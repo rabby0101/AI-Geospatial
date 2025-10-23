@@ -1,0 +1,56 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "zone_name": "Spree River Zone 1",
+        "risk_level": "High"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [13.37, 52.52],
+          [13.39, 52.52],
+          [13.39, 52.51],
+          [13.37, 52.51],
+          [13.37, 52.52]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "zone_name": "Spree River Zone 2",
+        "risk_level": "Medium"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [13.40, 52.52],
+          [13.42, 52.52],
+          [13.42, 52.50],
+          [13.40, 52.50],
+          [13.40, 52.52]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "zone_name": "Spree River Zone 3",
+        "risk_level": "Low"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [13.28, 52.52],
+          [13.30, 52.52],
+          [13.30, 52.51],
+          [13.28, 52.51],
+          [13.28, 52.52]
+        ]]
+      }
+    }
+  ]
+}

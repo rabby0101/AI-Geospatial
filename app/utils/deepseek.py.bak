@@ -1,0 +1,210 @@
+import os
+import json
+import requests
+from typing import Dict, Any, List
+from dotenv import load_dotenv
+from app.models.query_model import OperationPlan, GeospatialOperation
+
+load_dotenv()
+
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
+
+
+SYSTEM_PROMPT = """Convert natural language to PostGIS SQL. Schema: vector.
+
+Tables: osm_hospitals, osm_toilets, osm_pharmacies, osm_fire_stations, osm_police_stations, osm_parks, osm_schools, osm_restaurants, osm_transport_stops, osm_parking.
+All have: osm_id, name, geometry (EPSG:4326).
+All tables have spatial GIST indexes on geometry.
+
+Important attributes:
+- osm_schools: "operator:type" (values: 'government', 'public', 'private', 'religious', etc.)
+- osm_schools: operator, school (school type)
+
+For distance queries, use ST_Transform to EPSG:3857 for FAST performance:
+ST_DWithin(ST_Transform(geom1, 3857), ST_Transform(geom2, 3857), meters)
+IMPORTANT: Column names with special characters like colons MUST be quoted: "operator:type"
+
+Return JSON:
+{
+  "operations": [{"operation": "spatial_query", "parameters": {"sql": "SELECT * FROM vector.osm_hospitals"}, "description": "..."}],
+  "reasoning": "...",
+  "datasets_required": ["osm_hospitals"]
+}
+
+Rules:
+1. Use vector.table_name
+2. For distance: Use ST_Transform(geom, 3857) with ST_DWithin for SPEED
+3. For GROUP BY: MUST include geometry in SELECT and GROUP BY
+4. For counts: SELECT ts.name, ts.geometry, COUNT(*) FROM ... GROUP BY ts.osm_id, ts.name, ts.geometry
+5. Quote column names with special characters: "operator:type"
+
+Examples:
+"Find hospitals" → SELECT * FROM vector.osm_hospitals
+"Toilets near transport" → SELECT DISTINCT t.* FROM vector.osm_toilets t, vector.osm_transport_stops ts WHERE ST_DWithin(ST_Transform(t.geometry, 3857), ST_Transform(ts.geometry, 3857), 100)
+"Restaurants without parking nearby" → SELECT r.* FROM vector.osm_restaurants r WHERE NOT EXISTS (SELECT 1 FROM vector.osm_parking p WHERE ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(p.geometry, 3857), 200))
+"Which stops have most restaurants?" → SELECT ts.name, ts.geometry, COUNT(r.osm_id) as cnt FROM vector.osm_transport_stops ts LEFT JOIN vector.osm_restaurants r ON ST_DWithin(ST_Transform(ts.geometry, 3857), ST_Transform(r.geometry, 3857), 200) GROUP BY ts.osm_id, ts.name, ts.geometry ORDER BY cnt DESC LIMIT 20
+"Government schools" → SELECT * FROM vector.osm_schools WHERE "operator:type" = 'government'"""
+
+
+def query_deepseek(prompt: str, context: Dict[str, Any] = None) -> str:
+    """
+    Query DeepSeek API with a prompt.
+
+    Args:
+        prompt: The user's natural language query
+        context: Optional context information
+
+    Returns:
+        Raw text response from DeepSeek
+    """
+    if not DEEPSEEK_API_KEY:
+        raise ValueError("DEEPSEEK_API_KEY not found in environment variables")
+
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    # Build the full prompt with context if provided
+    full_prompt = prompt
+    if context:
+        full_prompt = f"{prompt}\n\nContext: {json.dumps(context)}"
+
+    payload = {
+        "model": DEEPSEEK_MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": full_prompt}
+        ],
+        "temperature": 0.3,  # Lower temperature for more consistent responses
+        "max_tokens": 2000
+    }
+
+    try:
+        print(f"🔍 Querying DeepSeek API...")
+        response = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=20)
+        response.raise_for_status()
+
+        result = response.json()
+        content = result["choices"][0]["message"]["content"]
+        print(f"✅ DeepSeek response received ({len(content)} chars)")
+        return content
+
+    except requests.exceptions.Timeout:
+        raise Exception("DeepSeek API timeout after 20 seconds. The AI service is taking too long to respond. Please try a simpler query.")
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"DeepSeek API request failed: {str(e)}")
+    except (KeyError, IndexError) as e:
+        raise Exception(f"Unexpected response format from DeepSeek: {str(e)}")
+
+
+def parse_geospatial_query(question: str, context: Dict[str, Any] = None) -> OperationPlan:
+    """
+    Parse a natural language geospatial query into structured operations.
+
+    Args:
+        question: Natural language query
+        context: Optional context (city, timeframe, etc.)
+
+    Returns:
+        OperationPlan with structured operations
+    """
+    # Query DeepSeek
+    raw_response = query_deepseek(question, context)
+
+    # Try to parse the JSON response
+    try:
+        # Clean the response - sometimes LLMs wrap JSON in markdown
+        cleaned_response = raw_response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]
+        if cleaned_response.startswith("```"):
+            cleaned_response = cleaned_response[3:]
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]
+        cleaned_response = cleaned_response.strip()
+
+        # Parse JSON
+        parsed = json.loads(cleaned_response)
+
+        # Convert to OperationPlan
+        operations = [
+            GeospatialOperation(**op) for op in parsed.get("operations", [])
+        ]
+
+        return OperationPlan(
+            operations=operations,
+            reasoning=parsed.get("reasoning"),
+            datasets_required=parsed.get("datasets_required", [])
+        )
+
+    except json.JSONDecodeError as e:
+        # If JSON parsing fails, create a simple fallback plan
+        print(f"Failed to parse DeepSeek response as JSON: {e}")
+        print(f"Raw response: {raw_response}")
+
+        # Return a basic error plan
+        return OperationPlan(
+            operations=[
+                GeospatialOperation(
+                    operation="return",
+                    parameters={"error": "Failed to parse query"},
+                    description=f"Could not parse: {question}"
+                )
+            ],
+            reasoning=f"Error parsing response: {raw_response}",
+            datasets_required=[]
+        )
+
+
+def get_available_datasets() -> List[Dict[str, Any]]:
+    """
+    Return list of available datasets from PostGIS.
+    Queries actual database tables.
+    """
+    from app.utils.database import db_manager
+
+    try:
+        # Get tables from PostGIS
+        tables = db_manager.get_available_tables(schema="vector")
+
+        datasets = []
+        for table in tables:
+            try:
+                info = db_manager.get_table_info(table, schema="vector")
+                datasets.append({
+                    "name": table,
+                    "type": "vector",
+                    "description": f"{info['geometry_type']} - {info['row_count']} features",
+                    "schema": "vector",
+                    "row_count": info['row_count'],
+                    "geometry_type": info['geometry_type'],
+                    "columns": [col['name'] for col in info['columns']]
+                })
+            except Exception as e:
+                print(f"Could not get info for table {table}: {e}")
+                datasets.append({
+                    "name": table,
+                    "type": "vector",
+                    "description": "PostGIS table",
+                    "schema": "vector"
+                })
+
+        return datasets
+
+    except Exception as e:
+        print(f"Could not query database for datasets: {e}")
+        # Fallback to known Berlin OSM tables
+        return [
+            {"name": "osm_hospitals", "type": "vector", "description": "Hospital locations in Berlin (59 features)", "schema": "vector"},
+            {"name": "osm_toilets", "type": "vector", "description": "Public toilets in Berlin (1,160 features)", "schema": "vector"},
+            {"name": "osm_pharmacies", "type": "vector", "description": "Pharmacy locations in Berlin (768 features)", "schema": "vector"},
+            {"name": "osm_fire_stations", "type": "vector", "description": "Fire stations in Berlin (179 features)", "schema": "vector"},
+            {"name": "osm_police_stations", "type": "vector", "description": "Police stations in Berlin (81 features)", "schema": "vector"},
+            {"name": "osm_parks", "type": "vector", "description": "Parks in Berlin (2,785 features)", "schema": "vector"},
+            {"name": "osm_schools", "type": "vector", "description": "Schools in Berlin (1,195 features)", "schema": "vector"},
+            {"name": "osm_restaurants", "type": "vector", "description": "Restaurants in Berlin (5,013 features)", "schema": "vector"},
+            {"name": "osm_transport_stops", "type": "vector", "description": "Transport stops in Berlin (14,899 features)", "schema": "vector"},
+        ]

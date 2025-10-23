@@ -1,0 +1,57 @@
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-multipart==0.0.6
+
+# Geospatial Processing
+geopandas==0.14.2
+shapely==2.0.2
+rasterio==1.3.9
+rioxarray==0.15.1
+pyproj==3.6.1
+fiona==1.9.5
+
+# Database
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+geoalchemy2==0.14.3
+
+# LLM Integration
+openai==1.10.0
+langchain==0.1.4
+langchain-openai==0.0.5
+requests==2.31.0
+
+# Data Processing
+numpy==1.26.3
+pandas==2.1.4
+
+# Utilities
+python-dotenv==1.0.0
+pyyaml==6.0.1
+
+# Data Access - Free and Open Sources
+planetary-computer==1.0.0
+pystac-client==0.7.5
+aiohttp==3.9.1
+
+# Optional - Enhanced Features
+matplotlib==3.8.2
+folium==0.15.1
+elevation==1.1.3
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+httpx==0.26.0
+
+# Caching
+diskcache==5.6.3
+
+# Raster Analysis (Phase 1: NDVI)
+rasterstats==0.19.0
+scikit-image==0.22.0
+xarray==2024.1.0
+scipy==1.11.4

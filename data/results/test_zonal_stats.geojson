@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "name": "Zone_0_0", "zone_id": 0, "ndvi_mean": 0.60609376430511475, "ndvi_min": 0.060721684247255325, "ndvi_max": 0.89999997615814209, "ndvi_std": 0.12981437146663666 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 13.4245, 52.338 ], [ 13.4245, 52.5065 ], [ 13.088, 52.5065 ], [ 13.088, 52.338 ], [ 13.4245, 52.338 ] ] ] } },
+{ "type": "Feature", "properties": { "name": "Zone_0_1", "zone_id": 1, "ndvi_mean": 0.61520510911941528, "ndvi_min": 0.072315946221351624, "ndvi_max": 0.89999997615814209, "ndvi_std": 0.13131147623062134 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 13.4245, 52.5065 ], [ 13.4245, 52.675 ], [ 13.088, 52.675 ], [ 13.088, 52.5065 ], [ 13.4245, 52.5065 ] ] ] } },
+{ "type": "Feature", "properties": { "name": "Zone_1_0", "zone_id": 2, "ndvi_mean": 0.60785824060440063, "ndvi_min": 0.10460194945335388, "ndvi_max": 0.89999997615814209, "ndvi_std": 0.12783160805702209 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 13.761, 52.338 ], [ 13.761, 52.5065 ], [ 13.4245, 52.5065 ], [ 13.4245, 52.338 ], [ 13.761, 52.338 ] ] ] } },
+{ "type": "Feature", "properties": { "name": "Zone_1_1", "zone_id": 3, "ndvi_mean": 0.61887097358703613, "ndvi_min": 0.039341006428003311, "ndvi_max": 0.89999997615814209, "ndvi_std": 0.13427475094795227 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 13.761, 52.5065 ], [ 13.761, 52.675 ], [ 13.4245, 52.675 ], [ 13.4245, 52.5065 ], [ 13.761, 52.5065 ] ] ] } }
+]
+}

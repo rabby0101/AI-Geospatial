@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment
+.env
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (keep structure, not actual large files)
+data/raster/*.tif
+data/raster/*/*.tif
+data/vector/*.gpkg
+data/vector/*/*.gpkg
+data/vector/*.shp
+data/vector/*/*.shp
+
+# Keep sample files
+!data/raster/sample*.tif
+!data/vector/sample*.geojson
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+# Claude Code
+.claude/
+claude.md
+CLAUDE.md

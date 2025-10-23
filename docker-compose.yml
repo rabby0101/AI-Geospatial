@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  postgis:
+    image: postgis/postgis:15-3.3
+    container_name: geoassist_postgis
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-geoassist}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geoassist_password}
+      POSTGRES_DB: ${POSTGRES_DB:-geospatial_db}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-geoassist}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: geoassist_api
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - POSTGRES_HOST=postgis
+      - POSTGRES_USER=${POSTGRES_USER:-geoassist}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-geoassist_password}
+      - POSTGRES_DB=${POSTGRES_DB:-geospatial_db}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+      - ./config:/app/config
+    depends_on:
+      postgis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgis_data:

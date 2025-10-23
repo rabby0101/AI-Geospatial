@@ -1,0 +1,153 @@
+{
+  "catalog_version": "1.0.0",
+  "last_updated": "2025-01-01",
+  "datasets": {
+    "vector": [
+      {
+        "id": "osm_hospitals_berlin",
+        "name": "Berlin Hospitals",
+        "type": "vector",
+        "format": "geojson",
+        "source": "OpenStreetMap",
+        "path": "data/vector/osm/hospitals_berlin.geojson",
+        "crs": "EPSG:4326",
+        "description": "Hospital locations in Berlin extracted from OpenStreetMap",
+        "temporal_coverage": {
+          "start": "2024-01-01",
+          "end": "2024-12-31"
+        },
+        "spatial_extent": {
+          "bbox": [13.088, 52.338, 13.761, 52.675]
+        },
+        "attributes": [
+          "name",
+          "city",
+          "amenity"
+        ],
+        "tags": ["healthcare", "infrastructure", "berlin", "osm"],
+        "license": "ODbL"
+      },
+      {
+        "id": "flood_zones_berlin",
+        "name": "Berlin Flood Zones",
+        "type": "vector",
+        "format": "geojson",
+        "source": "Sample Data",
+        "path": "data/vector/flood_zones_berlin.geojson",
+        "crs": "EPSG:4326",
+        "description": "Simulated flood risk zones along Spree River in Berlin",
+        "spatial_extent": {
+          "bbox": [13.088, 52.338, 13.761, 52.675]
+        },
+        "attributes": [
+          "zone_name",
+          "risk_level"
+        ],
+        "tags": ["disaster", "risk", "flood", "berlin"],
+        "license": "Public Domain"
+      },
+      {
+        "id": "urban_areas_berlin",
+        "name": "Berlin Urban Areas",
+        "type": "vector",
+        "format": "geojson",
+        "source": "Sample Data",
+        "path": "data/vector/urban_areas_berlin.geojson",
+        "crs": "EPSG:4326",
+        "description": "Urban district boundaries in Berlin",
+        "spatial_extent": {
+          "bbox": [13.088, 52.338, 13.761, 52.675]
+        },
+        "attributes": [
+          "area_name",
+          "population"
+        ],
+        "tags": ["administrative", "urban", "berlin"],
+        "license": "Public Domain"
+      }
+    ],
+    "raster": [
+      {
+        "id": "berlin_ndvi_2018",
+        "name": "Berlin NDVI 2018 (Real Sentinel-2)",
+        "type": "raster",
+        "format": "GeoTIFF",
+        "source": "Sentinel-2 via Microsoft Planetary Computer",
+        "path": "data/raster/ndvi_timeseries/berlin_ndvi_20180716.tif",
+        "crs": "EPSG:4326",
+        "description": "Real Sentinel-2 NDVI for Berlin, acquired 2018-07-16 (4027×3342 pixels, 10m resolution)",
+        "temporal_coverage": {
+          "start": "2018-07-16",
+          "end": "2018-07-16"
+        },
+        "spatial_extent": {
+          "bbox": [13.088, 52.338, 13.761, 52.675]
+        },
+        "resolution": "10m",
+        "bands": 1,
+        "file_size_mb": 66,
+        "tags": ["vegetation", "sentinel-2", "ndvi", "2018", "real"],
+        "license": "Copernicus Open Access Hub"
+      },
+      {
+        "id": "berlin_ndvi_2024",
+        "name": "Berlin NDVI 2024 (Real Sentinel-2)",
+        "type": "raster",
+        "format": "GeoTIFF",
+        "source": "Sentinel-2 via Microsoft Planetary Computer",
+        "path": "data/raster/ndvi_timeseries/berlin_ndvi_20240721.tif",
+        "crs": "EPSG:4326",
+        "description": "Real Sentinel-2 NDVI for Berlin, acquired 2024-07-21 (3849×4007 pixels, 10m resolution)",
+        "temporal_coverage": {
+          "start": "2024-07-21",
+          "end": "2024-07-21"
+        },
+        "spatial_extent": {
+          "bbox": [13.088, 52.338, 13.761, 52.675]
+        },
+        "resolution": "10m",
+        "bands": 1,
+        "file_size_mb": 57,
+        "tags": ["vegetation", "sentinel-2", "ndvi", "2024", "real"],
+        "license": "Copernicus Open Access Hub"
+      },
+      {
+        "id": "berlin_ndvi_diff_2018_2024",
+        "name": "Berlin NDVI Change 2018-2024",
+        "type": "raster",
+        "format": "GeoTIFF",
+        "source": "Computed from Sentinel-2 data",
+        "path": "data/raster/ndvi_timeseries/berlin_ndvi_diff_2018_2024_real.tif",
+        "crs": "EPSG:4326",
+        "description": "Pre-computed NDVI difference (2024 - 2018) showing vegetation change over 6 years",
+        "temporal_coverage": {
+          "start": "2018-07-16",
+          "end": "2024-07-21"
+        },
+        "spatial_extent": {
+          "bbox": [13.088, 52.338, 13.761, 52.675]
+        },
+        "resolution": "10m",
+        "bands": 1,
+        "file_size_mb": 70,
+        "statistics": {
+          "mean_change": -0.172,
+          "loss_area_km2": 2309,
+          "gain_area_km2": 624
+        },
+        "tags": ["vegetation", "change-detection", "ndvi", "2018-2024", "derived"],
+        "license": "Copernicus Open Access Hub"
+      }
+    ]
+  },
+  "metadata": {
+    "total_datasets": 6,
+    "vector_count": 3,
+    "raster_count": 3,
+    "supported_crs": ["EPSG:4326", "EPSG:3857"],
+    "supported_formats": {
+      "vector": ["geojson", "gpkg", "shp"],
+      "raster": ["tif", "tiff"]
+    }
+  }
+}

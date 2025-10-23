@@ -1,0 +1,332 @@
+{
+  "catalog": {
+    "id": "berlin-osm-datasets",
+    "title": "Berlin OpenStreetMap Datasets",
+    "description": "Collection of OpenStreetMap amenities and infrastructure data for Berlin, Germany",
+    "version": "1.0.0",
+    "created": "2025-01-19",
+    "updated": "2025-01-19",
+    "license": "ODbL (Open Database License)",
+    "attribution": "© OpenStreetMap contributors",
+    "source": "OpenStreetMap via Overpass API",
+    "bbox": {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [13.088, 52.338],
+          [13.761, 52.338],
+          [13.761, 52.675],
+          [13.088, 52.675],
+          [13.088, 52.338]
+        ]]
+      },
+      "properties": {
+        "name": "Berlin",
+        "country": "Germany"
+      }
+    }
+  },
+  "datasets": [
+    {
+      "id": "berlin_hospitals",
+      "name": "Berlin Hospitals",
+      "description": "Hospital and medical facility locations in Berlin",
+      "feature_type": "Point/Polygon",
+      "osm_tags": {
+        "amenity": "hospital"
+      },
+      "file": "data/vector/osm/berlin_hospitals.geojson",
+      "table": "vector.osm_hospitals",
+      "category": "healthcare",
+      "subcategory": "medical_facilities",
+      "crs": "EPSG:4326",
+      "geometry_type": "Mixed (Point/Polygon)",
+      "attributes": [
+        "osm_id",
+        "name",
+        "amenity",
+        "emergency",
+        "operator",
+        "addr:street",
+        "addr:housenumber",
+        "addr:city",
+        "addr:postcode"
+      ],
+      "use_cases": [
+        "Healthcare accessibility analysis",
+        "Emergency response planning",
+        "Spatial queries for medical facilities",
+        "Distance calculations to hospitals"
+      ]
+    },
+    {
+      "id": "berlin_toilets",
+      "name": "Berlin Public Toilets",
+      "description": "Public toilet locations in Berlin",
+      "feature_type": "Point/Polygon",
+      "osm_tags": {
+        "amenity": "toilets"
+      },
+      "file": "data/vector/osm/berlin_toilets.geojson",
+      "table": "vector.osm_toilets",
+      "category": "amenity",
+      "subcategory": "sanitation",
+      "crs": "EPSG:4326",
+      "geometry_type": "Mixed (Point/Polygon)",
+      "attributes": [
+        "osm_id",
+        "name",
+        "amenity",
+        "access",
+        "fee",
+        "wheelchair",
+        "opening_hours"
+      ],
+      "use_cases": [
+        "Urban amenity planning",
+        "Accessibility mapping",
+        "Tourist information services",
+        "Public health infrastructure analysis"
+      ]
+    },
+    {
+      "id": "berlin_pharmacies",
+      "name": "Berlin Pharmacies",
+      "description": "Pharmacy and drugstore locations in Berlin",
+      "feature_type": "Point/Polygon",
+      "osm_tags": {
+        "amenity": "pharmacy"
+      },
+      "file": "data/vector/osm/berlin_pharmacies.geojson",
+      "table": "vector.osm_pharmacies",
+      "category": "healthcare",
+      "subcategory": "pharmacy",
+      "crs": "EPSG:4326",
+      "geometry_type": "Mixed (Point/Polygon)",
+      "attributes": [
+        "osm_id",
+        "name",
+        "amenity",
+        "dispensing",
+        "opening_hours",
+        "phone",
+        "addr:street",
+        "addr:housenumber"
+      ],
+      "use_cases": [
+        "Healthcare service distribution",
+        "Pharmacy accessibility analysis",
+        "Emergency medication access planning"
+      ]
+    },
+    {
+      "id": "berlin_fire_stations",
+      "name": "Berlin Fire Stations",
+      "description": "Fire station locations in Berlin",
+      "feature_type": "Point/Polygon",
+      "osm_tags": {
+        "amenity": "fire_station"
+      },
+      "file": "data/vector/osm/berlin_fire_stations.geojson",
+      "table": "vector.osm_fire_stations",
+      "category": "emergency",
+      "subcategory": "fire_rescue",
+      "crs": "EPSG:4326",
+      "geometry_type": "Mixed (Point/Polygon)",
+      "attributes": [
+        "osm_id",
+        "name",
+        "amenity",
+        "operator",
+        "addr:street"
+      ],
+      "use_cases": [
+        "Emergency response planning",
+        "Fire service coverage analysis",
+        "Response time modeling",
+        "Disaster preparedness"
+      ]
+    },
+    {
+      "id": "berlin_police_stations",
+      "name": "Berlin Police Stations",
+      "description": "Police station locations in Berlin",
+      "feature_type": "Point/Polygon",
+      "osm_tags": {
+        "amenity": "police"
+      },
+      "file": "data/vector/osm/berlin_police_stations.geojson",
+      "table": "vector.osm_police_stations",
+      "category": "emergency",
+      "subcategory": "law_enforcement",
+      "crs": "EPSG:4326",
+      "geometry_type": "Mixed (Point/Polygon)",
+      "attributes": [
+        "osm_id",
+        "name",
+        "amenity",
+        "operator",
+        "addr:street"
+      ],
+      "use_cases": [
+        "Public safety planning",
+        "Law enforcement coverage analysis",
+        "Security infrastructure mapping"
+      ]
+    },
+    {
+      "id": "berlin_parks",
+      "name": "Berlin Parks",
+      "description": "Parks and recreational areas in Berlin",
+      "feature_type": "Polygon",
+      "osm_tags": {
+        "leisure": "park"
+      },
+      "file": "data/vector/osm/berlin_parks.geojson",
+      "table": "vector.osm_parks",
+      "category": "recreation",
+      "subcategory": "green_space",
+      "crs": "EPSG:4326",
+      "geometry_type": "Polygon",
+      "attributes": [
+        "osm_id",
+        "name",
+        "leisure",
+        "access",
+        "surface",
+        "operator"
+      ],
+      "use_cases": [
+        "Green space analysis",
+        "Urban planning",
+        "Recreation accessibility",
+        "Environmental studies",
+        "Quality of life assessments"
+      ]
+    },
+    {
+      "id": "berlin_schools",
+      "name": "Berlin Schools",
+      "description": "Educational institutions in Berlin",
+      "feature_type": "Point/Polygon",
+      "osm_tags": {
+        "amenity": "school"
+      },
+      "file": "data/vector/osm/berlin_schools.geojson",
+      "table": "vector.osm_schools",
+      "category": "education",
+      "subcategory": "schools",
+      "crs": "EPSG:4326",
+      "geometry_type": "Mixed (Point/Polygon)",
+      "attributes": [
+        "osm_id",
+        "name",
+        "amenity",
+        "operator",
+        "addr:street"
+      ],
+      "use_cases": [
+        "Education accessibility analysis",
+        "School catchment area planning",
+        "Transportation planning"
+      ]
+    },
+    {
+      "id": "berlin_restaurants",
+      "name": "Berlin Restaurants",
+      "description": "Restaurant locations in Berlin",
+      "feature_type": "Point/Polygon",
+      "osm_tags": {
+        "amenity": "restaurant"
+      },
+      "file": "data/vector/osm/berlin_restaurants.geojson",
+      "table": "vector.osm_restaurants",
+      "category": "food",
+      "subcategory": "dining",
+      "crs": "EPSG:4326",
+      "geometry_type": "Mixed (Point/Polygon)",
+      "attributes": [
+        "osm_id",
+        "name",
+        "amenity",
+        "cuisine",
+        "opening_hours",
+        "addr:street"
+      ],
+      "use_cases": [
+        "Food service distribution",
+        "Tourism planning",
+        "Urban amenity analysis",
+        "Business location intelligence"
+      ]
+    },
+    {
+      "id": "berlin_transport_stops",
+      "name": "Berlin Transport Stops",
+      "description": "Public transport stop locations in Berlin (bus, tram, metro)",
+      "feature_type": "Point",
+      "osm_tags": {
+        "public_transport": "stop_position",
+        "highway": "bus_stop"
+      },
+      "file": "data/vector/osm/berlin_transport_stops.geojson",
+      "table": "vector.osm_transport_stops",
+      "category": "transport",
+      "subcategory": "public_transport",
+      "crs": "EPSG:4326",
+      "geometry_type": "Point",
+      "attributes": [
+        "osm_id",
+        "name",
+        "public_transport",
+        "highway",
+        "network",
+        "operator"
+      ],
+      "use_cases": [
+        "Public transport accessibility",
+        "Transit-oriented development",
+        "Mobility analysis",
+        "First/last mile connectivity"
+      ]
+    }
+  ],
+  "spatial_queries": {
+    "examples": [
+      {
+        "query": "Find all hospitals within 500m of a park",
+        "sql": "SELECT h.name, h.geometry FROM vector.osm_hospitals h JOIN vector.osm_parks p ON ST_DWithin(h.geometry::geography, p.geometry::geography, 500)"
+      },
+      {
+        "query": "Find public toilets near transport stops (within 100m)",
+        "sql": "SELECT t.name, t.geometry FROM vector.osm_toilets t JOIN vector.osm_transport_stops s ON ST_DWithin(t.geometry::geography, s.geometry::geography, 100)"
+      },
+      {
+        "query": "Count pharmacies within 1km of each hospital",
+        "sql": "SELECT h.name as hospital, COUNT(p.osm_id) as pharmacy_count FROM vector.osm_hospitals h LEFT JOIN vector.osm_pharmacies p ON ST_DWithin(h.geometry::geography, p.geometry::geography, 1000) GROUP BY h.name"
+      },
+      {
+        "query": "Find the nearest fire station to each school",
+        "sql": "SELECT DISTINCT ON (s.osm_id) s.name as school, f.name as nearest_fire_station, ST_Distance(s.geometry::geography, f.geometry::geography) as distance_m FROM vector.osm_schools s CROSS JOIN vector.osm_fire_stations f ORDER BY s.osm_id, ST_Distance(s.geometry::geography, f.geometry::geography)"
+      }
+    ]
+  },
+  "api_integration": {
+    "natural_language_queries": [
+      "Find all hospitals in Berlin",
+      "Show me toilets near Alexanderplatz",
+      "Which parks are within 1km of the city center?",
+      "Find restaurants within 500m of transport stops",
+      "What is the nearest pharmacy to Brandenburger Tor?"
+    ]
+  },
+  "notes": [
+    "All datasets use WGS84 (EPSG:4326) coordinate reference system",
+    "Spatial indexes are created automatically on geometry columns",
+    "Data is updated from OpenStreetMap and may not reflect real-time changes",
+    "Some features may have incomplete attribute information",
+    "For distance calculations, use ::geography cast for accurate meters",
+    "Overpass API has rate limits - use responsibly"
+  ]
+}

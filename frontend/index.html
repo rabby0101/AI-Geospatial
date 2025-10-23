@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cognitive Geospatial Assistant</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #f5f5f5;
+        }
+
+        /* Top Search Bar */
+        .search-header {
+            background: white;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .search-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+        }
+
+        .search-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 0.75rem 3rem 0.75rem 2.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 1.2rem;
+        }
+
+        #searchBtn {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 0.5rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #searchBtn:hover:not(:disabled) {
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        #searchBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Main Content Area */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left Layers Panel */
+        .layers-panel {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .layers-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        .layer-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .layer-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+        }
+
+        .layer-item.active {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .layer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .layer-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .layer-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .layer-color-picker {
+            width: 28px;
+            height: 28px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+            background: white;
+        }
+
+        .layer-color-picker:hover {
+            border-color: #667eea;
+            transform: scale(1.1);
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+        }
+
+        .layer-color-picker input[type="color"] {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            width: 150%;
+            height: 150%;
+            border: none;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .layer-color-display {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: calc(100% - 4px);
+            height: calc(100% - 4px);
+            border-radius: 3px;
+            pointer-events: none;
+        }
+
+        .layer-toggle {
+            width: 40px;
+            height: 20px;
+            background: #ccc;
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .layer-toggle.active {
+            background: #667eea;
+        }
+
+        .layer-toggle::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .layer-toggle.active::after {
+            transform: translateX(20px);
+        }
+
+        .layer-remove {
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0 0.25rem;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .layer-remove:hover {
+            opacity: 1;
+        }
+
+        .layer-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #f0f0f0;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .layer-count {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .layer-time {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state-text {
+            font-size: 0.9rem;
+        }
+
+        /* Map */
+        #map {
+            flex: 1;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Locate Me Button */
+        .locate-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 1000;
+            width: 44px;
+            height: 44px;
+            background: white;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .locate-btn:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .locate-btn:active {
+            transform: translateY(0);
+        }
+
+        .locate-btn.locating {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+        }
+
+        /* Loading Indicator */
+        .loading-indicator {
+            position: absolute;
+            right: 5.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+            z-index: 999;
+        }
+
+        .loading-indicator.active {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f0f0f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text-small {
+            font-size: 0.8rem;
+            color: #667eea;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modern popup card styles */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            padding: 0;
+            max-width: 400px !important;
+            max-height: 500px;
+            overflow: hidden;
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            max-height: 480px;
+            overflow-y: auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .popup-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .popup-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            font-weight: 600;
+            font-size: 1rem;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+
+        .popup-body {
+            padding: 1rem;
+            background: white;
+        }
+
+        .popup-attribute {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        .popup-attribute:hover {
+            background: #f8f9fa;
+        }
+
+        .popup-attribute:last-child {
+            border-bottom: none;
+        }
+
+        .popup-label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.85rem;
+            text-transform: capitalize;
+            word-break: break-word;
+        }
+
+        .popup-value {
+            color: #333;
+            font-size: 0.85rem;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .popup-footer {
+            padding: 0.75rem 1rem;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            font-size: 0.75rem;
+            color: #666;
+            text-align: center;
+        }
+
+        .leaflet-popup-tip-container {
+            display: none;
+        }
+
+        .leaflet-popup-close-button {
+            color: white !important;
+            font-size: 24px !important;
+            padding: 4px 8px !important;
+            width: auto !important;
+            height: auto !important;
+            top: 8px !important;
+            right: 8px !important;
+        }
+
+        .leaflet-popup-close-button:hover {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1500;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .notification.success {
+            border-left: 4px solid #28a745;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Location Button */
+        .location-btn {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .location-btn:hover:not(:disabled) {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .location-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .location-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .location-status {
+            font-size: 0.75rem;
+            color: #666;
+            margin-left: 0.5rem;
+        }
+
+        /* Right Operations Panel */
+        .operations-panel {
+            width: 350px;
+            background: white;
+            border-left: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .operations-panel-hidden {
+            display: none;
+        }
+
+        .operations-header {
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .operations-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .no-selection {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .operations-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .operations-section-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #667eea;
+        }
+
+        .reasoning-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .operation-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .operation-type {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .operation-description {
+            font-size: 0.85rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .operation-params {
+            background: #f5f5f5;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+
+        .datasets-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .dataset-badge {
+            background: #43e97b;
+            color: white;
+            padding: 0.35rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .metadata-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.85rem;
+        }
+
+        .metadata-item:last-child {
+            border-bottom: none;
+        }
+
+        .metadata-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .metadata-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        /* Hide map container and adjust for panels */
+        .map-wrapper {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Search Bar -->
+    <div class="search-header">
+        <div class="search-container">
+            <div class="logo">🌍 GeoAssist</div>
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Ask a geospatial question... (e.g., Is there a toilet near me?)">
+                <div class="loading-indicator" id="loadingIndicator">
+                    <div class="loading-spinner"></div>
+                    <span class="loading-text-small" id="loadingIndicatorText">Processing...</span>
+                </div>
+                <button id="searchBtn" onclick="executeSearch()">Search</button>
+            </div>
+            <button id="locationBtn" class="location-btn" onclick="toggleLocation()">
+                <span id="locationIcon">📍</span>
+                <span id="locationText">My Location</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Layers Panel -->
+        <div class="layers-panel">
+            <div class="panel-header">
+                Layers
+            </div>
+            <div class="layers-list" id="layersList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🗺️</div>
+                    <div class="empty-state-text">No layers yet<br>Search to add results as layers</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Container with Operations Panel -->
+        <div class="map-wrapper">
+            <!-- Map -->
+            <div id="map">
+                <!-- Locate Me Button -->
+                <button id="locateBtn" class="locate-btn" onclick="locateUser()" title="Find my location">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Right Operations Panel -->
+            <div class="operations-panel operations-panel-hidden" id="operationsPanel">
+                <div class="operations-header">
+                    <div id="operationsTitle">Operations</div>
+                </div>
+                <div class="operations-content" id="operationsContent">
+                    <div class="no-selection">
+                        Click a layer to view operations
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Initialize map centered on Berlin
+        const map = L.map('map').setView([52.52, 13.405], 11);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // API base URL
+        const API_URL = window.location.origin + '/api';
+
+        // Store layers
+        let layers = [];
+        let layerIdCounter = 0;
+
+        // User location state
+        let userLocation = null;  // {lat, lon}
+        let userLocationMarker = null;
+        let userLocationCircle = null;
+        let locationWatchId = null;
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 4000);
+        }
+
+        // Show/hide loading indicator
+        function setLoading(isLoading, text = 'Processing...') {
+            const indicator = document.getElementById('loadingIndicator');
+            const loadingText = document.getElementById('loadingIndicatorText');
+
+            if (isLoading) {
+                loadingText.textContent = text;
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
+            }
+        }
+
+        // Generate layer name from query and data
+        function generateLayerName(query, geojsonData) {
+            // Strategy 1: Analyze feature properties to determine what was actually returned
+            if (geojsonData && geojsonData.features && geojsonData.features.length > 0) {
+                const firstFeature = geojsonData.features[0].properties;
+
+                // Check for common OSM tags
+                if (firstFeature.amenity) {
+                    const amenityName = firstFeature.amenity.replace(/_/g, ' ');
+                    return capitalize(amenityName) + 's';
+                }
+                if (firstFeature.shop) {
+                    const shopName = firstFeature.shop.replace(/_/g, ' ');
+                    return capitalize(shopName) + 's';
+                }
+                if (firstFeature.tourism) {
+                    return capitalize(firstFeature.tourism.replace(/_/g, ' '));
+                }
+                if (firstFeature.building && firstFeature.building !== 'yes') {
+                    return capitalize(firstFeature.building.replace(/_/g, ' ')) + 's';
+                }
+                if (firstFeature.highway) {
+                    return 'Roads';
+                }
+            }
+
+            // Strategy 2: Smart query parsing
+            const queryLower = query.toLowerCase();
+
+            // Expanded feature keywords dictionary
+            const featureKeywords = {
+                // Healthcare
+                'hospital': 'Hospitals',
+                'clinic': 'Clinics',
+                'pharmacy': 'Pharmacies',
+                'pharmacies': 'Pharmacies',
+                'doctor': 'Doctors',
+                'dentist': 'Dentists',
+
+                // Education
+                'school': 'Schools',
+                'kindergarten': 'Kindergartens',
+                'university': 'Universities',
+                'college': 'Colleges',
+                'library': 'Libraries',
+                'libraries': 'Libraries',
+
+                // Food & Drink
+                'restaurant': 'Restaurants',
+                'cafe': 'Cafes',
+                'bar': 'Bars',
+                'pub': 'Pubs',
+                'supermarket': 'Supermarkets',
+                'bakery': 'Bakeries',
+                'food': 'Food Places',
+
+                // Emergency Services
+                'fire station': 'Fire Stations',
+                'police station': 'Police Stations',
+                'police': 'Police Stations',
+
+                // Recreation
+                'park': 'Parks',
+                'playground': 'Playgrounds',
+                'sports': 'Sports Facilities',
+                'gym': 'Gyms',
+                'swimming': 'Swimming Pools',
+
+                // Transport
+                'train station': 'Train Stations',
+                'bus stop': 'Bus Stops',
+                'u-bahn': 'U-Bahn Stations',
+                'metro': 'Metro Stations',
+                'subway': 'Subway Stations',
+                'station': 'Stations',
+                'transport': 'Transport Stops',
+
+                // Infrastructure
+                'building': 'Buildings',
+                'road': 'Roads',
+                'highway': 'Highways',
+                'street': 'Streets',
+                'toilet': 'Toilets',
+                'parking': 'Parking',
+                'atm': 'ATMs',
+
+                // Areas
+                'residential area': 'Residential Areas',
+                'residential': 'Residential Areas',
+                'industrial area': 'Industrial Areas',
+                'industrial': 'Industrial Areas',
+                'commercial': 'Commercial Areas',
+                'urban': 'Urban Areas',
+
+                // Tourism
+                'hotel': 'Hotels',
+                'museum': 'Museums',
+                'monument': 'Monuments',
+                'attraction': 'Attractions',
+                'tourist': 'Tourist Attractions'
+            };
+
+            // Find the main feature (check longer phrases first)
+            let mainFeature = null;
+            const sortedKeys = Object.keys(featureKeywords).sort((a, b) => b.length - a.length);
+
+            for (const key of sortedKeys) {
+                if (queryLower.includes(key)) {
+                    mainFeature = featureKeywords[key];
+                    break;
+                }
+            }
+
+            // Extract location context
+            const locationPatterns = [
+                /(?:in|near|at|around)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/,
+                /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:area|district|neighborhood)/i
+            ];
+
+            let location = null;
+            for (const pattern of locationPatterns) {
+                const match = query.match(pattern);
+                if (match) {
+                    location = match[1];
+                    break;
+                }
+            }
+
+            // Extract distance/proximity
+            const distanceMatch = query.match(/within\s+(\d+\.?\d*)\s*(m|km|meters|kilometers)/i);
+            let distance = null;
+            if (distanceMatch) {
+                const distValue = distanceMatch[1];
+                const distUnit = distanceMatch[2].toLowerCase();
+                if (distUnit.startsWith('k')) {
+                    distance = distValue + 'km';
+                } else {
+                    distance = distValue + 'm';
+                }
+            }
+
+            // Build layer name with priority: feature + location > feature + distance > feature only
+            if (mainFeature && location) {
+                return `${mainFeature} - ${location}`;
+            } else if (mainFeature && distance) {
+                return `${mainFeature} (${distance})`;
+            } else if (mainFeature) {
+                return mainFeature;
+            }
+
+            // Fallback: Use first 3 meaningful words from query
+            const stopWords = ['find', 'show', 'search', 'where', 'what', 'which', 'that',
+                              'have', 'with', 'from', 'within', 'near', 'all', 'the', 'are',
+                              'more', 'than', 'less', 'between', 'and', 'or'];
+
+            const words = query.split(/\s+/).filter(w =>
+                w.length > 2 &&
+                !stopWords.includes(w.toLowerCase()) &&
+                !w.match(/^\d+$/)  // Exclude pure numbers
+            );
+
+            if (words.length > 0) {
+                const limitedWords = words.slice(0, 3);
+                return limitedWords.map(w =>
+                    w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+                ).join(' ');
+            }
+
+            return 'Search Results';
+        }
+
+        // Helper function to capitalize words
+        function capitalize(str) {
+            return str.split(' ').map(word =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
+        }
+
+        // Add layer to map and panel
+        function addLayer(name, geojsonData, query, operations = null, reasoning = null, datasetsUsed = null, metadata = null, executionTime = null) {
+            const layerId = ++layerIdCounter;
+
+            // Generate color for this layer
+            const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe',
+                           '#43e97b', '#fa709a', '#30cfd0', '#c471ed'];
+            const layerColor = colors[layerId % colors.length];
+
+            // Create Leaflet layer
+            const geojsonLayer = L.geoJSON(geojsonData, {
+                style: function(feature) {
+                    return {
+                        color: layerColor,
+                        weight: 2,
+                        fillOpacity: 0.3
+                    };
+                },
+                pointToLayer: function(feature, latlng) {
+                    return L.circleMarker(latlng, {
+                        radius: 8,
+                        fillColor: layerColor,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                },
+                onEachFeature: function(feature, layer) {
+                    if (feature.properties) {
+                        layer.bindPopup(createPopupContent(feature.properties));
+                    }
+                }
+            }).addTo(map);
+
+            // Fit map to layer bounds
+            if (geojsonLayer.getBounds().isValid()) {
+                map.fitBounds(geojsonLayer.getBounds(), { padding: [50, 50] });
+            }
+
+            // Store layer info
+            const layerInfo = {
+                id: layerId,
+                name: name,
+                query: query,
+                layer: geojsonLayer,
+                visible: true,
+                featureCount: geojsonData.features.length,
+                timestamp: new Date(),
+                color: layerColor,
+                geojsonData: geojsonData,  // Store original data for re-styling
+                operations: operations,     // Store operations performed
+                reasoning: reasoning,       // Store AI reasoning
+                datasetsUsed: datasetsUsed, // Store datasets used
+                metadata: metadata,         // Store metadata
+                executionTime: executionTime  // Store execution time
+            };
+
+            layers.push(layerInfo);
+
+            // Update UI
+            updateLayersPanel();
+        }
+
+        // Create popup content
+        function createPopupContent(properties) {
+            let featureName = properties.name || properties.title || properties.amenity ||
+                            properties.highway || properties.type || 'Feature Details';
+
+            let popupContent = '<div class="popup-card">';
+            popupContent += `<div class="popup-header">${featureName}</div>`;
+            popupContent += '<div class="popup-body">';
+
+            // Sort properties: put important ones first
+            const priorityKeys = ['name', 'amenity', 'shop', 'tourism', 'highway',
+                                 'building', 'type', 'operator', 'addr:street',
+                                 'addr:housenumber', 'addr:city', 'phone', 'website'];
+
+            const sortedEntries = Object.entries(properties).sort((a, b) => {
+                const aIndex = priorityKeys.indexOf(a[0]);
+                const bIndex = priorityKeys.indexOf(b[0]);
+                if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                if (aIndex !== -1) return -1;
+                if (bIndex !== -1) return 1;
+                return a[0].localeCompare(b[0]);
+            });
+
+            // Add attributes
+            for (const [key, value] of sortedEntries) {
+                if (value !== null && value !== undefined && value !== '') {
+                    const displayKey = key.replace(/_/g, ' ').replace(/:/g, ' ');
+                    let displayValue = value;
+
+                    if (typeof value === 'object') {
+                        displayValue = JSON.stringify(value, null, 2);
+                    } else if (typeof value === 'string' && value.startsWith('http')) {
+                        displayValue = `<a href="${value}" target="_blank" style="color: #667eea; text-decoration: none;">🔗 Link</a>`;
+                    }
+
+                    popupContent += `
+                        <div class="popup-attribute">
+                            <div class="popup-label">${displayKey}</div>
+                            <div class="popup-value">${displayValue}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            popupContent += '</div>';
+            popupContent += `<div class="popup-footer">${Object.keys(properties).length} attributes</div>`;
+            popupContent += '</div>';
+
+            return popupContent;
+        }
+
+        // Change layer color
+        function changeLayerColor(layerId, newColor) {
+            const layerInfo = layers.find(l => l.id === layerId);
+            if (!layerInfo) return;
+
+            // Update stored color
+            layerInfo.color = newColor;
+
+            // Remove old layer from map
+            map.removeLayer(layerInfo.layer);
+
+            // Create new layer with updated color
+            const geojsonLayer = L.geoJSON(layerInfo.geojsonData, {
+                style: function(feature) {
+                    return {
+                        color: newColor,
+                        weight: 2,
+                        fillOpacity: 0.3
+                    };
+                },
+                pointToLayer: function(feature, latlng) {
+                    return L.circleMarker(latlng, {
+                        radius: 8,
+                        fillColor: newColor,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                },
+                onEachFeature: function(feature, layer) {
+                    if (feature.properties) {
+                        layer.bindPopup(createPopupContent(feature.properties));
+                    }
+                }
+            });
+
+            // Add new layer to map if it was visible
+            if (layerInfo.visible) {
+                geojsonLayer.addTo(map);
+            }
+
+            // Update layer reference
+            layerInfo.layer = geojsonLayer;
+
+            // Update UI
+            updateLayersPanel();
+        }
+
+        // Update layers panel
+        function updateLayersPanel() {
+            const layersList = document.getElementById('layersList');
+
+            if (layers.length === 0) {
+                layersList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🗺️</div>
+                        <div class="empty-state-text">No layers yet<br>Search to add results as layers</div>
+                    </div>
+                `;
+                return;
+            }
+
+            layersList.innerHTML = '';
+
+            // Reverse order to show newest first
+            [...layers].reverse().forEach(layerInfo => {
+                const layerItem = document.createElement('div');
+                layerItem.className = 'layer-item' + (layerInfo.visible ? ' active' : '');
+
+                const timeAgo = getTimeAgo(layerInfo.timestamp);
+
+                layerItem.innerHTML = `
+                    <div class="layer-header">
+                        <div class="layer-name" title="${layerInfo.name}">${layerInfo.name}</div>
+                        <div class="layer-controls">
+                            <div class="layer-color-picker" title="Change color" id="colorPicker${layerInfo.id}">
+                                <div class="layer-color-display" style="background-color: ${layerInfo.color}"></div>
+                                <input type="color" value="${layerInfo.color}" id="colorInput${layerInfo.id}">
+                            </div>
+                            <div class="layer-toggle ${layerInfo.visible ? 'active' : ''}"
+                                 onclick="toggleLayer(${layerInfo.id})"></div>
+                            <span class="layer-remove" onclick="removeLayer(${layerInfo.id})">×</span>
+                        </div>
+                    </div>
+                    <div class="layer-info">
+                        <div class="layer-count">
+                            <span>📍 ${layerInfo.featureCount} features</span>
+                        </div>
+                        <div class="layer-time">${timeAgo}</div>
+                    </div>
+                `;
+
+                layerItem.onclick = (e) => {
+                    // Don't zoom if clicking controls
+                    if (e.target.classList.contains('layer-toggle') ||
+                        e.target.classList.contains('layer-remove') ||
+                        e.target.classList.contains('layer-color-picker') ||
+                        e.target.classList.contains('layer-color-display') ||
+                        e.target.type === 'color') {
+                        return;
+                    }
+                    // Display operations when layer is clicked
+                    displayLayerOperations(layerInfo.id);
+                    // Zoom to layer
+                    zoomToLayer(layerInfo.id);
+                };
+
+                layersList.appendChild(layerItem);
+
+                // Add event listener to color input after appending to DOM
+                const colorInput = document.getElementById(`colorInput${layerInfo.id}`);
+                if (colorInput) {
+                    colorInput.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+                    colorInput.addEventListener('change', (e) => {
+                        changeLayerColor(layerInfo.id, e.target.value);
+                    });
+                }
+            });
+        }
+
+        // Get time ago string
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            return `${Math.floor(seconds / 86400)}d ago`;
+        }
+
+        // Display operations for a selected layer
+        function displayLayerOperations(layerId) {
+            const layerInfo = layers.find(l => l.id === layerId);
+            if (!layerInfo) return;
+
+            const operationsPanel = document.getElementById('operationsPanel');
+            const operationsContent = document.getElementById('operationsContent');
+            const operationsTitle = document.getElementById('operationsTitle');
+
+            // Update title
+            operationsTitle.textContent = `${layerInfo.name}`;
+
+            let content = '';
+
+            // Display reasoning
+            if (layerInfo.reasoning) {
+                content += `
+                    <div class="operations-section">
+                        <div class="operations-section-title">Reasoning</div>
+                        <div class="reasoning-box">${layerInfo.reasoning}</div>
+                    </div>
+                `;
+            }
+
+            // Display operations
+            if (layerInfo.operations && layerInfo.operations.length > 0) {
+                content += '<div class="operations-section">';
+                content += '<div class="operations-section-title">Operations</div>';
+
+                layerInfo.operations.forEach((op, index) => {
+                    const operationType = op.operation.replace(/_/g, ' ').toUpperCase();
+                    const description = op.description || 'No description available';
+                    const params = op.parameters ? JSON.stringify(op.parameters, null, 2) : '{}';
+
+                    content += `
+                        <div class="operation-item">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">Step ${index + 1}</div>
+                            <div class="operation-type">${operationType}</div>
+                            <div class="operation-description">${description}</div>
+                            <div class="operation-params">${params}</div>
+                        </div>
+                    `;
+                });
+
+                content += '</div>';
+            }
+
+            // Display datasets used
+            if (layerInfo.datasetsUsed && layerInfo.datasetsUsed.length > 0) {
+                content += `
+                    <div class="operations-section">
+                        <div class="operations-section-title">Datasets Used</div>
+                        <div class="datasets-list">
+                            ${layerInfo.datasetsUsed.map(dataset =>
+                                `<div class="dataset-badge">${dataset}</div>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Display metadata
+            if (layerInfo.metadata) {
+                content += '<div class="operations-section">';
+                content += '<div class="operations-section-title">Metadata</div>';
+
+                for (const [key, value] of Object.entries(layerInfo.metadata)) {
+                    const displayKey = key.replace(/_/g, ' ').charAt(0).toUpperCase() +
+                                     key.replace(/_/g, ' ').slice(1);
+                    const displayValue = typeof value === 'object' ? JSON.stringify(value) : value;
+                    content += `
+                        <div class="metadata-item">
+                            <span class="metadata-label">${displayKey}</span>
+                            <span class="metadata-value">${displayValue}</span>
+                        </div>
+                    `;
+                }
+
+                content += '</div>';
+            }
+
+            // Display execution time
+            if (layerInfo.executionTime) {
+                content += `
+                    <div class="operations-section">
+                        <div class="metadata-item">
+                            <span class="metadata-label">Execution Time</span>
+                            <span class="metadata-value">${layerInfo.executionTime.toFixed(2)}s</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Show empty state if no operations data
+            if (!content) {
+                content = '<div class="no-selection">No operations data available</div>';
+            }
+
+            operationsContent.innerHTML = content;
+            operationsPanel.classList.remove('operations-panel-hidden');
+        }
+
+        // Hide operations panel
+        function hideOperationsPanel() {
+            const operationsPanel = document.getElementById('operationsPanel');
+            operationsPanel.classList.add('operations-panel-hidden');
+        }
+
+        // Toggle layer visibility
+        function toggleLayer(layerId) {
+            const layerInfo = layers.find(l => l.id === layerId);
+            if (!layerInfo) return;
+
+            layerInfo.visible = !layerInfo.visible;
+
+            if (layerInfo.visible) {
+                map.addLayer(layerInfo.layer);
+            } else {
+                map.removeLayer(layerInfo.layer);
+            }
+
+            updateLayersPanel();
+        }
+
+        // Remove layer
+        function removeLayer(layerId) {
+            const layerInfo = layers.find(l => l.id === layerId);
+            if (!layerInfo) return;
+
+            map.removeLayer(layerInfo.layer);
+            layers = layers.filter(l => l.id !== layerId);
+            updateLayersPanel();
+
+            showNotification(`Layer "${layerInfo.name}" removed`, 'success');
+        }
+
+        // Zoom to layer
+        function zoomToLayer(layerId) {
+            const layerInfo = layers.find(l => l.id === layerId);
+            if (!layerInfo) return;
+
+            if (layerInfo.layer.getBounds().isValid()) {
+                map.fitBounds(layerInfo.layer.getBounds(), { padding: [50, 50] });
+            }
+        }
+
+        // Toggle user location
+        function toggleLocation() {
+            if (userLocation) {
+                // Disable location
+                disableLocation();
+            } else {
+                // Enable location
+                enableLocation();
+            }
+        }
+
+        // Enable user location
+        function enableLocation() {
+            if (!navigator.geolocation) {
+                showNotification('Geolocation is not supported by your browser', 'error');
+                return;
+            }
+
+            const locationBtn = document.getElementById('locationBtn');
+            const locationText = document.getElementById('locationText');
+            const locationIcon = document.getElementById('locationIcon');
+
+            locationBtn.disabled = true;
+            locationText.textContent = 'Locating...';
+            locationIcon.textContent = '🔄';
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    // Success - save user location
+                    userLocation = {
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    };
+
+                    console.log('✅ Location enabled:', userLocation);
+
+                    // Update button UI
+                    locationBtn.disabled = false;
+                    locationBtn.classList.add('active');
+                    locationText.textContent = 'Location On';
+                    locationIcon.textContent = '📍';
+
+                    // Add marker to map
+                    if (userLocationMarker) {
+                        map.removeLayer(userLocationMarker);
+                    }
+                    if (userLocationCircle) {
+                        map.removeLayer(userLocationCircle);
+                    }
+
+                    // Add blue circle marker for user location
+                    userLocationMarker = L.circleMarker([userLocation.lat, userLocation.lon], {
+                        radius: 8,
+                        fillColor: '#4285F4',
+                        color: '#fff',
+                        weight: 3,
+                        opacity: 1,
+                        fillOpacity: 1
+                    }).addTo(map);
+
+                    // Add accuracy circle
+                    const accuracy = position.coords.accuracy || 100;
+                    userLocationCircle = L.circle([userLocation.lat, userLocation.lon], {
+                        radius: accuracy,
+                        fillColor: '#4285F4',
+                        color: '#4285F4',
+                        weight: 1,
+                        opacity: 0.3,
+                        fillOpacity: 0.1
+                    }).addTo(map);
+
+                    // Add popup to marker
+                    userLocationMarker.bindPopup(`
+                        <div class="popup-card">
+                            <div class="popup-header">Your Location</div>
+                            <div class="popup-body">
+                                <div class="popup-attribute">
+                                    <div class="popup-label">Latitude</div>
+                                    <div class="popup-value">${userLocation.lat.toFixed(6)}</div>
+                                </div>
+                                <div class="popup-attribute">
+                                    <div class="popup-label">Longitude</div>
+                                    <div class="popup-value">${userLocation.lon.toFixed(6)}</div>
+                                </div>
+                                <div class="popup-attribute">
+                                    <div class="popup-label">Accuracy</div>
+                                    <div class="popup-value">±${accuracy.toFixed(0)}m</div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+
+                    // Pan map to user location
+                    map.setView([userLocation.lat, userLocation.lon], 14);
+
+                    showNotification('Location enabled! Try "Find toilets near me"', 'success');
+                },
+                (error) => {
+                    // Error handling
+                    locationBtn.disabled = false;
+                    locationText.textContent = 'My Location';
+                    locationIcon.textContent = '📍';
+
+                    let errorMessage = 'Unable to get your location';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Location permission denied';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Location information unavailable';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Location request timed out';
+                            break;
+                    }
+                    showNotification(errorMessage, 'error');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        // Disable user location
+        function disableLocation() {
+            userLocation = null;
+
+            // Update button UI
+            const locationBtn = document.getElementById('locationBtn');
+            const locationText = document.getElementById('locationText');
+            const locationIcon = document.getElementById('locationIcon');
+
+            locationBtn.classList.remove('active');
+            locationText.textContent = 'My Location';
+            locationIcon.textContent = '📍';
+
+            // Remove markers from map
+            if (userLocationMarker) {
+                map.removeLayer(userLocationMarker);
+                userLocationMarker = null;
+            }
+            if (userLocationCircle) {
+                map.removeLayer(userLocationCircle);
+                userLocationCircle = null;
+            }
+
+            showNotification('Location disabled', 'success');
+        }
+
+        // Execute search
+        async function executeSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+
+            if (!query) {
+                showNotification('Please enter a search query', 'error');
+                return;
+            }
+
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.disabled = true;
+
+            setLoading(true, 'Processing...');
+
+            try {
+                // Build request payload
+                const payload = { question: query };
+
+                // Add user location if available
+                if (userLocation) {
+                    payload.user_location = userLocation;
+                    console.log('🌍 Using user location:', userLocation);
+                } else {
+                    console.log('⚠️ No user location available');
+                }
+
+                console.log('📤 Sending request:', payload);
+
+                const response = await fetch(`${API_URL}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                // Debug: Log the full response
+                console.log('📊 API Response:', data);
+                console.log('🔧 Operations:', data.operations);
+                console.log('💭 Reasoning:', data.reasoning);
+                console.log('📚 Datasets:', data.datasets_used);
+
+                if (data.success && data.data && data.data.features) {
+                    // Use DeepSeek-generated layer name if available, fallback to client-side generation
+                    const layerName = data.layer_name || generateLayerName(query, data.data);
+
+                    // Pass all operation data to addLayer
+                    addLayer(
+                        layerName,
+                        data.data,
+                        query,
+                        data.operations,      // Operations performed
+                        data.reasoning,       // AI reasoning
+                        data.datasets_used,   // Datasets used
+                        data.metadata,        // Metadata
+                        data.execution_time   // Execution time
+                    );
+
+                    showNotification(`Found ${data.data.features.length} results`, 'success');
+
+                    // Clear search input
+                    document.getElementById('searchInput').value = '';
+                } else {
+                    showNotification(data.error || 'No results found', 'error');
+                }
+
+            } catch (error) {
+                showNotification(`Error: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+                searchBtn.disabled = false;
+            }
+        }
+
+        // Allow Enter key to search
+        document.getElementById('searchInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                executeSearch();
+            }
+        });
+
+        // Locate user function
+        function locateUser() {
+            const locateBtn = document.getElementById('locateBtn');
+
+            // Check if geolocation is supported
+            if (!navigator.geolocation) {
+                showNotification('Geolocation is not supported by your browser', 'error');
+                return;
+            }
+
+            // Add loading animation
+            locateBtn.classList.add('locating');
+
+            navigator.geolocation.getCurrentPosition(
+                // Success callback
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+
+                    // Remove existing location marker if any
+                    if (userLocationMarker) {
+                        map.removeLayer(userLocationMarker);
+                    }
+                    if (userLocationCircle) {
+                        map.removeLayer(userLocationCircle);
+                    }
+
+                    // Create custom icon for user location
+                    const userIcon = L.divIcon({
+                        className: 'user-location-marker',
+                        html: `
+                            <div style="
+                                width: 20px;
+                                height: 20px;
+                                background: #667eea;
+                                border: 3px solid white;
+                                border-radius: 50%;
+                                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                            "></div>
+                        `,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+
+                    // Add marker at user location
+                    userLocationMarker = L.marker([lat, lng], {
+                        icon: userIcon
+                    }).addTo(map);
+
+                    // Add accuracy circle
+                    userLocationCircle = L.circle([lat, lng], {
+                        radius: accuracy,
+                        color: '#667eea',
+                        fillColor: '#667eea',
+                        fillOpacity: 0.15,
+                        weight: 1
+                    }).addTo(map);
+
+                    // Bind popup with location info
+                    userLocationMarker.bindPopup(`
+                        <div style="text-align: center;">
+                            <strong>📍 Your Location</strong><br>
+                            <small>
+                                Latitude: ${lat.toFixed(6)}<br>
+                                Longitude: ${lng.toFixed(6)}<br>
+                                Accuracy: ±${Math.round(accuracy)}m
+                            </small>
+                        </div>
+                    `).openPopup();
+
+                    // Center map on user location with appropriate zoom
+                    map.setView([lat, lng], 15);
+
+                    // Remove loading animation
+                    locateBtn.classList.remove('locating');
+
+                    showNotification('Location found!', 'success');
+                },
+                // Error callback
+                function(error) {
+                    locateBtn.classList.remove('locating');
+
+                    let errorMessage = 'Unable to retrieve your location';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Location access denied. Please enable location permissions.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Location information is unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Location request timed out.';
+                            break;
+                    }
+                    showNotification(errorMessage, 'error');
+                },
+                // Options
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        // Auto-locate on page load (optional - commented out by default)
+        // Uncomment the next line to automatically locate user when page loads
+        // window.addEventListener('load', () => setTimeout(locateUser, 1000));
+    </script>
+</body>
+</html>

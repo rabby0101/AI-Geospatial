@@ -1,0 +1,65 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Charité - Universitätsmedizin Berlin",
+        "city": "Berlin",
+        "amenity": "hospital"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [13.3777, 52.5244]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Vivantes Klinikum Am Urban",
+        "city": "Berlin",
+        "amenity": "hospital"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [13.4050, 52.5000]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "DRK Kliniken Berlin Westend",
+        "city": "Berlin",
+        "amenity": "hospital"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [13.2846, 52.5168]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Helios Klinikum Berlin-Buch",
+        "city": "Berlin",
+        "amenity": "hospital"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [13.5005, 52.6316]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Vivantes Humboldt-Klinikum",
+        "city": "Berlin",
+        "amenity": "hospital"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [13.4128, 52.5700]
+      }
+    }
+  ]
+}

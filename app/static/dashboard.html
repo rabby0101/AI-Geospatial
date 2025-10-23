@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geospatial Analytics Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+            gap: 0;
+        }
+
+        #map {
+            flex: 1;
+            z-index: 1;
+        }
+
+        #sidebar {
+            width: 380px;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        h2 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .query-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .query-form input,
+        .query-form select {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .query-form input:focus,
+        .query-form select:focus {
+            outline: none;
+            border-color: #1976d2;
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .preset-btn {
+            padding: 8px 12px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            color: #555;
+            transition: all 0.2s ease;
+        }
+
+        .preset-btn:hover {
+            background: #e8e8e8;
+            border-color: #999;
+        }
+
+        .preset-btn.active {
+            background: #1976d2;
+            color: white;
+            border-color: #1976d2;
+        }
+
+        button[type="submit"] {
+            padding: 11px;
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        button[type="submit"]:hover:not(:disabled) {
+            background: #1565c0;
+        }
+
+        button[type="submit"]:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 15px;
+            font-size: 14px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1976d2;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #dataTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            flex: 1;
+            display: block;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        #dataTable thead {
+            position: sticky;
+            top: 0;
+            background: #f5f5f5;
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #dataTable tbody {
+            display: block;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        #dataTable tr {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #dataTable th,
+        #dataTable td {
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+            border-bottom: 1px solid #eee;
+        }
+
+        #dataTable th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+            text-transform: capitalize;
+        }
+
+        #dataTable tbody tr {
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        #dataTable tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        #dataTable tbody tr.highlighted {
+            background: #fff3cd;
+            font-weight: 500;
+        }
+
+        .legend {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+
+        .legend-title {
+            font-weight: 600;
+            font-size: 12px;
+            color: #333;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            border-radius: 2px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-info {
+            margin-top: 12px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #1565c0;
+            border-left: 3px solid #1976d2;
+        }
+
+        .error-message {
+            padding: 12px;
+            background: #ffebee;
+            border: 1px solid #ef5350;
+            border-radius: 4px;
+            color: #c62828;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .empty-state-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="map"></div>
+        <div id="sidebar">
+            <h1>Analytics</h1>
+
+            <form class="query-form" id="queryForm">
+                <div>
+                    <label for="metricSelect" style="font-size: 12px; color: #666; font-weight: 500; display: block; margin-bottom: 6px;">Metric</label>
+                    <select id="metricSelect">
+                        <option value="banks">Banks</option>
+                        <option value="restaurants">Restaurants</option>
+                        <option value="hospitals">Hospitals</option>
+                        <option value="schools">Schools</option>
+                        <option value="parks">Parks</option>
+                        <option value="doctors">Doctors</option>
+                        <option value="pharmacies">Pharmacies</option>
+                        <option value="transport_stops">Transport Stops</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size: 12px; color: #666; font-weight: 500; display: block; margin-bottom: 6px;">Quick Select</label>
+                    <div class="preset-buttons">
+                        <button type="button" class="preset-btn" data-query="Count banks in each district">Banks</button>
+                        <button type="button" class="preset-btn" data-query="Count restaurants in each district">Restaurants</button>
+                        <button type="button" class="preset-btn" data-query="Count hospitals in each district">Hospitals</button>
+                        <button type="button" class="preset-btn" data-query="Count schools in each district">Schools</button>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn">Search</button>
+            </form>
+
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <div>Loading data...</div>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📊</div>
+                <div>Select a metric and click Search to visualize data on the map</div>
+            </div>
+
+            <div id="tableContainer" style="display: none; flex: 1; display: flex; flex-direction: column;">
+                <h2>Results</h2>
+                <table id="dataTable">
+                    <thead>
+                        <tr id="tableHeader"></tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="legendContainer" style="display: none;">
+                <div class="legend">
+                    <div class="legend-title">Color Scale</div>
+                    <div id="legendContent"></div>
+                </div>
+            </div>
+
+            <div id="statsInfo" class="stats-info" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([52.52, 13.405], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        let currentGeoJSON = null;
+        let districtsGeoJSON = null;
+        let currentMetrics = {};
+        let currentMetricName = 'banks';
+
+        // Fetch districts on load
+        async function loadDistricts() {
+            try {
+                const response = await fetch('/api/districts-geojson');
+                if (!response.ok) throw new Error('Failed to load districts');
+                districtsGeoJSON = await response.json();
+                console.log(`✅ Loaded ${districtsGeoJSON.features.length} district boundaries`);
+            } catch (error) {
+                console.error('Error loading districts:', error);
+                showError('Failed to load district boundaries');
+            }
+        }
+
+        // Format a number with thousands separator
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        // Get color based on value
+        function getColor(value, max) {
+            if (max === 0) return '#f0f0f0';
+            const ratio = value / max;
+
+            if (ratio > 0.8) return '#d73027';
+            if (ratio > 0.6) return '#fc8d59';
+            if (ratio > 0.4) return '#fee090';
+            if (ratio > 0.2) return '#e0f3f8';
+            return '#ffffbf';
+        }
+
+        // Create choropleth layer
+        function createChoropleth(metrics, metricName) {
+            // Remove existing geojson layer
+            map.eachLayer(layer => {
+                if (layer instanceof L.GeoJSON) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            if (!districtsGeoJSON) return;
+
+            const max = Math.max(...Object.values(metrics), 1);
+            const min = Math.min(...Object.values(metrics), 0);
+
+            L.geoJSON(districtsGeoJSON, {
+                style: (feature) => {
+                    const value = metrics[feature.properties.bezirk] || 0;
+                    return {
+                        fillColor: getColor(value, max),
+                        weight: 2,
+                        opacity: 1,
+                        color: '#333',
+                        fillOpacity: 0.75,
+                        className: `district-${feature.properties.bezirk.replace(/\s+/g, '-')}`
+                    };
+                },
+                onEachFeature: (feature, layer) => {
+                    const name = feature.properties.bezirk;
+                    const value = metrics[name] || 0;
+                    layer.bindPopup(`
+                        <div style="font-size: 13px; font-weight: 500;">
+                            <strong>${name}</strong><br/>
+                            ${metricName}: ${formatNumber(value)}
+                        </div>
+                    `);
+                    layer.on('click', () => highlightRow(name));
+                    layer.on('mouseover', function() {
+                        this.setStyle({ fillOpacity: 0.9, weight: 3 });
+                    });
+                    layer.on('mouseout', function() {
+                        this.setStyle({ fillOpacity: 0.75, weight: 2 });
+                    });
+                }
+            }).addTo(map);
+
+            // Create legend
+            createLegend(min, max, metricName);
+
+            // Show stats
+            const avgValue = Object.values(metrics).reduce((a, b) => a + b, 0) / Object.keys(metrics).length;
+            const topDistrict = Object.entries(metrics).reduce((a, b) => b[1] > a[1] ? b : a);
+
+            const statsInfo = document.getElementById('statsInfo');
+            statsInfo.innerHTML = `
+                <strong>${metricName}</strong><br/>
+                Total: ${formatNumber(Object.values(metrics).reduce((a, b) => a + b, 0))}<br/>
+                Average: ${Math.round(avgValue)}<br/>
+                Top: ${topDistrict[0]} (${formatNumber(topDistrict[1])})
+            `;
+            statsInfo.style.display = 'block';
+        }
+
+        // Create legend
+        function createLegend(min, max, metricName) {
+            const legendContent = document.getElementById('legendContent');
+            legendContent.innerHTML = '';
+
+            const ranges = [
+                { min: 0.8, label: '80%+', color: '#d73027' },
+                { min: 0.6, label: '60-80%', color: '#fc8d59' },
+                { min: 0.4, label: '40-60%', color: '#fee090' },
+                { min: 0.2, label: '20-40%', color: '#e0f3f8' },
+                { min: 0, label: '0-20%', color: '#ffffbf' }
+            ];
+
+            ranges.forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                const minVal = Math.round(max * r.min);
+                const maxVal = Math.round(max * (r.min + 0.2));
+                const label = r.min === 0.8 ? `${minVal}+` : `${minVal}-${maxVal}`;
+                item.innerHTML = `<div class="legend-color" style="background: ${r.color}"></div><span>${label}</span>`;
+                legendContent.appendChild(item);
+            });
+
+            document.getElementById('legendContainer').style.display = 'block';
+        }
+
+        // Populate table
+        function populateTable(metrics, metricName) {
+            const tableHeader = document.getElementById('tableHeader');
+            const tableBody = document.getElementById('tableBody');
+
+            // Clear existing content
+            tableHeader.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            // Create headers
+            const headerRow = tableHeader;
+            headerRow.innerHTML = `
+                <th>District</th>
+                <th style="text-align: right;">${metricName}</th>
+            `;
+
+            // Sort by value descending
+            const sorted = Object.entries(metrics)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([district, value]) => {
+                    const row = tableBody.insertRow();
+                    row.className = 'data-row';
+                    row.dataset.district = district;
+                    row.innerHTML = `
+                        <td>${district}</td>
+                        <td style="text-align: right; font-weight: 500;">${formatNumber(value)}</td>
+                    `;
+                    row.addEventListener('click', () => highlightRow(district));
+                    row.addEventListener('mouseover', () => row.classList.add('highlighted'));
+                    row.addEventListener('mouseout', () => row.classList.remove('highlighted'));
+                });
+
+            document.getElementById('tableContainer').style.display = 'flex';
+        }
+
+        // Highlight row and zoom to district
+        function highlightRow(districtName) {
+            document.querySelectorAll('#dataTable tbody tr').forEach(row => {
+                row.classList.remove('highlighted');
+                if (row.dataset.district === districtName) {
+                    row.classList.add('highlighted');
+                    row.scrollIntoView({ block: 'nearest' });
+                }
+            });
+
+            // Zoom to district
+            if (districtsGeoJSON) {
+                const feature = districtsGeoJSON.features.find(f => f.properties.bezirk === districtName);
+                if (feature) {
+                    const layer = L.geoJSON(feature);
+                    map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                }
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Handle form submission
+        document.getElementById('queryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const metricSelect = document.getElementById('metricSelect');
+            const query = getQueryForMetric(metricSelect.value);
+
+            currentMetricName = metricSelect.value;
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/query-stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: query })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Query failed');
+                }
+
+                // Create metrics map
+                currentMetrics = {};
+                const metricColumn = Object.keys(data.data[0] || {}).find(
+                    key => key !== 'bezirk' && key !== 'bezirk' && typeof data.data[0][key] === 'number'
+                ) || `${metricSelect.value}_count`;
+
+                data.data.forEach(row => {
+                    const column = Object.keys(row).find(k => k !== 'bezirk' && typeof row[k] === 'number');
+                    if (column) {
+                        currentMetrics[row.bezirk] = row[column];
+                    }
+                });
+
+                // Create visualization
+                createChoropleth(currentMetrics, currentMetricName);
+                populateTable(currentMetrics, currentMetricName);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Error: ${error.message}`);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        // Get query for metric
+        function getQueryForMetric(metric) {
+            const queries = {
+                'banks': 'Count banks in each Berlin district',
+                'restaurants': 'Count restaurants in each Berlin district',
+                'hospitals': 'Count hospitals in each Berlin district',
+                'schools': 'Count schools in each Berlin district',
+                'parks': 'Count parks in each Berlin district',
+                'doctors': 'Count doctors in each Berlin district',
+                'pharmacies': 'Count pharmacies in each Berlin district',
+                'transport_stops': 'Count transport stops in each Berlin district'
+            };
+            return queries[metric] || queries['banks'];
+        }
+
+        // Handle preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('queryForm').dispatchEvent(new Event('submit'));
+            });
+        });
+
+        // Load districts on page load
+        loadDistricts();
+
+        // Show empty state initially
+        document.getElementById('emptyState').style.display = 'block';
+    </script>
+</body>
+</html>

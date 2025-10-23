@@ -1,0 +1,39 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "area_name": "Mitte District",
+        "population": 100000
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [13.37, 52.53],
+          [13.42, 52.53],
+          [13.42, 52.50],
+          [13.37, 52.50],
+          [13.37, 52.53]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "area_name": "Charlottenburg",
+        "population": 85000
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [13.25, 52.52],
+          [13.32, 52.52],
+          [13.32, 52.48],
+          [13.25, 52.48],
+          [13.25, 52.52]
+        ]]
+      }
+    }
+  ]
+}

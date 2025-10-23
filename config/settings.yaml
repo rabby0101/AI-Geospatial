@@ -1,0 +1,119 @@
+# Cognitive Geospatial Assistant API Configuration
+
+api:
+  host: 0.0.0.0
+  port: 8000
+  debug: true
+  cors_origins:
+    - http://localhost:3000
+    - http://localhost:8000
+
+database:
+  host: localhost
+  port: 5433
+  name: geoassist
+  user: geoassist
+  password: geoassist_password
+  schema: vector
+
+deepseek:
+  model: deepseek-chat
+  temperature: 0.3
+  max_tokens: 2000
+
+data:
+  base_dir: ./data
+  vector_dir: ./data/vector
+  raster_dir: ./data/raster
+  metadata_dir: ./data/metadata
+
+datasets:
+  vector:
+    # OpenStreetMap Berlin Datasets
+    - name: osm_hospitals
+      table: osm_hospitals
+      description: Hospital and medical facility locations in Berlin from OpenStreetMap
+      tags: [healthcare, infrastructure, berlin, osm]
+      source: OpenStreetMap via Overpass API
+
+    - name: osm_toilets
+      table: osm_toilets
+      description: Public toilet locations in Berlin from OpenStreetMap
+      tags: [amenity, infrastructure, berlin, osm]
+      source: OpenStreetMap via Overpass API
+
+    - name: osm_pharmacies
+      table: osm_pharmacies
+      description: Pharmacy locations in Berlin from OpenStreetMap
+      tags: [healthcare, amenity, berlin, osm]
+      source: OpenStreetMap via Overpass API
+
+    - name: osm_fire_stations
+      table: osm_fire_stations
+      description: Fire station locations in Berlin from OpenStreetMap
+      tags: [emergency, infrastructure, berlin, osm]
+      source: OpenStreetMap via Overpass API
+
+    - name: osm_police_stations
+      table: osm_police_stations
+      description: Police station locations in Berlin from OpenStreetMap
+      tags: [emergency, infrastructure, berlin, osm]
+      source: OpenStreetMap via Overpass API
+
+    - name: osm_parks
+      table: osm_parks
+      description: Parks and recreational areas in Berlin from OpenStreetMap
+      tags: [recreation, green_space, berlin, osm]
+      source: OpenStreetMap via Overpass API
+
+    - name: osm_schools
+      table: osm_schools
+      description: Educational institutions in Berlin from OpenStreetMap
+      tags: [education, infrastructure, berlin, osm]
+      source: OpenStreetMap via Overpass API
+
+    - name: osm_restaurants
+      table: osm_restaurants
+      description: Restaurant locations in Berlin from OpenStreetMap
+      tags: [food, amenity, berlin, osm]
+      source: OpenStreetMap via Overpass API
+
+    - name: osm_transport_stops
+      table: osm_transport_stops
+      description: Public transport stops in Berlin from OpenStreetMap
+      tags: [transport, infrastructure, berlin, osm]
+      source: OpenStreetMap via Overpass API
+
+    # Administrative Boundaries
+    - name: admin_boundaries
+      table: admin_boundaries
+      description: German administrative boundaries from GADM
+      tags: [administrative, boundaries, germany, gadm]
+      source: GADM (Database of Global Administrative Areas)
+
+    # Other datasets
+    - name: flood_zones
+      table: flood_zones
+      description: Flood risk zones
+      tags: [disaster, risk]
+
+    - name: urban_areas
+      table: urban_areas
+      description: Urban area boundaries
+      tags: [administrative, urban]
+
+  raster:
+    - name: ndvi_2018.tif
+      path: data/raster/ndvi_timeseries/ndvi_2018.tif
+      description: NDVI from 2018
+      tags: [vegetation, sentinel]
+
+    - name: ndvi_2024.tif
+      path: data/raster/ndvi_timeseries/ndvi_2024.tif
+      description: NDVI from 2024
+      tags: [vegetation, sentinel]
+
+    - name: dem.tif
+      path: data/raster/dem/dem.tif
+      description: Digital Elevation Model
+      tags: [terrain, elevation]
