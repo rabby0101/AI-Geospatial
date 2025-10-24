@@ -8,6 +8,7 @@ import os
 from app.routes import query_router
 from app.routes.raster import router as raster_router
 from app.utils.database import db_manager
+from app.utils.auto_discovery import auto_discovery
 
 # Create FastAPI app
 app = FastAPI(
@@ -33,7 +34,7 @@ app.add_middleware(
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database connection on startup"""
+    """Initialize database connection and auto-discover new tables on startup"""
     print("🚀 Starting Cognitive Geospatial Assistant API...")
     print("📊 Initializing database connection...")
 
@@ -41,6 +42,14 @@ async def startup_event():
         db_manager.initialize()
         if db_manager.test_connection():
             print("✅ Database connection successful")
+            
+            # Auto-discover new tables and generate descriptions
+            print("🔍 Auto-discovering tables...")
+            result = auto_discovery.auto_discover_and_update()
+            if result.get("new_tables_found", 0) > 0:
+                print(f"✅ Found and added {result['new_tables_found']} new table(s)")
+            else:
+                print("✅ All tables are already documented")
         else:
             print("⚠️  Database connection failed - some features may not work")
     except Exception as e:
