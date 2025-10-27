@@ -232,7 +232,7 @@ Comprehensive documentation is available in the `docs/` directory:
 
 ## Available Datasets
 
-### Vector Data - OSM (23 Datasets, ~45,000+ features)
+### Vector Data - OSM (24 Datasets, ~45,000+ features)
 
 #### Original Amenities (10)
 - `osm_hospitals` - Hospital locations
@@ -246,12 +246,13 @@ Comprehensive documentation is available in the `docs/` directory:
 - `osm_libraries` - Libraries & cultural centers
 - `osm_restaurants` - Restaurant locations
 
-#### Education & Recreation (5)
+#### Education & Recreation (6)
 - `osm_museums` - Museums & galleries
 - `osm_theatres` - Theaters & cinemas
 - `osm_gyms` - Sports centers & fitness facilities
 - `osm_parks` - Parks & leisure areas
 - `osm_transport_stops` - Bus/tram/subway stops
+- `osm_allotment_gardens` - Allotment gardens (Kleingärten) & community gardens
 
 #### Commerce & Services (4)
 - `osm_supermarkets` - Grocery stores & supermarkets

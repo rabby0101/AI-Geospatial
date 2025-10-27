@@ -80,6 +80,43 @@ class SQLValidator:
             )
             return True, fixed_sql
 
+        # Pattern 3: ROUND(division, integer) - PostgreSQL ROUND expects numeric type
+        # Fix: ROUND(a / b, 2) → ROUND((a / b)::numeric, 2)
+        # But only if not already cast to numeric
+        pattern3 = r'ROUND\(([^,]+)\s*/\s*([^,)]+),\s*(\d+)\)'
+        if re.search(pattern3, sql):
+            # Check if already has ::numeric
+            if not re.search(r'ROUND\(\([^)]+\)::numeric,', sql):
+                fixed_sql = re.sub(
+                    pattern3,
+                    r'ROUND((\1 / \2)::numeric, \3)',
+                    sql
+                )
+                return True, fixed_sql
+
+        # Pattern 4: ST_Area(ST_Transform(geometry)::numeric, srid)) - full context
+        # This happens when DeepSeek incorrectly casts geometry before ST_Transform
+        # Fix: ST_Area(ST_Transform(d.geometry)::numeric, 3857)) → ST_Area(ST_Transform(d.geometry, 3857))
+        pattern4 = r'ST_Area\(ST_Transform\(([^)]+)\)::numeric,\s*(\d+)\)\)'
+        if re.search(pattern4, sql):
+            fixed_sql = re.sub(
+                pattern4,
+                r'ST_Area(ST_Transform(\1, \2))',
+                sql
+            )
+            return True, fixed_sql
+
+        # Pattern 5: ST_Transform(geometry)::numeric, srid) alone (simpler case)
+        # Fix: ST_Transform(d.geometry)::numeric, 3857) → ST_Transform(d.geometry, 3857)
+        pattern5 = r'ST_Transform\(([^)]+)\)::numeric,\s*(\d+)\)'
+        if re.search(pattern5, sql):
+            fixed_sql = re.sub(
+                pattern5,
+                r'ST_Transform(\1, \2)',
+                sql
+            )
+            return True, fixed_sql
+
         return False, sql
 
     @staticmethod

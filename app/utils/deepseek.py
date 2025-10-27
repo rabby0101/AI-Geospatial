@@ -44,6 +44,14 @@ SELECT * FROM vector.landmarks WHERE name = '<location>'
 
 
 
+**⚠️ GOLDEN RULE: Keep SQL queries SIMPLE and EFFICIENT**
+- Use simple JOINs and GROUP BY instead of complex CTEs or nested subqueries
+- Avoid ST_Union unless you're merging multiple results into one geometry
+- Don't add LIMIT unless user explicitly asks for a number
+- Don't add complex calculations (density, area, etc.) unless specifically asked
+- Always include geometry column for spatial visualization
+- Test that your SQL returns results quickly (< 10 seconds)
+
 Distance defaults:
 - "near me" / "nearby" → 500m radius
 - "closest" / "nearest" → 2km radius, ORDER BY distance, LIMIT 10
@@ -66,7 +74,7 @@ WHERE ST_DWithin(
 ORDER BY distance_m
 LIMIT 20
 
-**Available Tables (schema: vector) - 23 Total Datasets:**
+**Available Tables (schema: vector) - 24 Total Datasets:**
 
 **Original Amenities (10):**
 - osm_hospitals, osm_toilets, osm_pharmacies, osm_fire_stations, osm_police_stations
@@ -81,8 +89,8 @@ LIMIT 20
 **Commerce & Services (4):**
 - osm_supermarkets, osm_banks, osm_atm, osm_post_offices
 
-**Recreation (3):**
-- osm_museums, osm_theatres, osm_gyms
+**Recreation (4):**
+- osm_museums, osm_theatres, osm_gyms, osm_allotment_gardens
 
 **Land Use (2):**
 - osm_forests, osm_water_bodies
@@ -92,6 +100,33 @@ LIMIT 20
 - **berlin_districts** (POLYGON/MULTIPOLYGON boundaries from LOR Ortsteile with proper district names) ← USE THIS!
 
 **Common Columns:** osm_id, name, geometry (EPSG:4326)
+
+**Water Bodies Table - Special Handling:**
+- Table: `vector.osm_water_bodies` (102+ water features)
+- Key Column for Type Filtering: `water` (DO NOT use non-existent 'waterway' column)
+- Water Types Available: 'river' (102), 'stream', 'lake', 'canal', 'reservoir', 'pond', 'fishpond', 'cove', 'harbour', 'ditch', 'drain', 'basin', 'oxbow', 'lock', 'biotop', 'moat', 'wastewater', 'reflecting_pool', 'fountain'
+- Example: "Show all rivers" → SELECT * FROM vector.osm_water_bodies WHERE water = 'river'
+- Example: "Find lakes in Berlin" → SELECT * FROM vector.osm_water_bodies WHERE water = 'lake'
+- Note: Most rivers/streams don't have names (NULL), but 102 river features exist
+- Multi-type queries: Use OR → WHERE water = 'river' OR water = 'stream'
+
+**Allotment Gardens Table - Special Handling:**
+- Table: `vector.osm_allotment_gardens` (1038+ real garden features from Berlin WFS)
+- Key Columns: `id`, `ogr_fid`, `anlagennummer`, `objektname`, `strasse`, `flaechengroesse`, `parzellenanzahl`, `landoderbezirk`, `zwischenpaechter`, `geometry`
+- Field Description (IMPORTANT - Use exact German column names):
+  - `objektname`: Garden name/facility name (USE THIS for "name" queries, not a 'name' column)
+  - `landoderbezirk`: District name (USE THIS for district-based filtering)
+  - `strasse`: Street address
+  - `flaechengroesse`: Total area in m²
+  - `parzellenanzahl`: Number of individual plots/parcels
+  - `anlagennummer`: Official garden facility number
+- Example: "Show all allotment gardens" → SELECT * FROM vector.osm_allotment_gardens LIMIT 50
+- Example: "Find allotment gardens in Mitte" → SELECT * FROM vector.osm_allotment_gardens WHERE objektname ILIKE '%mitte%' OR landoderbezirk ILIKE '%mitte%'
+- Example: "List gardens in Wedding" → SELECT * FROM vector.osm_allotment_gardens WHERE landoderbezirk::text ILIKE '%wedding%'
+- Example: "Find Kleingärten near Charlottenburg" → Use ST_DWithin with landmarks table
+- Aliases: Kleingärten, community gardens, gardens, allotments, Gartenanlage
+- CRITICAL: Use `objektname` for name filtering, NOT `name` (column doesn't exist)
+- IMPORTANT: When filtering by landoderbezirk, use ILIKE with wildcards and ::text cast: WHERE landoderbezirk::text ILIKE '%district%'
 
 **UNIFIED LOCATION SYSTEM - Use landmarks table for ALL location queries:**
 All location-based queries use the centralized `vector.landmarks` table (12,853 locations).
@@ -443,30 +478,37 @@ This ensures results can be returned as GeoJSON for visualization on the `/api/q
 When users ask "areas without X" or "areas lacking X" or "areas out of X":
 - SIMPLE: Return COUNT(X) per area with areas having 0 count
 - DO NOT add complex density calculations (avoid ROUND divisions with ST_Area)
-- Simple template:
+- DO NOT use ST_Union unless necessary - use GROUP BY with explicit columns
+- Simple template (FAST & EFFICIENT):
 ```sql
-SELECT d.name, d.bezirk, ST_Union(d.geometry) as geometry, COUNT(x.osm_id) as X_count
+SELECT d.osm_id, d.name, d.bezirk, d.geometry, COUNT(x.osm_id) as X_count
 FROM vector.berlin_districts d
 LEFT JOIN vector.osm_X x ON ST_Within(x.geometry, d.geometry)
-GROUP BY d.name, d.bezirk
+GROUP BY d.osm_id, d.name, d.bezirk, d.geometry
 ORDER BY X_count ASC
-LIMIT 10
 ```
 - ❌ DO NOT: Add density calculations like `ROUND(COUNT(x.osm_id)::numeric / NULLIF(ST_Area(...), 0))`
-- ✅ DO: Keep it simple with just COUNT and ORDER BY count
+- ❌ DO NOT: Use ST_Union unless merging multiple polygon results
+- ✅ DO: Keep it simple with just COUNT, GROUP BY all columns, and ORDER BY count
+- ✅ DO: Return ALL results so user can see complete picture
 
 **⚠️ CRITICAL - LIMIT clause rules:**
+ONLY add LIMIT if user EXPLICITLY asks for a number. Otherwise, return ALL results.
+
 - "which area has the highest X" (SINGULAR) → `LIMIT 1` (return only top result)
-- "which areas have the highest X" (PLURAL) → `LIMIT 5` (return top 5)
-- "which areas are WITHOUT X" → `ORDER BY X_count ASC LIMIT 10` (show lowest first)
-- "rank/list X by Y" → `LIMIT 10` (return top 10 for ranking)
-- "top X areas" → `LIMIT {X}` (return exactly X results)
+- "which areas have the highest X" (PLURAL) → NO LIMIT (return all, sorted DESC)
+- "which areas are WITHOUT X" / "which areas have NO X" → NO LIMIT (return all with 0 count, sorted ASC)
+- "rank/list X by Y" → NO LIMIT (return all for full ranking)
+- "top X areas" / "first X areas" → `LIMIT {X}` (only if number explicitly stated)
+- "show me 10 hospitals" → `LIMIT 10` (only if number explicitly stated)
 - "compare X and Y" → No LIMIT (return all for comparison)
 
 Examples:
 - ✅ "Which district has the most doctors?" → `ORDER BY doctor_count DESC LIMIT 1`
-- ✅ "Which districts have the most doctors?" → `ORDER BY doctor_count DESC LIMIT 5`
-- ✅ "Rank districts by doctor density" → `ORDER BY doctor_count DESC LIMIT 10`
+- ✅ "Which districts have the most doctors?" → `ORDER BY doctor_count DESC` (NO LIMIT - all results)
+- ✅ "Which areas have NO allotment gardens?" → `ORDER BY allotment_count ASC` (NO LIMIT - all results)
+- ✅ "Top 5 districts by doctor count" → `ORDER BY doctor_count DESC LIMIT 5` (user said "top 5")
+- ✅ "Rank districts by doctor density" → `ORDER BY doctor_count DESC` (NO LIMIT - full ranking)
 
 "Compare bank density and restaurant density in Mitte versus Charlottenburg-Wilmersdorf" →
 Use SUBQUERY approach (RECOMMENDED - avoids ambiguity):

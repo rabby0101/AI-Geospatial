@@ -64,6 +64,30 @@
         ],
         "tags": ["administrative", "urban", "berlin"],
         "license": "Public Domain"
+      },
+      {
+        "id": "osm_allotment_gardens_berlin",
+        "name": "Berlin Allotment Gardens",
+        "type": "vector",
+        "format": "geojson",
+        "source": "OpenStreetMap",
+        "path": "data/vector/osm_allotment_gardens.geojson",
+        "table_name": "vector.osm_allotment_gardens",
+        "crs": "EPSG:4326",
+        "description": "Allotment gardens (Kleingärten) and community gardens in Berlin from OpenStreetMap",
+        "spatial_extent": {
+          "bbox": [13.088, 52.338, 13.761, 52.675]
+        },
+        "attributes": [
+          "osm_id",
+          "name",
+          "access",
+          "description",
+          "operator",
+          "geometry"
+        ],
+        "tags": ["recreation", "green-space", "gardens", "community", "berlin", "osm"],
+        "license": "ODbL"
       }
     ],
     "raster": [
@@ -141,8 +165,8 @@
     ]
   },
   "metadata": {
-    "total_datasets": 6,
-    "vector_count": 3,
+    "total_datasets": 7,
+    "vector_count": 4,
     "raster_count": 3,
     "supported_crs": ["EPSG:4326", "EPSG:3857"],
     "supported_formats": {

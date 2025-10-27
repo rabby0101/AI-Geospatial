@@ -7,6 +7,7 @@ import os
 
 from app.routes import query_router
 from app.routes.raster import router as raster_router
+from app.routes.dem_query import router as dem_router
 from app.utils.database import db_manager
 from app.utils.auto_discovery import auto_discovery
 
@@ -42,7 +43,7 @@ async def startup_event():
         db_manager.initialize()
         if db_manager.test_connection():
             print("✅ Database connection successful")
-            
+
             # Auto-discover new tables and generate descriptions
             print("🔍 Auto-discovering tables...")
             result = auto_discovery.auto_discover_and_update()
@@ -55,6 +56,14 @@ async def startup_event():
     except Exception as e:
         print(f"❌ Database initialization error: {e}")
 
+    # Check DEM availability
+    dem_path = Path("data/raster/dem/berlin_dem.tif")
+    if dem_path.exists():
+        print(f"✅ Berlin DEM available: {dem_path} ({dem_path.stat().st_size / 1024 / 1024:.1f} MB)")
+        print("📍 DEM Query endpoints available at /api/dem/*")
+    else:
+        print("⚠️  Berlin DEM not found. Run: python scripts/download_berlin_dem.py")
+
 
 # Shutdown event
 @app.on_event("shutdown")
@@ -66,6 +75,7 @@ async def shutdown_event():
 # Include routers
 app.include_router(query_router)
 app.include_router(raster_router)  # NDVI, terrain, land cover endpoints
+app.include_router(dem_router)  # DEM (Digital Elevation Model) endpoints
 
 
 # Serve static files (dashboards, assets)
@@ -74,43 +84,40 @@ if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     print(f"✅ Static files mounted from {static_dir}")
 
-# Serve frontend if it exists
+# Serve main interface (Frontend Map)
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    """Serve the frontend map interface as main application"""
+    frontend_path = Path(__file__).parent.parent / "frontend" / "index.html"
+    if frontend_path.exists():
+        return frontend_path.read_text()
+    # Fallback to dashboard if frontend not found
+    dashboard_path = Path(__file__).parent / "static" / "dashboard.html"
+    if dashboard_path.exists():
+        return dashboard_path.read_text()
+    return """
+    <html>
+        <head>
+            <title>Cognitive Geospatial Assistant API</title>
+        </head>
+        <body>
+            <h1>Cognitive Geospatial Assistant API</h1>
+            <p>API is running! Visit <a href="/docs">/docs</a> for API documentation.</p>
+            <p><a href="/static/dashboard.html">📊 Analytics Dashboard</a></p>
+        </body>
+    </html>
+    """
+
+# Serve frontend if it exists (legacy support)
 frontend_dir = Path(__file__).parent.parent / "frontend"
 if frontend_dir.exists():
-    @app.get("/", response_class=HTMLResponse)
-    async def read_root():
+    @app.get("/frontend", response_class=HTMLResponse)
+    async def read_frontend():
         """Serve the frontend HTML"""
         index_path = frontend_dir / "index.html"
         if index_path.exists():
             return index_path.read_text()
-        return """
-        <html>
-            <head>
-                <title>Cognitive Geospatial Assistant API</title>
-            </head>
-            <body>
-                <h1>Cognitive Geospatial Assistant API</h1>
-                <p>API is running! Visit <a href="/docs">/docs</a> for API documentation.</p>
-                <p><a href="/static/dashboard.html">📊 Analytics Dashboard</a></p>
-            </body>
-        </html>
-        """
-else:
-    @app.get("/", response_class=HTMLResponse)
-    async def read_root():
-        """Root endpoint"""
-        return """
-        <html>
-            <head>
-                <title>Cognitive Geospatial Assistant API</title>
-            </head>
-            <body>
-                <h1>Cognitive Geospatial Assistant API</h1>
-                <p>API is running! Visit <a href="/docs">/docs</a> for API documentation.</p>
-                <p><a href="/static/dashboard.html">📊 Analytics Dashboard</a></p>
-            </body>
-        </html>
-        """
+        return "Frontend not found"
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cognitive Geospatial Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 16px;
+            opacity: 0.95;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            font-size: 28px;
+        }
+
+        .query-input {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input[type="text"],
+        textarea {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .quick-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .quick-btn {
+            padding: 10px 12px;
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .quick-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .result-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            min-height: 150px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            margin-top: 20px;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .result-section h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .result-text {
+            color: #555;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+
+        .success {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+
+        .success .result-text {
+            color: #1b5e20;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .info-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .info-box p {
+            color: #666;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .status {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .status.connected {
+            border-left: 4px solid #4caf50;
+            color: #1b5e20;
+        }
+
+        .status.disconnected {
+            border-left: 4px solid #f44336;
+            color: #c62828;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            opacity: 0.9;
+            font-size: 13px;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: none;
+            border-bottom: 1px solid white;
+        }
+
+        footer a:hover {
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 32px;
+            }
+
+            .quick-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 Cognitive Geospatial Assistant</h1>
+            <p>Ask questions about Berlin's terrain, geography, and spatial data</p>
+        </header>
+
+        <div id="status" class="status disconnected">
+            Checking API connection...
+        </div>
+
+        <div class="content">
+            <!-- Spatial Query Card -->
+            <div class="card">
+                <h2><span class="card-icon">📊</span> Spatial Query</h2>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Ask about geographic features, amenities, and locations in Berlin</p>
+                <div class="query-input">
+                    <textarea id="spatialQuery" placeholder="e.g., Show hospitals in Wedding district or Count schools near Potsdamer Platz"></textarea>
+                    <button onclick="querySpatial()">🔍 Search Spatial Data</button>
+                </div>
+                <div id="spatialResult" class="result-section">
+                    <h3>Spatial Results</h3>
+                    <div id="spatialContent"></div>
+                </div>
+            </div>
+
+            <!-- DEM Query Card -->
+            <div class="card">
+                <h2><span class="card-icon">🏔️</span> DEM Analysis</h2>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Ask about terrain elevation, slopes, and development suitability</p>
+                <div class="query-input">
+                    <textarea id="demQuery" placeholder="e.g., What is the terrain like in Berlin? or Which areas are suitable for development?"></textarea>
+                    <button onclick="queryDEM()">⛰️ Analyze Terrain</button>
+                    <div class="quick-buttons">
+                        <button class="quick-btn" onclick="setDEMQuery('What is the terrain like in Berlin?')">Terrain Analysis</button>
+                        <button class="quick-btn" onclick="setDEMQuery('Show me the slope analysis')">Slope Analysis</button>
+                        <button class="quick-btn" onclick="setDEMQuery('Which areas are suitable for development?')">Development Areas</button>
+                        <button class="quick-btn" onclick="setDEMQuery('Classify the terrain')">Terrain Classification</button>
+                    </div>
+                </div>
+                <div id="demResult" class="result-section">
+                    <h3>DEM Analysis Results</h3>
+                    <div id="demContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="info-grid">
+            <div class="info-box">
+                <h3>🌐 Data Coverage</h3>
+                <p>Berlin, Germany (13.08-13.76°E, 52.33-52.67°N) with comprehensive geospatial datasets including OpenStreetMap amenities, administrative boundaries, and elevation models.</p>
+            </div>
+            <div class="info-box">
+                <h3>📡 DEM Source</h3>
+                <p>Copernicus NASADEM via Microsoft Planetary Computer - 30 meter resolution elevation data covering all of Berlin for precise terrain analysis.</p>
+            </div>
+            <div class="info-box">
+                <h3>💻 API Endpoints</h3>
+                <p>RESTful API with natural language query support. Visit <a href="/docs" style="color: #667eea; border-bottom: 1px solid #667eea;">/docs</a> for full API documentation and testing interface.</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>Cognitive Geospatial Assistant | <a href="/docs">API Docs</a> | <a href="/redoc">API Reference</a> | <a href="/static/dashboard.html">Analytics Dashboard</a></p>
+        </footer>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:8000/api";
+
+        // Check API status
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch(`${API_BASE}/dem/info`, { timeout: 5000 });
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('status').className = 'status connected';
+                    document.getElementById('status').innerHTML = `✅ API Connected | DEM Available (${data.resolution} resolution)`;
+                } else {
+                    throw new Error('API error');
+                }
+            } catch (error) {
+                document.getElementById('status').className = 'status disconnected';
+                document.getElementById('status').innerHTML = `❌ API Offline | Make sure the server is running on port 8000`;
+            }
+        });
+
+        // Spatial Query
+        async function querySpatial() {
+            const query = document.getElementById('spatialQuery').value.trim();
+            if (!query) {
+                alert('Please enter a query');
+                return;
+            }
+
+            const resultDiv = document.getElementById('spatialResult');
+            const contentDiv = document.getElementById('spatialContent');
+            contentDiv.innerHTML = '<div class="loading"><span class="spinner"></span>Processing query...</div>';
+            resultDiv.classList.add('show');
+
+            try {
+                const response = await fetch(`${API_BASE}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: query })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    contentDiv.innerHTML = `<div class="result-text">${JSON.stringify(result.data, null, 2)}</div>`;
+                    resultDiv.className = 'result-section show success';
+                } else {
+                    contentDiv.innerHTML = `<div class="result-text">Error: ${result.error}</div>`;
+                    resultDiv.className = 'result-section show error';
+                }
+            } catch (error) {
+                contentDiv.innerHTML = `<div class="result-text">Error: ${error.message}</div>`;
+                resultDiv.className = 'result-section show error';
+            }
+        }
+
+        // DEM Query
+        async function queryDEM() {
+            const query = document.getElementById('demQuery').value.trim();
+            if (!query) {
+                alert('Please enter a query');
+                return;
+            }
+
+            const resultDiv = document.getElementById('demResult');
+            const contentDiv = document.getElementById('demContent');
+            contentDiv.innerHTML = '<div class="loading"><span class="spinner"></span>Analyzing terrain...</div>';
+            resultDiv.classList.add('show');
+
+            try {
+                const response = await fetch(
+                    `${API_BASE}/dem/query?question=${encodeURIComponent(query)}`,
+                    { method: 'POST' }
+                );
+
+                const result = await response.json();
+
+                if (result.success) {
+                    contentDiv.innerHTML = `<div class="result-text">${result.summary}</div>`;
+                    resultDiv.className = 'result-section show success';
+                } else {
+                    contentDiv.innerHTML = `<div class="result-text">Error: ${result.error}</div>`;
+                    resultDiv.className = 'result-section show error';
+                }
+            } catch (error) {
+                contentDiv.innerHTML = `<div class="result-text">Error: ${error.message}</div>`;
+                resultDiv.className = 'result-section show error';
+            }
+        }
+
+        // Set DEM query from quick button
+        function setDEMQuery(query) {
+            document.getElementById('demQuery').value = query;
+            queryDEM();
+        }
+
+        // Allow Enter key
+        document.getElementById('demQuery').addEventListener('keypress', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') queryDEM();
+        });
+
+        document.getElementById('spatialQuery').addEventListener('keypress', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') querySpatial();
+        });
+    </script>
+</body>
+</html>

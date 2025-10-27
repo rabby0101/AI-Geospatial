@@ -2,6 +2,7 @@
   "admin_boundaries": "National and regional administrative borders with country codes and names.",
   "berlin_districts": "Berlin administrative districts (Bezirke) with official boundaries",
   "landmarks": "Unified location index of all major landmarks, districts, and named locations in Berlin",
+  "osm_allotment_gardens": "Polygon features representing allotment gardens, including their names, access rules, and operators.",
   "osm_atm": "Automated teller machines and cash points",
   "osm_banks": "Banks and financial institutions",
   "osm_clinics": "Outpatient medical clinics and health centers",
