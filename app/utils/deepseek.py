@@ -99,7 +99,13 @@ LIMIT 20
 - osm_districts (LineString boundaries - for reference only)
 - **berlin_districts** (POLYGON/MULTIPOLYGON boundaries from LOR Ortsteile with proper district names) ← USE THIS!
 
-**Common Columns:** osm_id, name, geometry (EPSG:4326)
+**Berlin Districts Table - Schema:**
+- Table: `vector.berlin_districts`
+- Columns: `id` (PK), `name`, `bezirk`, `oteil`, `area_ha`, `geometry`
+- ⚠️ Use `id` NOT `osm_id` (primary key is `id`, not `osm_id`)
+- Example: "Which districts have most doctors?" → `GROUP BY d.id, d.name, d.bezirk, d.geometry`
+
+**Common Columns:** osm_id (for OSM tables), name, geometry (EPSG:4326)
 
 **Water Bodies Table - Special Handling:**
 - Table: `vector.osm_water_bodies` (102+ water features)
@@ -481,12 +487,13 @@ When users ask "areas without X" or "areas lacking X" or "areas out of X":
 - DO NOT use ST_Union unless necessary - use GROUP BY with explicit columns
 - Simple template (FAST & EFFICIENT):
 ```sql
-SELECT d.osm_id, d.name, d.bezirk, d.geometry, COUNT(x.osm_id) as X_count
+SELECT d.id, d.name, d.bezirk, d.geometry, COUNT(x.osm_id) as X_count
 FROM vector.berlin_districts d
 LEFT JOIN vector.osm_X x ON ST_Within(x.geometry, d.geometry)
-GROUP BY d.osm_id, d.name, d.bezirk, d.geometry
+GROUP BY d.id, d.name, d.bezirk, d.geometry
 ORDER BY X_count ASC
 ```
+- ⚠️ NOTE: Use `d.id` NOT `d.osm_id` for berlin_districts table (its primary key is `id`)
 - ❌ DO NOT: Add density calculations like `ROUND(COUNT(x.osm_id)::numeric / NULLIF(ST_Area(...), 0))`
 - ❌ DO NOT: Use ST_Union unless merging multiple polygon results
 - ✅ DO: Keep it simple with just COUNT, GROUP BY all columns, and ORDER BY count
