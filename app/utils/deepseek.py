@@ -42,13 +42,13 @@ SELECT * FROM vector.landmarks WHERE name = '<location>'
 2. If "<word>" exists in landmarks → return landmark geometry
 3. Only fallback to keyword search if NOT found in landmarks
 
-**USER LOCATION QUERIES:**
-When user_location is provided (e.g., {lat: 52.52, lon: 13.405}), use it for "near me" / "nearby" / "closest" queries.
+
 
 Distance defaults:
 - "near me" / "nearby" → 500m radius
 - "closest" / "nearest" → 2km radius, ORDER BY distance, LIMIT 10
 - "within walking distance" → 800m radius
+- "near <location>" (landmark/station) → 15km radius (landmarks like train stations are specific points)
 - Custom: "within 5km of me" → use specified distance
 
 SQL Template for proximity:
@@ -103,11 +103,28 @@ This eliminates hardcoding and supports dynamic location lookup for any location
 - Location Types: 'bezirk' (12), 'ortsteil' (96), 'park' (635), 'hospital' (59), 'train_station' (487), 'transit_stop' (11,564)
 
 **UNIFIED QUERY PATTERN - Same pattern for ALL location types:**
+
+**For "within" queries (ST_Within):**
 ```sql
 SELECT <table>.*
 FROM vector.<table> <alias>
-WHERE ST_Within(<alias>.geometry, (SELECT ST_Union(geometry) FROM vector.landmarks WHERE name = '<location>' AND type = '<type>'))
+WHERE ST_Within(<alias>.geometry, (SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<location>') AND type = '<type>'))
 ```
+
+**For "near" queries (ST_DWithin) - DO NOT filter by type, search by name only:**
+```sql
+SELECT <table>.*
+FROM vector.<table> <alias>
+WHERE ST_DWithin(
+  ST_Transform(<alias>.geometry, 3857),
+  ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<location>')), 3857),
+  15000
+)
+ORDER BY ST_Distance(ST_Transform(<alias>.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<location>')), 3857))
+LIMIT 20
+```
+
+**Key difference: When searching "near" a location, don't restrict by type - any location (ortsteil, park, station, etc.) works as a reference point!**
 
 **Correct Usage Examples - ALL using the same landmarks pattern:**
 
@@ -126,21 +143,31 @@ WHERE ST_Within(p.geometry, (SELECT ST_Union(geometry) FROM vector.landmarks WHE
 ✅ "Hospitals near Tiergarten" (Park as reference) →
 ```sql
 SELECT h.* FROM vector.osm_hospitals h
-WHERE ST_DWithin(h.geometry, (SELECT geometry FROM vector.landmarks WHERE name = 'Tiergarten' AND type = 'park'), 500)
+WHERE ST_DWithin(
+  ST_Transform(h.geometry, 3857),
+  ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = 'tiergarten'), 3857),
+  15000
+)
+ORDER BY ST_Distance(ST_Transform(h.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = 'tiergarten'), 3857))
+LIMIT 20
 ```
+Note: Search by name only (not type) - works for districts, parks, train stations, any location
 
 ✅ "Restaurants near Hauptbahnhof" (Train station) →
 ```sql
 SELECT r.* FROM vector.osm_restaurants r
-WHERE ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE name = 'Hauptbahnhof' AND type = 'train_station'), 3857), 800)
-ORDER BY ST_Distance(ST_Transform(r.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE name = 'Hauptbahnhof' AND type = 'train_station'), 3857))
+WHERE ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = 'hauptbahnhof'), 3857), 15000)
+ORDER BY ST_Distance(ST_Transform(r.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = 'hauptbahnhof'), 3857))
 LIMIT 20
 ```
+Note: Search by name only (no type filter) - Hauptbahnhof could be train_station, landmark, etc.
 
 ✅ "Schools within 1km of bus stop" (Transit stop) →
 ```sql
 SELECT s.* FROM vector.osm_schools s
-WHERE ST_DWithin(ST_Transform(s.geometry, 3857), ST_Transform((SELECT geometry FROM vector.landmarks WHERE name = '<stop_name>' AND type = 'transit_stop'), 3857), 1000)
+WHERE ST_DWithin(ST_Transform(s.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<stop_name>')), 3857), 1000)
+ORDER BY ST_Distance(ST_Transform(s.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<stop_name>')), 3857))
+LIMIT 20
 ```
 
 **CRITICAL - Multi-result subqueries must use ST_Union():**
@@ -400,16 +427,38 @@ NEVER use reserved keywords as table aliases! This includes: do, all, any, some,
 }
 ```
 
-**⚠️ CRITICAL - Always include geometry in aggregation queries:**
-When grouping/aggregating by districts or subdivisions, ALWAYS include geometry using ST_Union (NOT GROUP BY geometry):
-- ✅ CORRECT: `SELECT d.bezirk, COUNT(*) as count, ST_Union(d.geometry) as geometry FROM ... GROUP BY d.bezirk`
-- ❌ WRONG: `SELECT d.bezirk, COUNT(*) as count, d.geometry FROM ... GROUP BY d.bezirk, d.geometry` (causes duplicate rows)
+**⚠️ CRITICAL - Always include geometry AND name in aggregation queries:**
+When grouping/aggregating by districts or subdivisions, ALWAYS include:
+1. `d.name` - The specific area/subdivision name (e.g., "Mitte", "Kladow")
+2. `d.bezirk` - The parent district if available
+3. `ST_Union(d.geometry)` - Geometry using ST_Union (NOT GROUP BY geometry)
 
-This ensures results can be returned as GeoJSON for visualization on the `/api/query` endpoint without duplicate grouping issues.
+- ✅ CORRECT: `SELECT d.name, d.bezirk, COUNT(*) as count, ST_Union(d.geometry) as geometry FROM ... GROUP BY d.name, d.bezirk`
+- ❌ WRONG: `SELECT d.bezirk, COUNT(*) as count, d.geometry FROM ... GROUP BY d.bezirk, d.geometry` (missing name, causes duplicate rows)
+- ❌ WRONG: `SELECT d.bezirk, COUNT(*) as count, ST_Union(d.geometry) as geometry FROM ... GROUP BY d.bezirk` (missing name field)
+
+This ensures results can be returned as GeoJSON for visualization on the `/api/query` endpoint with proper area names displayed in popups.
+
+**⚠️ SPECIAL CASE - "WITHOUT X" or "LACKING X" queries (e.g., "areas without markets"):**
+When users ask "areas without X" or "areas lacking X" or "areas out of X":
+- SIMPLE: Return COUNT(X) per area with areas having 0 count
+- DO NOT add complex density calculations (avoid ROUND divisions with ST_Area)
+- Simple template:
+```sql
+SELECT d.name, d.bezirk, ST_Union(d.geometry) as geometry, COUNT(x.osm_id) as X_count
+FROM vector.berlin_districts d
+LEFT JOIN vector.osm_X x ON ST_Within(x.geometry, d.geometry)
+GROUP BY d.name, d.bezirk
+ORDER BY X_count ASC
+LIMIT 10
+```
+- ❌ DO NOT: Add density calculations like `ROUND(COUNT(x.osm_id)::numeric / NULLIF(ST_Area(...), 0))`
+- ✅ DO: Keep it simple with just COUNT and ORDER BY count
 
 **⚠️ CRITICAL - LIMIT clause rules:**
 - "which area has the highest X" (SINGULAR) → `LIMIT 1` (return only top result)
 - "which areas have the highest X" (PLURAL) → `LIMIT 5` (return top 5)
+- "which areas are WITHOUT X" → `ORDER BY X_count ASC LIMIT 10` (show lowest first)
 - "rank/list X by Y" → `LIMIT 10` (return top 10 for ranking)
 - "top X areas" → `LIMIT {X}` (return exactly X results)
 - "compare X and Y" → No LIMIT (return all for comparison)
@@ -427,14 +476,14 @@ Use SUBQUERY approach (RECOMMENDED - avoids ambiguity):
     {
       "operation": "spatial_query",
       "parameters": {
-        "sql": "SELECT d.bezirk, COUNT(b.osm_id) as bank_count FROM vector.osm_banks b CROSS JOIN (SELECT DISTINCT bezirk, ST_Union(geometry) as geom FROM vector.berlin_districts WHERE bezirk IN ('Mitte', 'Charlottenburg-Wilmersdorf') GROUP BY bezirk) d WHERE ST_Within(b.geometry, d.geom) GROUP BY d.bezirk ORDER BY d.bezirk"
+        "sql": "SELECT d.name, d.bezirk, COUNT(b.osm_id) as bank_count FROM vector.osm_banks b CROSS JOIN (SELECT DISTINCT name, bezirk, ST_Union(geometry) as geom FROM vector.berlin_districts WHERE bezirk IN ('Mitte', 'Charlottenburg-Wilmersdorf') GROUP BY name, bezirk) d WHERE ST_Within(b.geometry, d.geom) GROUP BY d.name, d.bezirk ORDER BY d.bezirk"
       },
       "description": "Count banks by district"
     },
     {
       "operation": "spatial_query",
       "parameters": {
-        "sql": "SELECT d.bezirk, COUNT(r.osm_id) as restaurant_count FROM vector.osm_restaurants r CROSS JOIN (SELECT DISTINCT bezirk, ST_Union(geometry) as geom FROM vector.berlin_districts WHERE bezirk IN ('Mitte', 'Charlottenburg-Wilmersdorf') GROUP BY bezirk) d WHERE ST_Within(r.geometry, d.geom) GROUP BY d.bezirk ORDER BY d.bezirk"
+        "sql": "SELECT d.name, d.bezirk, COUNT(r.osm_id) as restaurant_count FROM vector.osm_restaurants r CROSS JOIN (SELECT DISTINCT name, bezirk, ST_Union(geometry) as geom FROM vector.berlin_districts WHERE bezirk IN ('Mitte', 'Charlottenburg-Wilmersdorf') GROUP BY name, bezirk) d WHERE ST_Within(r.geometry, d.geom) GROUP BY d.name, d.bezirk ORDER BY d.bezirk"
       },
       "description": "Count restaurants by district"
     }
@@ -462,16 +511,19 @@ Use SUBQUERY approach (RECOMMENDED - avoids ambiguity):
 When users ask "which districts have X" or "X ratio by district" or "district comparison of X vs Y", return a CHOROPLETH map (district boundaries colored by metric):
 
 CRITICAL RULES for choropleth queries:
-1. ALWAYS include geometry: `ST_Union(d.geometry) as geometry`
-2. ALWAYS group by district: `GROUP BY d.bezirk, d.geometry` (include geometry in GROUP BY)
-3. Calculate PRIMARY metric (for color coding): percentage/ratio/density
-4. Include SECONDARY metrics as properties: counts, densities, walkability scores
-5. Return single GeoJSON with all metrics embedded in properties
-6. Include: `d.bezirk, d.geometry` PLUS count metrics
+1. ALWAYS include name: `d.name` - The specific area/subdivision name (required for popups)
+2. ALWAYS include bezirk: `d.bezirk` - The parent district
+3. ALWAYS include geometry: `ST_Union(d.geometry) as geometry`
+4. ALWAYS group by: `GROUP BY d.name, d.bezirk, d.geometry` (must include all three)
+5. Calculate PRIMARY metric (for color coding): percentage/ratio/density
+6. Include SECONDARY metrics as properties: counts, densities, walkability scores
+7. Return single GeoJSON with all metrics embedded in properties
+8. Include: `d.name, d.bezirk, d.geometry` PLUS count metrics (THIS IS CRITICAL FOR FRONTEND DISPLAY)
 
 Template for multi-metric choropleth:
 ```sql
 SELECT
+  d.name,
   d.bezirk,
   d.geometry,
   COUNT(*) as total_items,
@@ -481,9 +533,10 @@ SELECT
 FROM vector.berlin_districts d
 LEFT JOIN vector.<amenity_table> a ON ST_Within(a.geometry, d.geometry)
 LEFT JOIN vector.<reference_table> r ON <spatial_join_condition>
-GROUP BY d.bezirk, d.geometry
+GROUP BY d.name, d.bezirk, d.geometry
 ORDER BY accessibility_ratio ASC
 ```
+**CRITICAL:** Include `d.name` in both SELECT and GROUP BY clauses. The `name` field is what users see in popups!
 
 Examples:
 
@@ -493,7 +546,7 @@ Q2: "How many restaurants are within walking distance (800m) of a public transpo
   "operations": [{
     "operation": "spatial_query",
     "parameters": {
-      "sql": "SELECT d.bezirk, d.geometry, COUNT(DISTINCT r.osm_id) as total_restaurants, COUNT(DISTINCT CASE WHEN ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(t.geometry, 3857), 800) THEN r.osm_id END) as accessible_restaurants, ROUND(100.0 * COUNT(DISTINCT CASE WHEN ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(t.geometry, 3857), 800) THEN r.osm_id END)::numeric / NULLIF(COUNT(DISTINCT r.osm_id), 0), 1) as accessibility_ratio, COUNT(DISTINCT t.osm_id) as transport_stops FROM vector.berlin_districts d LEFT JOIN vector.osm_restaurants r ON ST_Within(r.geometry, d.geometry) LEFT JOIN vector.osm_transport_stops t ON ST_Within(t.geometry, d.geometry) GROUP BY d.bezirk, d.geometry ORDER BY accessibility_ratio ASC"
+      "sql": "SELECT d.name, d.bezirk, d.geometry, COUNT(DISTINCT r.osm_id) as total_restaurants, COUNT(DISTINCT CASE WHEN ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(t.geometry, 3857), 800) THEN r.osm_id END) as accessible_restaurants, ROUND(100.0 * COUNT(DISTINCT CASE WHEN ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(t.geometry, 3857), 800) THEN r.osm_id END)::numeric / NULLIF(COUNT(DISTINCT r.osm_id), 0), 1) as accessibility_ratio, COUNT(DISTINCT t.osm_id) as transport_stops FROM vector.berlin_districts d LEFT JOIN vector.osm_restaurants r ON ST_Within(r.geometry, d.geometry) LEFT JOIN vector.osm_transport_stops t ON ST_Within(t.geometry, d.geometry) GROUP BY d.name, d.bezirk, d.geometry ORDER BY accessibility_ratio ASC"
     },
     "description": "Restaurant accessibility to public transport by district with multiple metrics"
   }],
@@ -509,7 +562,7 @@ Q6: "Calculate the 'economic vitality score' for each district: (restaurant coun
   "operations": [{
     "operation": "spatial_query",
     "parameters": {
-      "sql": "SELECT d.bezirk, d.geometry, COUNT(DISTINCT r.osm_id) as restaurants, COUNT(DISTINCT b.osm_id) as banks, COUNT(DISTINCT s.osm_id) as supermarkets, ROUND(((COUNT(DISTINCT r.osm_id) + COUNT(DISTINCT b.osm_id) + COUNT(DISTINCT s.osm_id))::numeric / NULLIF(ST_Area(ST_Transform(d.geometry, 3857)) / 1000000, 0)), 2) as economic_vitality_score FROM vector.berlin_districts d LEFT JOIN vector.osm_restaurants r ON ST_Within(r.geometry, d.geometry) LEFT JOIN vector.osm_banks b ON ST_Within(b.geometry, d.geometry) LEFT JOIN vector.osm_supermarkets s ON ST_Within(s.geometry, d.geometry) GROUP BY d.bezirk, d.geometry ORDER BY economic_vitality_score DESC"
+      "sql": "SELECT d.name, d.bezirk, d.geometry, COUNT(DISTINCT r.osm_id) as restaurants, COUNT(DISTINCT b.osm_id) as banks, COUNT(DISTINCT s.osm_id) as supermarkets, ROUND(((COUNT(DISTINCT r.osm_id) + COUNT(DISTINCT b.osm_id) + COUNT(DISTINCT s.osm_id))::numeric / NULLIF(ST_Area(ST_Transform(d.geometry, 3857)) / 1000000, 0)), 2) as economic_vitality_score FROM vector.berlin_districts d LEFT JOIN vector.osm_restaurants r ON ST_Within(r.geometry, d.geometry) LEFT JOIN vector.osm_banks b ON ST_Within(b.geometry, d.geometry) LEFT JOIN vector.osm_supermarkets s ON ST_Within(s.geometry, d.geometry) GROUP BY d.name, d.bezirk, d.geometry ORDER BY economic_vitality_score DESC"
     },
     "description": "Economic vitality index by district (restaurants + banks + supermarkets per km²)"
   }],

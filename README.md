@@ -303,6 +303,7 @@ pytest -m integration   # Integration tests only
 1. Add data files to `data/vector/` or `data/raster/`
 2. Update `data/metadata/catalog.json`
 3. Optionally load into PostGIS using the API
+4. https://daten.odis-berlin.de/en/
 
 ### API Documentation
 
@@ -365,14 +366,119 @@ This project provides:
 3. Integration pattern for DeepSeek with geospatial data
 4. Reproducible API and dataset catalog
 
+## Known Challenges & Lessons Learned
+
+### Challenge 1: Location Type Handling
+**Problem**: Landmarks like train stations (e.g., Ahrensfelde) don't exist as `ortsteil` (subdivision) in the landmarks table, causing "near" queries to fail.
+
+**Solution**: Modified DeepSeek prompts to:
+- Search by name only (no type filtering) for proximity queries
+- Use `LOWER(name) = LOWER('<location>')` pattern
+- Increased default radius from 1km to 15km for landmark-based searches
+
+**Lesson**: LLMs need explicit instruction about:
+- When to use type-specific vs flexible searches
+- Distance defaults for different location types
+- Edge cases where administrative data is incomplete
+
+### Challenge 2: Query Pattern Disambiguation
+**Problem**: DeepSeek struggled with distinguishing between:
+- "Within <location>" (ST_Within - containment)
+- "Near <location>" (ST_DWithin - proximity)
+
+**Solution**: Provided separate SQL templates and clear examples for each pattern.
+
+**Future Improvement**: Fine-tuned Gemma3 can learn these patterns more reliably with proper training data.
+
 ## Roadmap
 
+### Phase 1: Current (DeepSeek Integration)
+- [x] Natural language geospatial queries
+- [x] PostGIS spatial operations
+- [x] DEM analysis and terrain classification
+- [x] Frontend map visualization
 - [ ] Add temporal filtering ("between 2018-2024")
 - [ ] Implement user feedback learning
 - [ ] Support for more raster operations
 - [ ] Multi-language support
 - [ ] Vector tile serving for large datasets
 - [ ] Query history and saved queries
+
+### Phase 2: Local AI Integration (Gemma3)
+- [ ] Deploy Gemma3 model locally (via Ollama or similar)
+- [ ] Replace DeepSeek API with local Gemma3 inference
+- [ ] Implement caching layer for query patterns
+- [ ] Benchmark Gemma3 performance vs DeepSeek
+- [ ] Add support for multiple query languages
+- [ ] Create geospatial-specific prompt templates for Gemma3
+
+### Phase 3: Fine-tuning & Optimization
+- [ ] **Collect training datasets** for geospatial reasoning:
+  - Natural language queries + expected SQL translations
+  - Edge cases and location-specific queries (Ahrensfelde pattern)
+  - Multi-step spatial operations
+  - Error patterns and corrections
+- [ ] **Fine-tune Gemma3** with custom geospatial dataset:
+  - Train on 1000+ labeled query-SQL pairs
+  - Include Berlin OSM data context
+  - Optimize for landmark/ortsteil resolution
+  - Improve accuracy for "near" vs "within" distinctions
+- [ ] **Evaluate fine-tuned model**:
+  - Test accuracy on unseen geospatial queries
+  - Compare with base Gemma3
+  - Benchmark against DeepSeek
+- [ ] **Deploy fine-tuned Gemma3**:
+  - Private/on-premise deployment
+  - No API costs
+  - Faster inference
+  - Better domain-specific accuracy
+
+## Training Strategy for Gemma3 Fine-tuning
+
+### Dataset Collection
+
+**Essential Categories**:
+1. **Location-based queries** (50% of dataset)
+   ```
+   Q: "Find hospitals near Ahrensfelde"
+   SQL: SELECT h.* FROM osm_hospitals h WHERE ST_DWithin(...landmarks WHERE LOWER(name) = 'ahrensfelde'..., 15000)
+   ```
+
+2. **Spatial operations** (30% of dataset)
+   ```
+   Q: "Show parks within 2km of Mitte"
+   SQL: SELECT p.* FROM osm_parks p WHERE ST_Within(p.geometry, (SELECT ST_Union(geometry) FROM landmarks WHERE name='Mitte' AND type='bezirk'))
+   ```
+
+3. **Multi-step queries** (15% of dataset)
+   ```
+   Q: "Find restaurants near hospitals in Charlottenburg"
+   SQL: [Buffer hospitals → Find restaurants within buffer]
+   ```
+
+4. **Edge cases & corrections** (5% of dataset)
+   - Queries that currently fail
+   - Ambiguous location names
+   - Type vs name confusion
+
+### Expected Improvements
+
+**Baseline** (Current DeepSeek):
+- Accuracy: ~85% (fails on landmark-only locations)
+- Speed: ~2-3s per query (API latency)
+
+**Fine-tuned Gemma3** (Goal):
+- Accuracy: >95% (handles all location types)
+- Speed: <500ms (local inference)
+- Cost: $0 (no API calls)
+
+### Validation Metrics
+
+- Query parsing accuracy
+- SQL syntax correctness
+- Result relevance (correct spatial operation)
+- Edge case handling
+- Performance benchmarks
 
 ## Contributing
 

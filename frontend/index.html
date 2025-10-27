@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+    
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,18 +17,22 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background: #f5f5f5;
+            background: linear-gradient(135deg, #0f0d1a 0%, #1a1825 50%, #251f35 100%);
+            backdrop-filter: blur(10px);
+            color: #f5f5f5;
         }
 
         /* Top Search Bar */
         .search-header {
-            background: white;
+            background: rgba(26, 24, 37, 0.7);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-bottom: 1.5px solid rgba(196, 195, 227, 0.2);
             padding: 1rem 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
             z-index: 1000;
         }
 
@@ -36,13 +41,14 @@
             margin: 0 auto;
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 1.2rem;
+            justify-content: space-between;
         }
 
         .logo {
             font-size: 1.5rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #504E76 0%, #F1642E 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             white-space: nowrap;
@@ -50,23 +56,37 @@
 
         .search-wrapper {
             flex: 1;
+            min-width: 300px;
+            max-width: 600px;
             position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
         #searchInput {
-            width: 100%;
-            padding: 0.75rem 3rem 0.75rem 2.5rem;
-            border: 2px solid #e0e0e0;
+            flex: 1;
+            padding: 0.75rem 2.5rem 0.75rem 2.5rem;
+            background: rgba(37, 32, 53, 0.6);
+            border: 1.5px solid rgba(196, 195, 227, 0.25);
             border-radius: 50px;
             font-size: 0.95rem;
             font-family: inherit;
-            transition: all 0.3s;
+            backdrop-filter: blur(15px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #f5f5f5;
+            height: 40px;
+        }
+
+        #searchInput::placeholder {
+            color: rgba(196, 195, 227, 0.5);
         }
 
         #searchInput:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: rgba(37, 32, 53, 0.9);
+            border-color: rgba(241, 100, 46, 0.6);
+            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.2);
         }
 
         .search-icon {
@@ -74,33 +94,56 @@
             left: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #999;
+            color: rgba(196, 195, 227, 0.6);
             font-size: 1.2rem;
+            pointer-events: none;
         }
 
         #searchBtn {
-            position: absolute;
-            right: 0.5rem;
-            top: 50%;
-            transform: translateY(-50%);
-            padding: 0.5rem 1.5rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 0.6rem 1.5rem;
+            background: rgba(241, 100, 46, 0.85);
             color: white;
-            border: none;
+            border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 50px;
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(15px);
+            box-shadow:
+                0 8px 16px rgba(241, 100, 46, 0.25),
+                inset 0 1px 2px rgba(255, 255, 255, 0.4);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        #searchBtn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: 0;
+            right: 0;
+            height: 200%;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+            pointer-events: none;
         }
 
         #searchBtn:hover:not(:disabled) {
-            transform: translateY(-50%) scale(1.05);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transform: translateY(-2px);
+            background: rgba(80, 78, 118, 0.95);
+            box-shadow: 0 12px 24px rgba(80, 78, 118, 0.3);
+        }
+
+        #searchBtn:active:not(:disabled) {
+            transform: translateY(0);
         }
 
         #searchBtn:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
@@ -114,8 +157,9 @@
         /* Left Layers Panel */
         .layers-panel {
             width: 320px;
-            background: white;
-            border-right: 1px solid #e0e0e0;
+            background: rgba(26, 24, 37, 0.5);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-right: 1.5px solid rgba(196, 195, 227, 0.2);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -123,10 +167,13 @@
 
         .panel-header {
             padding: 1rem 1.5rem;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e0e0e0;
+            background: rgba(37, 32, 53, 0.4);
+            backdrop-filter: blur(15px);
+            border-bottom: 1.5px solid rgba(196, 195, 227, 0.15);
             font-weight: 600;
-            color: #333;
+            color: #f5f5f5;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
         }
 
         .layers-list {
@@ -136,24 +183,29 @@
         }
 
         .layer-item {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
+            background: rgba(37, 32, 53, 0.45);
+            border: 1.5px solid rgba(196, 195, 227, 0.2);
+            border-radius: 12px;
             padding: 0.75rem;
             margin-bottom: 0.5rem;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            backdrop-filter: blur(15px);
+            color: #f5f5f5;
         }
 
         .layer-item:hover {
-            border-color: #667eea;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+            background: rgba(37, 32, 53, 0.7);
+            border-color: rgba(241, 100, 46, 0.4);
+            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.15);
+            transform: translateY(-2px);
         }
 
         .layer-item.active {
-            border-color: #667eea;
-            background: #f8f9ff;
+            background: rgba(241, 100, 46, 0.15);
+            border-color: rgba(241, 100, 46, 0.4);
+            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.2);
         }
 
         .layer-header {
@@ -164,7 +216,7 @@
 
         .layer-name {
             font-weight: 600;
-            color: #333;
+            color: #f5f5f5;
             font-size: 0.9rem;
             flex: 1;
             min-width: 0;
@@ -182,19 +234,21 @@
         .layer-color-picker {
             width: 28px;
             height: 28px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-            background: white;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.5);
         }
 
         .layer-color-picker:hover {
-            border-color: #667eea;
-            transform: scale(1.1);
-            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+            border-color: rgba(80, 78, 118, 0.5);
+            transform: scale(1.08);
+            box-shadow: 0 8px 16px rgba(80, 78, 118, 0.2), inset 0 0 8px rgba(255, 255, 255, 0.5);
         }
 
         .layer-color-picker input[type="color"] {
@@ -221,27 +275,32 @@
         .layer-toggle {
             width: 40px;
             height: 20px;
-            background: #ccc;
+            background: rgba(0, 0, 0, 0.15);
             border-radius: 10px;
             position: relative;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
         }
 
         .layer-toggle.active {
-            background: #667eea;
+            background: rgba(80, 78, 118, 0.6);
+            border-color: rgba(80, 78, 118, 0.4);
+            box-shadow: 0 4px 12px rgba(80, 78, 118, 0.15);
         }
 
         .layer-toggle::after {
             content: '';
             position: absolute;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             background: white;
             border-radius: 50%;
-            top: 2px;
-            left: 2px;
-            transition: transform 0.3s;
+            top: 3px;
+            left: 3px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
         }
 
         .layer-toggle.active::after {
@@ -285,17 +344,18 @@
         .empty-state {
             text-align: center;
             padding: 3rem 1.5rem;
-            color: #999;
+            color: #999999;
         }
 
         .empty-state-icon {
             font-size: 3rem;
             margin-bottom: 1rem;
-            opacity: 0.3;
+            opacity: 0.4;
         }
 
         .empty-state-text {
             font-size: 0.9rem;
+            color: #b0b0b0;
         }
 
         /* Map */
@@ -313,41 +373,64 @@
             z-index: 1000;
             width: 44px;
             height: 44px;
-            background: white;
-            border: 2px solid rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
+            background: rgba(37, 32, 53, 0.75);
+            border: 1.5px solid rgba(241, 100, 46, 0.4);
+            border-radius: 12px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s ease;
+            box-shadow:
+                0 8px 24px rgba(0, 0, 0, 0.3),
+                inset 0 1px 2px rgba(241, 100, 46, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            color: #F1642E;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .locate-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: 0;
+            right: 0;
+            height: 200%;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), transparent);
+            pointer-events: none;
         }
 
         .locate-btn:hover {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: rgba(80, 78, 118, 0.7);
             color: white;
-            border-color: #667eea;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(80, 78, 118, 0.25);
         }
 
         .locate-btn:active {
-            transform: translateY(0);
+            transform: translateY(-2px);
         }
 
         .locate-btn.locating {
-            animation: pulse 1.5s ease-in-out infinite;
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         @keyframes pulse {
             0%, 100% {
                 transform: scale(1);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                box-shadow:
+                    0 8px 24px rgba(0, 0, 0, 0.12),
+                    inset 0 1px 2px rgba(255, 255, 255, 0.4),
+                    0 0 0 0 rgba(80, 78, 118, 0.3);
             }
             50% {
-                transform: scale(1.05);
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                transform: scale(1.02);
+                box-shadow:
+                    0 8px 24px rgba(0, 0, 0, 0.12),
+                    inset 0 1px 2px rgba(255, 255, 255, 0.4),
+                    0 0 0 8px rgba(80, 78, 118, 0);
             }
         }
 
@@ -370,15 +453,16 @@
         .loading-spinner {
             width: 20px;
             height: 20px;
-            border: 2px solid #f0f0f0;
-            border-top-color: #667eea;
+            border: 2px solid rgba(80, 78, 118, 0.2);
+            border-top-color: #504E76;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            box-shadow: inset 0 0 4px rgba(80, 78, 118, 0.1);
         }
 
         .loading-text-small {
             font-size: 0.8rem;
-            color: #667eea;
+            color: #504E76;
             font-weight: 500;
             white-space: nowrap;
         }
@@ -389,19 +473,22 @@
 
         /* Modern popup card styles */
         .leaflet-popup-content-wrapper {
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             padding: 0;
             max-width: 400px !important;
             max-height: 500px;
             overflow: hidden;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
         }
 
         .leaflet-popup-content {
             margin: 0;
             max-height: 480px;
             overflow-y: auto;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
 
         .popup-card {
@@ -410,18 +497,19 @@
         }
 
         .popup-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, rgba(80, 78, 118, 0.9) 0%, rgba(241, 100, 46, 0.9) 100%);
             color: white;
             padding: 1rem;
             font-weight: 600;
             font-size: 1rem;
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            backdrop-filter: blur(10px);
         }
 
         .popup-body {
             padding: 1rem;
-            background: white;
+            background: rgba(255, 255, 255, 0.5);
         }
 
         .popup-attribute {
@@ -458,11 +546,12 @@
 
         .popup-footer {
             padding: 0.75rem 1rem;
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
+            background: rgba(255, 255, 255, 0.4);
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
             font-size: 0.75rem;
             color: #666;
             text-align: center;
+            backdrop-filter: blur(10px);
         }
 
         .leaflet-popup-tip-container {
@@ -489,21 +578,24 @@
             position: fixed;
             top: 100px;
             right: 2rem;
-            background: white;
+            background: rgba(37, 32, 53, 0.85);
+            backdrop-filter: blur(25px) saturate(180%);
             padding: 1rem 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 12px;
+            border: 1.5px solid rgba(241, 100, 46, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            color: #f5f5f5;
             z-index: 1500;
             display: none;
-            animation: slideIn 0.3s ease-out;
+            animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .notification.error {
-            border-left: 4px solid #dc3545;
+            border-left: 3px solid #dc3545;
         }
 
         .notification.success {
-            border-left: 4px solid #28a745;
+            border-left: 3px solid #28a745;
         }
 
         @keyframes slideIn {
@@ -517,35 +609,62 @@
             }
         }
 
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-4px);
+            }
+        }
+
+        @keyframes glassShimmer {
+            0% {
+                background-position: -1000px 0;
+            }
+            100% {
+                background-position: 1000px 0;
+            }
+        }
+
         /* Location Button */
         .location-btn {
-            padding: 0.5rem 1rem;
-            background: white;
-            border: 2px solid #e0e0e0;
+            padding: 0.6rem 1.2rem;
+            background: rgba(37, 32, 53, 0.6);
+            border: 1.5px solid rgba(196, 195, 227, 0.25);
             border-radius: 50px;
             font-size: 0.9rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             white-space: nowrap;
+            backdrop-filter: blur(15px);
+            color: #f5f5f5;
+            height: 40px;
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.2),
+                inset 0 1px 2px rgba(196, 195, 227, 0.1);
         }
 
         .location-btn:hover:not(:disabled) {
-            border-color: #667eea;
-            background: #f8f9ff;
+            background: rgba(37, 32, 53, 0.85);
+            border-color: rgba(241, 100, 46, 0.4);
+            box-shadow: 0 12px 24px rgba(241, 100, 46, 0.15);
+            transform: translateY(-2px);
         }
 
         .location-btn:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
         .location-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: rgba(241, 100, 46, 0.7);
             color: white;
-            border-color: #667eea;
+            border-color: rgba(241, 100, 46, 0.4);
+            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.25);
         }
 
         .location-status {
@@ -557,8 +676,9 @@
         /* Right Operations Panel */
         .operations-panel {
             width: 350px;
-            background: white;
-            border-left: 1px solid #e0e0e0;
+            background: rgba(26, 24, 37, 0.6);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-left: 2px solid rgba(196, 195, 227, 0.35);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -570,10 +690,13 @@
 
         .operations-header {
             padding: 1rem 1.5rem;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e0e0e0;
+            background: rgba(80, 78, 118, 0.3);
+            backdrop-filter: blur(15px);
+            border-bottom: 2px solid rgba(196, 195, 227, 0.25);
             font-weight: 600;
-            color: #333;
+            color: #C4C3E3;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
         }
 
         .operations-content {
@@ -585,7 +708,7 @@
         .no-selection {
             text-align: center;
             padding: 2rem 1rem;
-            color: #999;
+            color: #b0b0b0;
             font-size: 0.9rem;
         }
 
@@ -595,61 +718,75 @@
 
         .operations-section-title {
             font-weight: 600;
-            color: #333;
+            color: #F1642E;
             font-size: 0.9rem;
             margin-bottom: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #667eea;
         }
 
         .reasoning-box {
-            background: #f0f4ff;
-            border-left: 4px solid #667eea;
+            background: rgba(196, 195, 227, 0.12);
+            border-left: 3px solid rgba(196, 195, 227, 0.6);
             padding: 0.75rem;
-            border-radius: 4px;
+            border-radius: 8px;
             font-size: 0.85rem;
-            color: #333;
+            color: #f5f5f5;
             line-height: 1.5;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(196, 195, 227, 0.2);
         }
 
         .operation-item {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
+            background: rgba(80, 78, 118, 0.15);
+            border: 1.5px solid rgba(196, 195, 227, 0.25);
+            border-radius: 8px;
             padding: 0.75rem;
             margin-bottom: 0.5rem;
+            backdrop-filter: blur(15px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #f5f5f5;
+        }
+
+        .operation-item:hover {
+            background: rgba(80, 78, 118, 0.25);
+            box-shadow: 0 8px 24px rgba(196, 195, 227, 0.15);
+            border-color: rgba(196, 195, 227, 0.45);
         }
 
         .operation-type {
             display: inline-block;
-            background: #667eea;
-            color: white;
+            background: rgba(80, 78, 118, 0.6);
+            color: #C4C3E3;
             padding: 0.25rem 0.75rem;
             border-radius: 12px;
             font-size: 0.75rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
             text-transform: uppercase;
+            border: 1px solid rgba(196, 195, 227, 0.3);
+            box-shadow: 0 4px 12px rgba(196, 195, 227, 0.12);
         }
 
         .operation-description {
             font-size: 0.85rem;
-            color: #333;
+            color: #f5f5f5;
             margin-bottom: 0.5rem;
             font-weight: 500;
         }
 
         .operation-params {
-            background: #f5f5f5;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(196, 195, 227, 0.15);
             padding: 0.5rem;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 0.75rem;
-            color: #666;
-            font-family: 'Courier New', monospace;
+            color: #a0a0a0;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
             overflow-x: auto;
             max-height: 80px;
             overflow-y: auto;
+            backdrop-filter: blur(5px);
         }
 
         .datasets-list {
@@ -659,19 +796,21 @@
         }
 
         .dataset-badge {
-            background: #43e97b;
-            color: white;
+            background: rgba(163, 181, 101, 0.5);
+            color: #FDF8E2;
             padding: 0.35rem 0.75rem;
             border-radius: 12px;
             font-size: 0.75rem;
             font-weight: 600;
+            border: 1px solid rgba(196, 195, 227, 0.25);
+            box-shadow: 0 4px 12px rgba(163, 181, 101, 0.12);
         }
 
         .metadata-item {
             display: flex;
             justify-content: space-between;
             padding: 0.5rem 0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid rgba(196, 195, 227, 0.2);
             font-size: 0.85rem;
         }
 
@@ -680,13 +819,52 @@
         }
 
         .metadata-label {
-            color: #666;
+            color: #C4C3E3;
             font-weight: 500;
         }
 
         .metadata-value {
-            color: #333;
+            color: #FDF8E2;
             font-weight: 600;
+        }
+
+        /* Leaflet Dark Mode Styling */
+        .leaflet-control {
+            background: rgba(37, 32, 53, 0.8) !important;
+            border: 1.5px solid rgba(196, 195, 227, 0.2) !important;
+            backdrop-filter: blur(10px) !important;
+        }
+
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out {
+            color: #F1642E !important;
+            background: rgba(37, 32, 53, 0.8) !important;
+            border: 1px solid rgba(241, 100, 46, 0.3) !important;
+        }
+
+        .leaflet-control-zoom-in:hover,
+        .leaflet-control-zoom-out:hover {
+            background: rgba(37, 32, 53, 0.95) !important;
+            border-color: rgba(241, 100, 46, 0.5) !important;
+        }
+
+        .leaflet-control-attribution {
+            background: rgba(37, 32, 53, 0.7) !important;
+            color: #b0b0b0 !important;
+            border: 1px solid rgba(196, 195, 227, 0.15) !important;
+            backdrop-filter: blur(10px) !important;
+        }
+
+        .leaflet-control-attribution a {
+            color: #F1642E !important;
+        }
+
+        .leaflet-control-attribution a:hover {
+            color: #FCDD9D !important;
+        }
+
+        .leaflet-popup {
+            filter: drop-shadow(0 8px 32px rgba(0, 0, 0, 0.5));
         }
 
         /* Hide map container and adjust for panels */
@@ -695,6 +873,229 @@
             display: flex;
             overflow: hidden;
         }
+
+
+        /* Layer Menu (3-dots) */
+        .layer-menu-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: rgba(80, 78, 118, 0.4);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #f5f5f5;
+            font-size: 1.2rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 0;
+            line-height: 1;
+        }
+
+        .layer-menu-btn:hover {
+            background: rgba(80, 78, 118, 0.7);
+            transform: scale(1.08);
+        }
+
+        .layer-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: rgba(26, 24, 37, 0.95);
+            backdrop-filter: blur(25px);
+            border: 1.5px solid rgba(196, 195, 227, 0.3);
+            border-radius: 10px;
+            margin-top: 0.5rem;
+            z-index: 1001;
+            min-width: 180px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+
+        .layer-dropdown-menu.active {
+            display: block;
+        }
+
+        .layer-dropdown-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            color: #f5f5f5;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(196, 195, 227, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .layer-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .layer-dropdown-item:hover {
+            background: rgba(80, 78, 118, 0.3);
+            padding-left: 1.25rem;
+        }
+
+        .layer-dropdown-item.delete:hover {
+            background: rgba(241, 100, 46, 0.2);
+            color: #F1642E;
+        }
+
+        /* Export Dialog */
+        .export-dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .export-dialog-overlay.active {
+            display: flex;
+        }
+
+        .export-dialog {
+            background: linear-gradient(135deg, rgba(26, 24, 37, 0.98) 0%, rgba(37, 32, 53, 0.95) 100%);
+            backdrop-filter: blur(25px);
+            border: 1.5px solid rgba(196, 195, 227, 0.3);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            color: #f5f5f5;
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .export-dialog-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #C4C3E3;
+        }
+
+        .export-dialog-content {
+            margin-bottom: 2rem;
+        }
+
+        .export-option {
+            margin-bottom: 1.5rem;
+        }
+
+        .export-option-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #f5f5f5;
+            font-size: 0.95rem;
+        }
+
+        .export-option-description {
+            font-size: 0.85rem;
+            color: #b0b0b0;
+            margin-bottom: 0.75rem;
+        }
+
+        .export-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .export-checkbox:hover {
+            background: rgba(80, 78, 118, 0.2);
+        }
+
+        .export-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #F1642E;
+        }
+
+        .export-format-select {
+            padding: 0.75rem 1rem;
+            background: rgba(37, 32, 53, 0.8);
+            border: 1.5px solid rgba(196, 195, 227, 0.25);
+            border-radius: 8px;
+            color: #f5f5f5;
+            font-family: inherit;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .export-format-select:hover {
+            border-color: rgba(241, 100, 46, 0.5);
+        }
+
+        .export-format-select:focus {
+            outline: none;
+            border-color: rgba(241, 100, 46, 0.7);
+            box-shadow: 0 0 12px rgba(241, 100, 46, 0.2);
+        }
+
+        .export-dialog-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .export-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.95rem;
+        }
+
+        .export-btn-primary {
+            background: linear-gradient(135deg, #504E76 0%, #F1642E 100%);
+            color: white;
+            box-shadow: 0 8px 20px rgba(241, 100, 46, 0.3);
+        }
+
+        .export-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(241, 100, 46, 0.4);
+        }
+
+        .export-btn-secondary {
+            background: rgba(80, 78, 118, 0.4);
+            color: #f5f5f5;
+            border: 1.5px solid rgba(196, 195, 227, 0.3);
+        }
+
+        .export-btn-secondary:hover {
+            background: rgba(80, 78, 118, 0.6);
+            border-color: rgba(196, 195, 227, 0.5);
+        }
+
     </style>
 </head>
 <body>
@@ -704,7 +1105,7 @@
             <div class="logo">🌍 GeoAssist</div>
             <div class="search-wrapper">
                 <span class="search-icon">🔍</span>
-                <input type="text" id="searchInput" placeholder="Ask a geospatial question... (e.g., Is there a toilet near me?)">
+                <input type="text" id="searchInput" placeholder="Ask a question... (e.g., hospitals in Mitte OR terrain elevation in Berlin)">
                 <div class="loading-indicator" id="loadingIndicator">
                     <div class="loading-spinner"></div>
                     <span class="loading-text-small" id="loadingIndicatorText">Processing...</span>
@@ -760,6 +1161,50 @@
         </div>
     </div>
 
+    <!-- Export Dialog -->
+    <div class="export-dialog-overlay" id="exportDialogOverlay">
+        <div class="export-dialog">
+            <div class="export-dialog-header">📥 Export Layer as GeoJSON</div>
+            
+            <div class="export-dialog-content">
+                <div class="export-option">
+                    <label class="export-option-label">Include Properties</label>
+                    <div class="export-option-description">Add feature attributes to the export</div>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="exportIncludeProperties" checked>
+                        <span>Include feature properties</span>
+                    </label>
+                </div>
+
+                <div class="export-option">
+                    <label class="export-option-label">Formatting</label>
+                    <div class="export-option-description">Choose output formatting</div>
+                    <select class="export-format-select" id="exportFormatSelect">
+                        <option value="minified">Minified (compact)</option>
+                        <option value="pretty">Pretty printed (formatted)</option>
+                    </select>
+                </div>
+
+                <div class="export-option">
+                    <label class="export-option-label">Additional Options</label>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="exportIncludeCRS">
+                        <span>Include CRS (Coordinate Reference System)</span>
+                    </label>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="exportIncludeBbox">
+                        <span>Include bounding box (bbox)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="export-dialog-actions">
+                <button class="export-btn export-btn-secondary" onclick="closeExportDialog()">Cancel</button>
+                <button class="export-btn export-btn-primary" onclick="performExport()">Export</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notification -->
     <div class="notification" id="notification"></div>
 
@@ -770,10 +1215,26 @@
         // Initialize map centered on Berlin
         const map = L.map('map').setView([52.52, 13.405], 11);
 
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
+        // Define Berlin boundary (bounding box)
+        // Northwest corner: [52.67, 13.08]
+        // Southeast corner: [52.34, 13.76]
+        const berlinBounds = L.latLngBounds(
+            L.latLng(52.34, 13.08),  // Southwest
+            L.latLng(52.67, 13.76)   // Northeast
+        );
+
+        // Restrict map to Berlin boundary
+        map.setMaxBounds(berlinBounds);
+
+        // Set min/max zoom levels
+        map.setMinZoom(10);
+        map.setMaxZoom(19);
+
+        // Add Dark CartoDB Voyager tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors, © CARTO',
+            maxZoom: 19,
+            subdomains: 'abcd'
         }).addTo(map);
 
         // API base URL
@@ -997,8 +1458,8 @@
             const layerId = ++layerIdCounter;
 
             // Generate color for this layer
-            const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe',
-                           '#43e97b', '#fa709a', '#30cfd0', '#c471ed'];
+            const colors = ['#504E76', '#F1642E', '#C4C3E3', '#A3B565',
+                           '#FCDD9D', '#FDF8E2', '#A3B565', '#F1642E'];
             const layerColor = colors[layerId % colors.length];
 
             // Create Leaflet layer
@@ -1058,17 +1519,22 @@
 
         // Create popup content
         function createPopupContent(properties) {
-            let featureName = properties.name || properties.title || properties.amenity ||
-                            properties.highway || properties.type || 'Feature Details';
+            // Determine the feature name - check area/subdivision fields first
+            let featureName = properties.name || properties.title || properties.oteil ||
+                            properties.amenity || properties.highway || properties.type || 'Feature Details';
 
             let popupContent = '<div class="popup-card">';
             popupContent += `<div class="popup-header">${featureName}</div>`;
             popupContent += '<div class="popup-body">';
 
-            // Sort properties: put important ones first
-            const priorityKeys = ['name', 'amenity', 'shop', 'tourism', 'highway',
-                                 'building', 'type', 'operator', 'addr:street',
-                                 'addr:housenumber', 'addr:city', 'phone', 'website'];
+            // Enhanced priority list: area/subdivision fields first, then standard OSM tags
+            const priorityKeys = [
+                'name', 'oteil', 'bezirk',  // Area/subdivision names
+                'amenity', 'shop', 'tourism', 'highway', 'building', 'type',
+                'operator', 'market_count', 'count',  // Counts and metrics
+                'area_sq_km', 'area_ha', 'area',  // Area measurements
+                'addr:street', 'addr:housenumber', 'addr:city', 'phone', 'website'
+            ];
 
             const sortedEntries = Object.entries(properties).sort((a, b) => {
                 const aIndex = priorityKeys.indexOf(a[0]);
@@ -1082,13 +1548,31 @@
             // Add attributes
             for (const [key, value] of sortedEntries) {
                 if (value !== null && value !== undefined && value !== '') {
-                    const displayKey = key.replace(/_/g, ' ').replace(/:/g, ' ');
+                    // Better display names for area-specific fields
+                    let displayKey = key;
+                    if (key === 'oteil') {
+                        displayKey = 'Area/Neighborhood';
+                    } else if (key === 'bezirk') {
+                        displayKey = 'District';
+                    } else if (key === 'market_count' || key === 'count') {
+                        displayKey = key.replace(/_/g, ' ');
+                    } else if (key === 'area_sq_km') {
+                        displayKey = 'Area (sq km)';
+                    } else if (key === 'area_ha') {
+                        displayKey = 'Area (hectares)';
+                    } else {
+                        displayKey = key.replace(/_/g, ' ').replace(/:/g, ' ');
+                    }
+
                     let displayValue = value;
 
                     if (typeof value === 'object') {
                         displayValue = JSON.stringify(value, null, 2);
                     } else if (typeof value === 'string' && value.startsWith('http')) {
-                        displayValue = `<a href="${value}" target="_blank" style="color: #667eea; text-decoration: none;">🔗 Link</a>`;
+                        displayValue = `<a href="${value}" target="_blank" style="color: #504E76; text-decoration: none;">🔗 Link</a>`;
+                    } else if (typeof value === 'number' && (key === 'area_sq_km' || key === 'area_ha')) {
+                        // Format area values with 2 decimal places
+                        displayValue = typeof value === 'number' ? value.toFixed(2) : value;
                     }
 
                     popupContent += `
@@ -1189,7 +1673,13 @@
                             </div>
                             <div class="layer-toggle ${layerInfo.visible ? 'active' : ''}"
                                  onclick="toggleLayer(${layerInfo.id})"></div>
-                            <span class="layer-remove" onclick="removeLayer(${layerInfo.id})">×</span>
+                                                <div class="layer-menu-wrapper">
+                                                    <button class="layer-menu-btn" onclick="toggleLayerMenu(event, ${layerInfo.id})" title="More options">⋮</button>
+                                                    <div class="layer-dropdown-menu" id="menu${layerInfo.id}">
+                                                        <div class="layer-dropdown-item" onclick="openExportDialog(${layerInfo.id}, event)">📥 Export as GeoJSON</div>
+                                                    </div>
+                                                </div>
+                                                                            <span class="layer-remove" onclick="removeLayer(${layerInfo.id})">×</span>
                         </div>
                     </div>
                     <div class="layer-info">
@@ -1301,24 +1791,54 @@
                 `;
             }
 
-            // Display metadata
+            // Display metadata and subdivision rankings
             if (layerInfo.metadata) {
-                content += '<div class="operations-section">';
-                content += '<div class="operations-section-title">Metadata</div>';
+                // Check for subdivision analysis data
+                if (layerInfo.metadata.subdivisions_analysis && layerInfo.metadata.rankings) {
+                    content += '<div class="operations-section">';
+                    content += '<div class="operations-section-title">Top Subdivisions Ranking</div>';
 
-                for (const [key, value] of Object.entries(layerInfo.metadata)) {
-                    const displayKey = key.replace(/_/g, ' ').charAt(0).toUpperCase() +
-                                     key.replace(/_/g, ' ').slice(1);
-                    const displayValue = typeof value === 'object' ? JSON.stringify(value) : value;
-                    content += `
-                        <div class="metadata-item">
-                            <span class="metadata-label">${displayKey}</span>
-                            <span class="metadata-value">${displayValue}</span>
-                        </div>
-                    `;
+                    layerInfo.metadata.rankings.forEach(ranking => {
+                        content += `
+                            <div class="metadata-item">
+                                <span class="metadata-label">#${ranking.rank}</span>
+                                <span class="metadata-value">${ranking.suitable_areas_count.toLocaleString()} areas (${ranking.percentage.toFixed(2)}%)</span>
+                            </div>
+                        `;
+                    });
+
+                    if (layerInfo.metadata.top_subdivision) {
+                        const top = layerInfo.metadata.top_subdivision;
+                        content += '<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">';
+                        content += `<div style="font-weight: 600; color: #504E76; margin-bottom: 0.5rem;">Top Subdivision:</div>`;
+                        content += `<div class="metadata-item"><span class="metadata-label">ID</span><span class="metadata-value">${top.osm_id}</span></div>`;
+                        content += `<div class="metadata-item"><span class="metadata-label">Areas</span><span class="metadata-value">${top.suitable_areas.toLocaleString()}</span></div>`;
+                        content += '</div>';
+                    }
+
+                    content += '</div>';
+                } else {
+                    // Regular metadata display
+                    content += '<div class="operations-section">';
+                    content += '<div class="operations-section-title">Metadata</div>';
+
+                    for (const [key, value] of Object.entries(layerInfo.metadata)) {
+                        // Skip subdivision-related keys
+                        if (key.includes('subdivision') || key === 'rankings' || key === 'top_subdivision') continue;
+
+                        const displayKey = key.replace(/_/g, ' ').charAt(0).toUpperCase() +
+                                         key.replace(/_/g, ' ').slice(1);
+                        const displayValue = typeof value === 'object' ? JSON.stringify(value) : value;
+                        content += `
+                            <div class="metadata-item">
+                                <span class="metadata-label">${displayKey}</span>
+                                <span class="metadata-value">${displayValue}</span>
+                            </div>
+                        `;
+                    }
+
+                    content += '</div>';
                 }
-
-                content += '</div>';
             }
 
             // Display execution time
@@ -1375,6 +1895,147 @@
 
             showNotification(`Layer "${layerInfo.name}" removed`, 'success');
         }
+        // Current layer ID for export
+        let currentExportLayerId = null;
+
+        // Toggle layer dropdown menu
+        function toggleLayerMenu(event, layerId) {
+            event.stopPropagation();
+            
+            // Close all other menus first
+            document.querySelectorAll('.layer-dropdown-menu').forEach(menu => {
+                if (menu.id !== `menu${layerId}`) {
+                    menu.classList.remove('active');
+                }
+            });
+
+            // Toggle current menu
+            const menu = document.getElementById(`menu${layerId}`);
+            if (menu) {
+                menu.classList.toggle('active');
+            }
+        }
+
+        // Close all menus when clicking outside
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.layer-dropdown-menu').forEach(menu => {
+                menu.classList.remove('active');
+            });
+        });
+
+        // Open export dialog
+        function openExportDialog(layerId, event) {
+            event.stopPropagation();
+            currentExportLayerId = layerId;
+            const overlay = document.getElementById('exportDialogOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+            }
+            // Close the menu
+            const menu = document.getElementById(`menu${layerId}`);
+            if (menu) {
+                menu.classList.remove('active');
+            }
+        }
+
+        // Close export dialog
+        function closeExportDialog() {
+            const overlay = document.getElementById('exportDialogOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+            currentExportLayerId = null;
+        }
+
+        // Perform export
+        function performExport() {
+            if (!currentExportLayerId) {
+                showNotification('No layer selected for export', 'error');
+                return;
+            }
+
+            const layerInfo = layers.find(l => l.id === currentExportLayerId);
+            if (!layerInfo) {
+                showNotification('Layer not found', 'error');
+                return;
+            }
+
+            // Get export options
+            const includeProperties = document.getElementById('exportIncludeProperties').checked;
+            const formatSelect = document.getElementById('exportFormatSelect');
+            const format = formatSelect ? formatSelect.value : 'minified';
+            const includeCRS = document.getElementById('exportIncludeCRS').checked;
+            const includeBbox = document.getElementById('exportIncludeBbox').checked;
+
+            // Get the GeoJSON data from the layer
+            let geojsonData = layerInfo.geojsonData;
+            
+            if (!geojsonData) {
+                showNotification('No GeoJSON data available for this layer', 'error');
+                return;
+            }
+
+            // Create a copy to modify
+            let exportData = JSON.parse(JSON.stringify(geojsonData));
+
+            // Remove properties if not needed
+            if (!includeProperties) {
+                if (exportData.features) {
+                    exportData.features.forEach(feature => {
+                        feature.properties = {};
+                    });
+                }
+            }
+
+            // Add CRS if requested
+            if (includeCRS) {
+                exportData.crs = {
+                    type: "name",
+                    properties: {
+                        name: "EPSG:4326"
+                    }
+                };
+            }
+
+            // Add bounding box if requested
+            if (includeBbox) {
+                const bounds = layerInfo.layer.getBounds();
+                if (bounds && bounds.isValid()) {
+                    exportData.bbox = [
+                        bounds.getWest(),
+                        bounds.getSouth(),
+                        bounds.getEast(),
+                        bounds.getNorth()
+                    ];
+                }
+            }
+
+            // Convert to JSON string
+            let jsonString;
+            if (format === 'pretty') {
+                jsonString = JSON.stringify(exportData, null, 2);
+            } else {
+                jsonString = JSON.stringify(exportData);
+            }
+
+            // Create blob and download
+            const blob = new Blob([jsonString], { type: 'application/geo+json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${layerInfo.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.geojson`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            // Show success notification
+            showNotification(`Layer "${layerInfo.name}" exported successfully`, 'success');
+            
+            // Close dialog
+            closeExportDialog();
+        }
+
 
         // Zoom to layer
         function zoomToLayer(layerId) {
@@ -1436,10 +2097,10 @@
                         map.removeLayer(userLocationCircle);
                     }
 
-                    // Add blue circle marker for user location
+                    // Add circle marker for user location
                     userLocationMarker = L.circleMarker([userLocation.lat, userLocation.lon], {
                         radius: 8,
-                        fillColor: '#4285F4',
+                        fillColor: '#504E76',
                         color: '#fff',
                         weight: 3,
                         opacity: 1,
@@ -1450,8 +2111,8 @@
                     const accuracy = position.coords.accuracy || 100;
                     userLocationCircle = L.circle([userLocation.lat, userLocation.lon], {
                         radius: accuracy,
-                        fillColor: '#4285F4',
-                        color: '#4285F4',
+                        fillColor: '#504E76',
+                        color: '#504E76',
                         weight: 1,
                         opacity: 0.3,
                         fillOpacity: 0.1
@@ -1537,6 +2198,71 @@
             showNotification('Location disabled', 'success');
         }
 
+        // Detect if query is DEM-related
+        function isDEMQuery(question) {
+            const demKeywords = [
+                'elevation', 'terrain', 'slope', 'steep', 'flat', 'dem',
+                'develop', 'suitable', 'building', 'construction', 'build',
+                'flood', 'water', 'relief', 'hillshade', 'aspect',
+                'altitude', 'height', 'rise', 'descent', 'topography',
+                'steepness', 'gradient', 'relief', 'contour',
+                'erosion', 'watershed', 'stream', 'drainage'
+            ];
+
+            const lowerQuestion = question.toLowerCase();
+            return demKeywords.some(keyword => lowerQuestion.includes(keyword));
+        }
+
+        // Process DEM results and create a layer
+        function processDEMResult(data, query) {
+            // Generate a meaningful layer name based on query
+            let layerName = 'Terrain Analysis';
+            if (query.includes('develop') || query.includes('suitable')) {
+                layerName = 'Development Suitability';
+            } else if (query.includes('slope') || query.includes('steep')) {
+                layerName = 'Slope Analysis';
+            } else if (query.includes('classify') || query.includes('classification')) {
+                layerName = 'Terrain Classification';
+            } else if (query.includes('flood')) {
+                layerName = 'Flood Risk Assessment';
+            }
+
+            let geojson;
+
+            // Check if data already contains actual GeoJSON features (from spatial DEM analysis)
+            if (data.type === 'FeatureCollection' && data.features && data.features.length > 0) {
+                // Use actual spatial data returned from API
+                console.log(`✅ Using actual spatial GeoJSON with ${data.features.length} features`);
+                geojson = data;
+            } else {
+                // Fall back to dummy point with metadata for text-based results
+                const demFeature = {
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [13.405, 52.52] // Berlin center
+                    },
+                    properties: {
+                        type: 'DEM Analysis',
+                        query: query,
+                        analysis_type: layerName,
+                        ...(data.metadata || {})
+                    }
+                };
+
+                geojson = {
+                    type: 'FeatureCollection',
+                    features: [demFeature]
+                };
+            }
+
+            return {
+                layerName: layerName,
+                geojson: geojson,
+                summary: data.summary || 'Terrain analysis complete'
+            };
+        }
+
         // Execute search
         async function executeSearch() {
             const query = document.getElementById('searchInput').value.trim();
@@ -1552,61 +2278,113 @@
             setLoading(true, 'Processing...');
 
             try {
-                // Build request payload
-                const payload = { question: query };
+                // Determine query type
+                const isDEM = isDEMQuery(query);
+                const endpoint = isDEM ? '/api/dem/query' : '/api/query';
 
-                // Add user location if available
-                if (userLocation) {
-                    payload.user_location = userLocation;
-                    console.log('🌍 Using user location:', userLocation);
+                console.log(`📍 Query Type: ${isDEM ? 'DEM' : 'Spatial'}`);
+
+                let response;
+
+                if (isDEM) {
+                    // DEM query
+                    const demUrl = new URL(`${API_URL}/dem/query`, window.location.origin);
+                    demUrl.searchParams.append('question', query);
+
+                    response = await fetch(demUrl.toString(), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
                 } else {
-                    console.log('⚠️ No user location available');
+                    // Spatial query
+                    const payload = { question: query };
+
+                    // Add user location if available
+                    if (userLocation) {
+                        payload.user_location = userLocation;
+                        console.log('🌍 Using user location:', userLocation);
+                    }
+
+                    response = await fetch(`${API_URL}/query`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
                 }
-
-                console.log('📤 Sending request:', payload);
-
-                const response = await fetch(`${API_URL}/query`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
 
                 const data = await response.json();
 
                 // Debug: Log the full response
                 console.log('📊 API Response:', data);
-                console.log('🔧 Operations:', data.operations);
-                console.log('💭 Reasoning:', data.reasoning);
-                console.log('📚 Datasets:', data.datasets_used);
 
-                if (data.success && data.data && data.data.features) {
-                    // Use DeepSeek-generated layer name if available, fallback to client-side generation
-                    const layerName = data.layer_name || generateLayerName(query, data.data);
+                if (isDEM) {
+                    // Handle DEM response
+                    if (data.success) {
+                        // Pass the actual data field from API response (which contains GeoJSON)
+                        const processed = processDEMResult(data.data, query);
 
-                    // Pass all operation data to addLayer
-                    addLayer(
-                        layerName,
-                        data.data,
-                        query,
-                        data.operations,      // Operations performed
-                        data.reasoning,       // AI reasoning
-                        data.datasets_used,   // Datasets used
-                        data.metadata,        // Metadata
-                        data.execution_time   // Execution time
-                    );
+                        // For subdivision analysis, include ranking info in metadata
+                        let metadata = data.metadata || {};
+                        if (data.ranking && data.top_subdivision) {
+                            metadata.subdivisions_analysis = true;
+                            metadata.rankings = data.ranking;
+                            metadata.top_subdivision = data.top_subdivision;
+                        }
 
-                    showNotification(`Found ${data.data.features.length} results`, 'success');
+                        addLayer(
+                            processed.layerName,
+                            processed.geojson,
+                            query,
+                            data.operations || [],
+                            data.reasoning || processed.summary,
+                            data.datasets_used || [],
+                            metadata,
+                            data.execution_time || 0
+                        );
 
-                    // Clear search input
-                    document.getElementById('searchInput').value = '';
+                        const featureCount = processed.geojson.features ? processed.geojson.features.length : 1;
+                        showNotification(`✅ ${processed.layerName}: ${featureCount} features loaded (Top subdivision)`, 'success');
+                    } else {
+                        showNotification(data.error || 'DEM analysis failed', 'error');
+                    }
                 } else {
-                    showNotification(data.error || 'No results found', 'error');
+                    // Handle Spatial response
+                    console.log('🔧 Operations:', data.operations);
+                    console.log('💭 Reasoning:', data.reasoning);
+                    console.log('📚 Datasets:', data.datasets_used);
+
+                    if (data.success && data.data && data.data.features) {
+                        // Use DeepSeek-generated layer name if available, fallback to client-side generation
+                        const layerName = data.layer_name || generateLayerName(query, data.data);
+
+                        // Pass all operation data to addLayer
+                        addLayer(
+                            layerName,
+                            data.data,
+                            query,
+                            data.operations,      // Operations performed
+                            data.reasoning,       // AI reasoning
+                            data.datasets_used,   // Datasets used
+                            data.metadata,        // Metadata
+                            data.execution_time   // Execution time
+                        );
+
+                        showNotification(`Found ${data.data.features.length} results`, 'success');
+                    } else {
+                        showNotification(data.error || 'No results found', 'error');
+                    }
                 }
+
+                // Clear search input
+                document.getElementById('searchInput').value = '';
 
             } catch (error) {
                 showNotification(`Error: ${error.message}`, 'error');
+                console.error('❌ Search error:', error);
             } finally {
                 setLoading(false);
                 searchBtn.disabled = false;
@@ -1656,7 +2434,7 @@
                             <div style="
                                 width: 20px;
                                 height: 20px;
-                                background: #667eea;
+                                background: #504E76;
                                 border: 3px solid white;
                                 border-radius: 50%;
                                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -1674,8 +2452,8 @@
                     // Add accuracy circle
                     userLocationCircle = L.circle([lat, lng], {
                         radius: accuracy,
-                        color: '#667eea',
-                        fillColor: '#667eea',
+                        color: '#504E76',
+                        fillColor: '#504E76',
                         fillOpacity: 0.15,
                         weight: 1
                     }).addTo(map);
