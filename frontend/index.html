@@ -9,6 +9,13 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.Default.css" />
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
     <style>
         * {
             margin: 0;
@@ -37,12 +44,14 @@
         }
 
         .search-container {
-            max-width: 1400px;
+            max-width: 100%;
+            width: 100%;
             margin: 0 auto;
             display: flex;
             align-items: center;
             gap: 1.2rem;
-            justify-content: space-between;
+            justify-content: flex-start;
+            padding: 0 1.5rem;
         }
 
         .logo {
@@ -56,8 +65,6 @@
 
         .search-wrapper {
             flex: 1;
-            min-width: 300px;
-            max-width: 600px;
             position: relative;
             display: flex;
             align-items: center;
@@ -193,6 +200,7 @@
             position: relative;
             backdrop-filter: blur(15px);
             color: #f5f5f5;
+            overflow: visible;
         }
 
         .layer-item:hover {
@@ -231,45 +239,8 @@
             align-items: center;
         }
 
-        .layer-color-picker {
-            width: 28px;
-            height: 28px;
-            border: 1.5px solid rgba(255, 255, 255, 0.4);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .layer-menu-wrapper {
             position: relative;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(10px);
-            box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.5);
-        }
-
-        .layer-color-picker:hover {
-            border-color: rgba(80, 78, 118, 0.5);
-            transform: scale(1.08);
-            box-shadow: 0 8px 16px rgba(80, 78, 118, 0.2), inset 0 0 8px rgba(255, 255, 255, 0.5);
-        }
-
-        .layer-color-picker input[type="color"] {
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            width: 150%;
-            height: 150%;
-            border: none;
-            cursor: pointer;
-            background: transparent;
-        }
-
-        .layer-color-display {
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: calc(100% - 4px);
-            height: calc(100% - 4px);
-            border-radius: 3px;
-            pointer-events: none;
         }
 
         .layer-toggle {
@@ -437,34 +408,58 @@
         /* Loading Indicator */
         .loading-indicator {
             position: absolute;
-            right: 5.5rem;
+            right: 1rem;
             top: 50%;
             transform: translateY(-50%);
             display: none;
             z-index: 999;
+            width: 24px;
+            height: 24px;
         }
 
         .loading-indicator.active {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: center;
         }
 
         .loading-spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(80, 78, 118, 0.2);
-            border-top-color: #504E76;
+            width: 24px;
+            height: 24px;
+            position: relative;
+        }
+
+        .loading-spinner::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2.5px solid transparent;
+            border-top-color: #F1642E;
+            border-right-color: #F1642E;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            box-shadow: inset 0 0 4px rgba(80, 78, 118, 0.1);
+            animation: spinProgress 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+            box-shadow: 0 0 8px rgba(241, 100, 46, 0.3);
+        }
+
+        .loading-spinner::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2.5px solid transparent;
+            border-bottom-color: rgba(241, 100, 46, 0.2);
+            border-left-color: rgba(241, 100, 46, 0.2);
+            border-radius: 50%;
+            animation: spinProgress 2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
         }
 
         .loading-text-small {
-            font-size: 0.8rem;
-            color: #504E76;
-            font-weight: 500;
-            white-space: nowrap;
+            display: none;
+        }
+
+        @keyframes spinProgress {
+            to { transform: rotate(360deg); }
         }
 
         @keyframes spin {
@@ -473,85 +468,420 @@
 
         /* Modern popup card styles */
         .leaflet-popup-content-wrapper {
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
             padding: 0;
-            max-width: 400px !important;
+            max-width: 480px !important;
             max-height: 500px;
             overflow: hidden;
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(10px);
+            background: #ffffff;
+            border: none;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes popupSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .leaflet-popup {
+            border-radius: 20px !important;
+            margin-bottom: 0 !important;
         }
 
         .leaflet-popup-content {
             margin: 0;
-            max-height: 480px;
+            padding: 0;
+            max-height: 500px;
             overflow-y: auto;
+            overflow-x: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: transparent;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-thumb {
+            background: rgba(241, 100, 46, 0.4);
+            border-radius: 3px;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(241, 100, 46, 0.7);
+        }
+
+        /* MarkerCluster Styling */
+        .marker-cluster {
+            background-clip: padding-box;
+            border-radius: 40px;
+            font-weight: bold;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(80, 78, 118, 0.8) 0%, rgba(241, 100, 46, 0.8) 100%);
+            border: 2px solid rgba(241, 100, 46, 0.6);
+            box-shadow: 0 4px 15px rgba(241, 100, 46, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .marker-cluster:hover {
+            background: linear-gradient(135deg, rgba(80, 78, 118, 1) 0%, rgba(241, 100, 46, 1) 100%);
+            box-shadow: 0 6px 20px rgba(241, 100, 46, 0.5);
+            transform: scale(1.1);
+        }
+
+        .marker-cluster span {
+            color: #ffffff;
+            font-size: 13px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            font-weight: 600;
+        }
+
+        /* Small clusters (2-5 points) */
+        .marker-cluster.marker-cluster-small {
+            background: linear-gradient(135deg, rgba(93, 173, 226, 0.7) 0%, rgba(155, 89, 182, 0.7) 100%);
+            border-color: rgba(155, 89, 182, 0.8);
+            box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+        }
+
+        /* Medium clusters (6-20 points) */
+        .marker-cluster.marker-cluster-medium {
+            background: linear-gradient(135deg, rgba(241, 100, 46, 0.75) 0%, rgba(230, 126, 34, 0.75) 100%);
+            border-color: rgba(230, 126, 34, 0.9);
+            box-shadow: 0 3px 10px rgba(230, 126, 34, 0.4);
+        }
+
+        /* Large clusters (21+ points) */
+        .marker-cluster.marker-cluster-large {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.85) 0%, rgba(192, 57, 43, 0.85) 100%);
+            border-color: rgba(192, 57, 43, 1);
+            box-shadow: 0 4px 15px rgba(192, 57, 43, 0.5);
+        }
+
+        /* Cluster animation on zoom */
+        .marker-cluster.fade-in {
+            animation: clusterFadeIn 0.3s ease-out;
+        }
+
+        @keyframes clusterFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .popup-card {
             display: flex;
             flex-direction: column;
+            width: 340px;
+            max-height: 600px;
+            background: linear-gradient(135deg,
+                rgba(30, 27, 45, 0.55) 0%,
+                rgba(15, 13, 26, 0.65) 50%,
+                rgba(37, 32, 53, 0.5) 100%);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-radius: 20px;
+            border: 1.5px solid rgba(241, 100, 46, 0.3);
+            overflow: hidden;
+            box-shadow:
+                0 25px 50px rgba(0, 0, 0, 0.5),
+                inset 0 1px 2px rgba(255, 255, 255, 0.15),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .popup-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), transparent 50%);
+            pointer-events: none;
+            border-radius: 20px;
         }
 
         .popup-header {
-            background: linear-gradient(135deg, rgba(80, 78, 118, 0.9) 0%, rgba(241, 100, 46, 0.9) 100%);
-            color: white;
-            padding: 1rem;
-            font-weight: 600;
-            font-size: 1rem;
-            border-top-left-radius: 16px;
-            border-top-right-radius: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg,
+                rgba(241, 100, 46, 0.08) 0%,
+                rgba(80, 78, 118, 0.06) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1.5px solid rgba(241, 100, 46, 0.2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .popup-avatar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+            color: #504E76;
+            font-size: 1.8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.3);
             backdrop-filter: blur(10px);
         }
 
+        .popup-title-section {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .popup-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #f5f5f5;
+            margin: 0;
+            word-break: break-word;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .popup-subtitle {
+            font-size: 0.85rem;
+            color: rgba(241, 100, 46, 0.9);
+            margin-top: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+            font-weight: 500;
+        }
+
         .popup-body {
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.5);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+        }
+
+        .popup-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .popup-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .popup-body::-webkit-scrollbar-thumb {
+            background: rgba(241, 100, 46, 0.4);
+            border-radius: 3px;
+        }
+
+        .popup-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(241, 100, 46, 0.7);
+        }
+
+        .popup-badges {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .popup-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.9rem;
+            background: rgba(241, 100, 46, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1.2px solid rgba(241, 100, 46, 0.35);
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: rgba(241, 245, 250, 0.95);
+            white-space: nowrap;
+            font-weight: 500;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .popup-badge-icon {
+            font-size: 0.9rem;
+        }
+
+        .popup-description {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: rgba(245, 245, 245, 0.9);
+            max-height: 100px;
+            overflow-y: auto;
+            padding: 0.5rem 0;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            width: 100%;
+        }
+
+        .popup-description::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .popup-description::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .popup-description::-webkit-scrollbar-thumb {
+            background: rgba(241, 100, 46, 0.3);
+            border-radius: 2px;
+        }
+
+        .popup-attributes {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            max-height: 150px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 0.5rem;
+        }
+
+        .popup-attributes::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .popup-attributes::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .popup-attributes::-webkit-scrollbar-thumb {
+            background: rgba(241, 100, 46, 0.3);
+            border-radius: 2px;
+        }
+
+        .popup-attributes::-webkit-scrollbar-thumb:hover {
+            background: rgba(241, 100, 46, 0.6);
         }
 
         .popup-attribute {
-            display: grid;
-            grid-template-columns: 140px 1fr;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
             gap: 0.75rem;
-            padding: 0.75rem;
-            border-bottom: 1px solid #f0f0f0;
-            transition: background 0.2s;
+            padding: 0.5rem 0;
         }
 
         .popup-attribute:hover {
-            background: #f8f9fa;
-        }
-
-        .popup-attribute:last-child {
-            border-bottom: none;
+            background: rgba(241, 100, 46, 0.08);
+            padding-left: 0.5rem;
+            border-radius: 4px;
         }
 
         .popup-label {
             font-weight: 600;
-            color: #555;
-            font-size: 0.85rem;
-            text-transform: capitalize;
+            color: rgba(196, 195, 227, 0.7);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             word-break: break-word;
+            flex-shrink: 0;
+            max-width: 40%;
         }
 
         .popup-value {
-            color: #333;
+            color: #f5f5f5;
             font-size: 0.85rem;
             word-break: break-word;
-            line-height: 1.4;
+            font-weight: 500;
+            text-align: right;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .popup-footer {
-            padding: 0.75rem 1rem;
-            background: rgba(255, 255, 255, 0.4);
-            border-top: 1px solid rgba(255, 255, 255, 0.3);
-            font-size: 0.75rem;
-            color: #666;
-            text-align: center;
-            backdrop-filter: blur(10px);
+            padding: 1rem 1.5rem;
+            background: linear-gradient(to top,
+                rgba(15, 13, 26, 0.3),
+                rgba(30, 27, 45, 0.25));
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-top: 1.5px solid rgba(241, 100, 46, 0.2);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .popup-button {
+            padding: 0.65rem 1.3rem;
+            background: linear-gradient(135deg,
+                rgba(241, 100, 46, 0.85),
+                rgba(241, 100, 46, 0.75));
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: white;
+            border: 1.3px solid rgba(241, 100, 46, 0.65);
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 0 20px rgba(241, 100, 46, 0.2),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.2);
+        }
+
+        .popup-button:hover {
+            background: linear-gradient(135deg,
+                rgba(241, 100, 46, 0.95),
+                rgba(241, 100, 46, 0.88));
+            box-shadow:
+                0 12px 24px rgba(241, 100, 46, 0.4),
+                inset 0 1px 2px rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            border-color: rgba(241, 100, 46, 0.85);
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 20px !important;
+            background: transparent !important;
+            box-shadow:
+                0 25px 50px rgba(0, 0, 0, 0.5),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
         }
 
         .leaflet-popup-tip-container {
@@ -671,6 +1001,110 @@
             font-size: 0.75rem;
             color: #666;
             margin-left: 0.5rem;
+        }
+
+        /* LLM Provider Selector */
+        .llm-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(37, 32, 53, 0.6);
+            border: 1.5px solid rgba(196, 195, 227, 0.25);
+            border-radius: 50px;
+            padding: 0.4rem 0.6rem;
+            backdrop-filter: blur(15px);
+            height: 40px;
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.2),
+                inset 0 1px 2px rgba(196, 195, 227, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .llm-selector:hover {
+            background: rgba(37, 32, 53, 0.85);
+            border-color: rgba(241, 100, 46, 0.4);
+            box-shadow: 0 12px 24px rgba(241, 100, 46, 0.15);
+        }
+
+        .llm-selector-label {
+            font-size: 0.8rem;
+            color: #b0b0b0;
+            white-space: nowrap;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .llm-radio-group {
+            display: flex;
+            gap: 0.25rem;
+            align-items: center;
+        }
+
+        .llm-radio {
+            display: none;
+        }
+
+        .llm-radio-label {
+            padding: 0.35rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            background: rgba(80, 78, 118, 0.3);
+            color: #b0b0b0;
+            white-space: nowrap;
+            border: 1px solid rgba(196, 195, 227, 0.15);
+        }
+
+        .llm-radio:checked + .llm-radio-label {
+            background: rgba(241, 100, 46, 0.7);
+            color: white;
+            border-color: rgba(241, 100, 46, 0.5);
+            box-shadow: 0 4px 12px rgba(241, 100, 46, 0.25);
+        }
+
+        .llm-radio-label:hover {
+            background: rgba(80, 78, 118, 0.5);
+            border-color: rgba(241, 100, 46, 0.3);
+        }
+
+        .llm-unavailable {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .llm-unavailable:hover {
+            background: rgba(80, 78, 118, 0.3);
+            border-color: rgba(196, 195, 227, 0.15);
+        }
+
+        .llm-status-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 0.3rem;
+            animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .llm-status-dot.available {
+            background: #28a745;
+        }
+
+        .llm-status-dot.unavailable {
+            background: #6c757d;
+            animation: none;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
         }
 
         /* Right Operations Panel */
@@ -1099,6 +1533,588 @@
             border-color: rgba(196, 195, 227, 0.5);
         }
 
+        /* Style Dialog */
+        .style-dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .style-dialog-overlay.active {
+            display: flex;
+        }
+
+        .style-dialog {
+            background: rgba(26, 24, 37, 0.95);
+            backdrop-filter: blur(25px);
+            border: 1.5px solid rgba(196, 195, 227, 0.3);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .style-dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1.5px solid rgba(196, 195, 227, 0.2);
+        }
+
+        .style-dialog-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #f5f5f5;
+            margin: 0;
+        }
+
+        .style-dialog-header .close-btn {
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #C4C3E3;
+            background: none;
+            border: none;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s ease;
+        }
+
+        .style-dialog-header .close-btn:hover {
+            color: #F1642E;
+        }
+
+        .style-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(196, 195, 227, 0.2);
+        }
+
+        .style-tab {
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #b0b0b0;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .style-tab.active {
+            color: #F1642E;
+            border-bottom-color: #F1642E;
+        }
+
+        .style-tab:hover {
+            color: #f5f5f5;
+        }
+
+        .style-tab-content {
+            display: block;
+        }
+
+        .style-tab-content.hidden {
+            display: none;
+        }
+
+        .style-option {
+            margin-bottom: 1.5rem;
+        }
+
+        .style-option label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #f5f5f5;
+            font-size: 0.95rem;
+        }
+
+        .style-option input[type="color"] {
+            width: 60px;
+            height: 40px;
+            border: 1.5px solid rgba(196, 195, 227, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .style-option input[type="color"]:hover {
+            border-color: rgba(241, 100, 46, 0.5);
+        }
+
+        .style-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(80, 78, 118, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 0.5rem 0;
+        }
+
+        .style-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #F1642E;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(241, 100, 46, 0.4);
+        }
+
+        .style-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #F1642E;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(241, 100, 46, 0.4);
+        }
+
+        .slider-value {
+            display: inline-block;
+            margin-left: 1rem;
+            color: #C4C3E3;
+            font-weight: 600;
+        }
+
+        .style-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(37, 32, 53, 0.8);
+            border: 1.5px solid rgba(196, 195, 227, 0.25);
+            border-radius: 8px;
+            color: #f5f5f5;
+            font-family: inherit;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .style-select:hover {
+            border-color: rgba(241, 100, 46, 0.5);
+        }
+
+        .style-select:focus {
+            outline: none;
+            border-color: rgba(241, 100, 46, 0.7);
+            box-shadow: 0 0 12px rgba(241, 100, 46, 0.2);
+        }
+
+        .style-select option {
+            background: #251f35;
+            color: #f5f5f5;
+        }
+
+        .style-range-inputs {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .style-number-input {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            background: rgba(37, 32, 53, 0.8);
+            border: 1.5px solid rgba(196, 195, 227, 0.25);
+            border-radius: 6px;
+            color: #f5f5f5;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .style-number-input:focus {
+            outline: none;
+            border-color: rgba(241, 100, 46, 0.5);
+        }
+
+        .style-button-small {
+            padding: 0.5rem 1rem;
+            background: rgba(80, 78, 118, 0.4);
+            border: 1.5px solid rgba(196, 195, 227, 0.3);
+            color: #f5f5f5;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .style-button-small:hover {
+            background: rgba(80, 78, 118, 0.6);
+            border-color: rgba(196, 195, 227, 0.5);
+        }
+
+        .style-legend {
+            background: rgba(37, 32, 53, 0.6);
+            border: 1.5px solid rgba(196, 195, 227, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .legend-bar {
+            height: 30px;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #b0b0b0;
+        }
+
+        .style-dialog-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1.5px solid rgba(196, 195, 227, 0.2);
+        }
+
+        .btn-cancel, .btn-apply {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.95rem;
+        }
+
+        .btn-cancel {
+            background: rgba(80, 78, 118, 0.4);
+            color: #f5f5f5;
+            border: 1.5px solid rgba(196, 195, 227, 0.3);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(80, 78, 118, 0.6);
+            border-color: rgba(196, 195, 227, 0.5);
+        }
+
+        .btn-apply {
+            background: linear-gradient(135deg, #504E76 0%, #F1642E 100%);
+            color: white;
+            box-shadow: 0 8px 20px rgba(241, 100, 46, 0.3);
+        }
+
+        .btn-apply:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(241, 100, 46, 0.4);
+        }
+
+        .icon-picker {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+        }
+
+        .icon-btn {
+            padding: 0.75rem;
+            background: rgba(37, 32, 53, 0.6);
+            border: 2px solid rgba(196, 195, 227, 0.2);
+            border-radius: 8px;
+            color: #f5f5f5;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 50px;
+        }
+
+        .icon-btn:hover {
+            background: rgba(80, 78, 118, 0.6);
+            border-color: rgba(241, 100, 46, 0.5);
+            transform: scale(1.05);
+        }
+
+        .icon-btn.selected {
+            background: linear-gradient(135deg, #504E76 0%, #F1642E 100%);
+            border-color: #F1642E;
+            box-shadow: 0 0 12px rgba(241, 100, 46, 0.4);
+        }
+
+        .icon-btn.hidden {
+            display: none;
+        }
+
+        .icon-search-input {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 0.8rem;
+            background: rgba(37, 32, 53, 0.8);
+            border: 2px solid rgba(196, 195, 227, 0.3);
+            border-radius: 8px;
+            color: #f5f5f5;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .icon-search-input:focus {
+            border-color: rgba(241, 100, 46, 0.6);
+            background: rgba(37, 32, 53, 1);
+            box-shadow: 0 0 8px rgba(241, 100, 46, 0.2);
+        }
+
+        .icon-search-input::placeholder {
+            color: rgba(196, 195, 227, 0.5);
+        }
+
+        .icon-picker-info {
+            text-align: center;
+            font-size: 0.85rem;
+            color: rgba(196, 195, 227, 0.6);
+            margin-top: 0.8rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid rgba(196, 195, 227, 0.1);
+        }
+
+        /* Query Mode Selector */
+        .query-mode-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(37, 32, 53, 0.6);
+            border: 1.5px solid rgba(196, 195, 227, 0.25);
+            border-radius: 50px;
+            font-size: 0.85rem;
+            color: #f5f5fa;
+        }
+
+        .query-mode-selector select {
+            background: transparent;
+            border: none;
+            color: #f5f5fa;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .query-mode-selector select option {
+            background: #251f35;
+            color: #f5f5fa;
+        }
+
+        /* Timeline Container */
+        #queryTimeline {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 320px;
+            max-height: 450px;
+            overflow-y: auto;
+            background: rgba(15, 13, 26, 0.85);
+            border: 1.5px solid rgba(241, 100, 46, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 999;
+            display: none;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        #queryTimeline.active {
+            display: block;
+        }
+
+        .timeline-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #F1642E;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .timeline-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(80, 78, 118, 0.15);
+            border-left: 3px solid #F1642E;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .timeline-card:hover {
+            background: rgba(80, 78, 118, 0.3);
+            border-left-color: rgba(241, 100, 46, 0.8);
+        }
+
+        .timeline-card-number {
+            font-weight: bold;
+            color: #F1642E;
+            min-width: 24px;
+            font-size: 0.9rem;
+        }
+
+        .timeline-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .timeline-card-text {
+            font-size: 0.75rem;
+            color: #c4c3e3;
+            word-break: break-word;
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+
+        .timeline-card-count {
+            font-size: 0.7rem;
+            color: rgba(241, 100, 46, 0.7);
+        }
+
+        .timeline-card-controls {
+            display: flex;
+            gap: 6px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .timeline-toggle-btn {
+            width: 20px;
+            height: 20px;
+            border: 1px solid rgba(241, 100, 46, 0.4);
+            background: rgba(241, 100, 46, 0.1);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: #F1642E;
+            transition: all 0.2s ease;
+        }
+
+        .timeline-toggle-btn:hover {
+            background: rgba(241, 100, 46, 0.2);
+            border-color: rgba(241, 100, 46, 0.6);
+        }
+
+        .timeline-toggle-btn.hidden {
+            opacity: 0.4;
+        }
+
+        .timeline-remove-btn {
+            width: 20px;
+            height: 20px;
+            border: 1px solid rgba(196, 195, 227, 0.3);
+            background: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: rgba(196, 195, 227, 0.6);
+            transition: all 0.2s ease;
+        }
+
+        .timeline-remove-btn:hover {
+            background: rgba(241, 100, 46, 0.2);
+            border-color: rgba(241, 100, 46, 0.6);
+            color: #F1642E;
+        }
+
+        .timeline-arrow {
+            text-align: center;
+            color: rgba(241, 100, 46, 0.4);
+            margin: 8px 0;
+            font-size: 16px;
+            display: none;
+        }
+
+        .timeline-arrow.show {
+            display: block;
+        }
+
+        .timeline-clear-btn {
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            background: rgba(241, 100, 46, 0.2);
+            border: 1px solid rgba(241, 100, 46, 0.4);
+            border-radius: 6px;
+            color: #F1642E;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .timeline-clear-btn:hover {
+            background: rgba(241, 100, 46, 0.35);
+            border-color: rgba(241, 100, 46, 0.7);
+        }
+
+        /* Scrollbar styling for timeline */
+        #queryTimeline::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #queryTimeline::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #queryTimeline::-webkit-scrollbar-thumb {
+            background: rgba(241, 100, 46, 0.3);
+            border-radius: 3px;
+        }
+
+        #queryTimeline::-webkit-scrollbar-thumb:hover {
+            background: rgba(241, 100, 46, 0.6);
+        }
+
     </style>
 </head>
 <body>
@@ -1115,10 +2131,10 @@
                 </div>
                 <button id="searchBtn" onclick="executeSearch()">Search</button>
             </div>
-            <button id="locationBtn" class="location-btn" onclick="toggleLocation()">
-                <span id="locationIcon">📍</span>
-                <span id="locationText">My Location</span>
-            </button>
+            <a href="database-inspector.html" class="location-btn" style="text-decoration: none; background: rgba(241, 100, 46, 0.2); border: 1px solid rgba(241, 100, 46, 0.4); white-space: nowrap;">
+                <span style="font-size: 16px;">📊</span>
+                <span>Database</span>
+            </a>
         </div>
     </div>
 
@@ -1141,13 +2157,12 @@
         <div class="map-wrapper">
             <!-- Map -->
             <div id="map">
-                <!-- Locate Me Button -->
-                <button id="locateBtn" class="locate-btn" onclick="locateUser()" title="Find my location">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                </button>
+                <!-- Query Timeline (Multi-Step Mode) -->
+                <div id="queryTimeline">
+                    <div class="timeline-title">📊 Query Chain</div>
+                    <div id="timelineContent"></div>
+                    <button class="timeline-clear-btn" onclick="clearAllQueries()">Clear All</button>
+                </div>
             </div>
 
             <!-- Right Operations Panel -->
@@ -1208,38 +2223,162 @@
         </div>
     </div>
 
+    <!-- Style Dialog -->
+    <div class="style-dialog-overlay" id="styleDialogOverlay">
+        <div class="style-dialog">
+            <div class="style-dialog-header">
+                <h2>Style: <span id="styleLayerName">Layer</span></h2>
+                <span class="close-btn" onclick="closeStyleDialog()">×</span>
+            </div>
+
+            <div class="style-tabs">
+                <button class="style-tab active" data-tab="basic" onclick="switchStyleTab(this)">🎨 Basic Colors</button>
+                <button class="style-tab" data-tab="gradient" onclick="switchStyleTab(this)">📊 Gradient by Property</button>
+            </div>
+
+            <!-- Basic Styling Tab -->
+            <div class="style-tab-content" id="basicTab">
+                <div class="style-option">
+                    <label>Fill Color</label>
+                    <input type="color" id="fillColor" class="style-color-input">
+                </div>
+
+                <div class="style-option">
+                    <label>Border Color</label>
+                    <input type="color" id="borderColor" class="style-color-input">
+                </div>
+
+                <div class="style-option">
+                    <label>Fill Opacity</label>
+                    <input type="range" id="fillOpacity" min="0" max="1" step="0.1" class="style-slider" value="0.3">
+                    <span class="slider-value" id="fillOpacityValue">0.3</span>
+                </div>
+
+                <div class="style-option">
+                    <label>Border Width</label>
+                    <input type="range" id="borderWidth" min="0" max="5" step="1" class="style-slider" value="2">
+                    <span class="slider-value" id="borderWidthValue">2</span>
+                </div>
+
+                <div class="style-option">
+                    <label>Icon Color</label>
+                    <input type="color" id="iconColor" class="style-color-input">
+                </div>
+
+                <div class="style-option">
+                    <label>Select Icon</label>
+                    <input type="text" id="iconSearch" class="icon-search-input" placeholder="Search icons (hospital, bank, park, etc.)">
+                    <div class="icon-picker" id="iconPicker">
+                        <!-- Icons will be dynamically generated by JavaScript -->
+                    </div>
+                    <div class="icon-picker-info">
+                        Icons available: <span id="iconCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gradient Styling Tab -->
+            <div class="style-tab-content hidden" id="gradientTab">
+                <div class="style-option">
+                    <label>Property to Visualize</label>
+                    <select id="propertySelect" class="style-select" onchange="updateGradientPreview()">
+                        <option value="">-- Select a numerical property --</option>
+                    </select>
+                </div>
+
+                <div class="style-option">
+                    <label>Color Scheme</label>
+                    <select id="colorScheme" class="style-select" onchange="updateGradientPreview()">
+                        <option value="viridis">🎨 Viridis</option>
+                        <option value="plasma">🔴 Plasma</option>
+                        <option value="inferno">🔥 Inferno</option>
+                        <option value="cool-warm">🌊 Cool to Warm</option>
+                        <option value="red-green">🔴 Red to Green</option>
+                        <option value="blue-red">🔵 Blue to Red</option>
+                    </select>
+                </div>
+
+                <div class="style-option">
+                    <label>Range</label>
+                    <div class="style-range-inputs">
+                        <input type="number" id="rangeMin" placeholder="Min" class="style-number-input" onchange="updateGradientPreview()">
+                        <span>to</span>
+                        <input type="number" id="rangeMax" placeholder="Max" class="style-number-input" onchange="updateGradientPreview()">
+                    </div>
+                    <button id="autoRangeBtn" class="style-button-small" onclick="autoDetectRange()">📊 Auto Detect</button>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <div class="style-legend" id="styleLegend">
+                        <!-- Legend preview will be rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Preview Checkbox -->
+            <div class="style-option">
+                <label>
+                    <input type="checkbox" id="livePreview" checked>
+                    Live Preview
+                </label>
+            </div>
+
+            <div class="style-dialog-actions">
+                <button class="btn-cancel" onclick="closeStyleDialog()">Cancel</button>
+                <button class="btn-apply" onclick="applyLayerStyle()">Apply</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notification -->
     <div class="notification" id="notification"></div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    <!-- Leaflet MarkerCluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.0/dist/leaflet.markercluster.js"></script>
+
     <script>
         // Initialize map centered on Berlin with smooth interaction settings
         const map = L.map('map', {
+            // Default Leaflet settings
+            center: [52.52, 13.405],
+            zoom: 11,
+
+            // Interaction options (DEFAULT = all enabled)
+            dragging: true,           // Enable dragging
+            touchZoom: true,          // Enable touch zoom on mobile
+            doubleClickZoom: true,    // Enable double-click zoom
+            scrollWheelZoom: true,    // Enable scroll wheel zoom
+            boxZoom: true,            // Enable box zoom (shift+drag)
+            tap: true,                // Enable tap on mobile
+
+            // Animation options
             zoomAnimation: true,
             fadeAnimation: true,
             markerZoomAnimation: true,
+
+            // Inertia (smooth panning after drag)
             inertia: true,
             inertiaDeceleration: 3400,
-            inertiaMaxSpeed: 1200
-        }).setView([52.52, 13.405], 11);
+            inertiaMaxSpeed: 1200,
 
-        // Define Berlin boundary (bounding box) with slight padding for smooth interaction
-        // Northwest corner: [52.67, 13.08]
-        // Southeast corner: [52.34, 13.76]
-        const berlinBounds = L.latLngBounds(
-            L.latLng(52.34, 13.08),  // Southwest
-            L.latLng(52.67, 13.76)   // Northeast
-        );
+            // Controls (all default enabled)
+            zoomControl: true,        // Show zoom buttons
+            attributionControl: true, // Show attribution
 
-        // Restrict map to Berlin boundary with smooth viscosity (0.1-1.0, lower = smoother)
-        map.setMaxBounds(berlinBounds);
-        map.options.maxBoundsViscosity = 0.5; // Smooth boundary behavior instead of hard stop
+            // Zoom limits
+            minZoom: 10,
+            maxZoom: 19,
 
-        // Set min/max zoom levels
-        map.setMinZoom(10);
-        map.setMaxZoom(19);
+            // Boundary restriction
+            maxBounds: L.latLngBounds(
+                L.latLng(52.34, 13.08),  // Southwest
+                L.latLng(52.67, 13.76)   // Northeast
+            ),
+            maxBoundsViscosity: 0.5   // Smooth boundary behavior
+        });
 
         // Add Dark CartoDB Voyager tiles
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -1248,6 +2387,56 @@
             subdomains: 'abcd'
         }).addTo(map);
 
+        // Smart popup zoom handler - automatically zoom in when popup is too large for viewport
+        map.on('popupopen', function(e) {
+            const popup = e.popup;
+            const currentZoom = map.getZoom();
+            const minPopupZoom = 13; // Minimum zoom level for popups to display properly
+
+            // If current zoom is below minimum, smoothly zoom in
+            if (currentZoom < minPopupZoom) {
+                const latlng = popup.getLatLng();
+
+                // Smoothly zoom to optimal level and pan to center on feature
+                map.flyTo(latlng, minPopupZoom, {
+                    duration: 0.8,
+                    easeLinearity: 0.5
+                });
+
+                // Reopen popup after zoom completes to ensure proper positioning
+                setTimeout(() => {
+                    popup.update();
+                }, 850);
+            }
+
+            // Apply initial scale
+            updatePopupScale();
+        });
+
+        // Popup card responsive scaling based on zoom level
+        function updatePopupScale() {
+            const currentZoom = map.getZoom();
+            const baseZoom = 13; // Base zoom level for normal (1x) scale
+            const scaleMultiplier = 0.06; // Adjust scale by 6% per zoom level
+
+            // Calculate scale: at zoom 13 = 1.0, zoom 10 = 0.82, zoom 16 = 1.18
+            const scale = 1 + (currentZoom - baseZoom) * scaleMultiplier;
+
+            // Apply scale to all visible popup cards
+            const popupCards = document.querySelectorAll('.popup-card');
+            popupCards.forEach(card => {
+                card.style.transform = `scale(${scale.toFixed(3)})`;
+                card.style.transformOrigin = 'top center';
+                card.style.transition = 'transform 0.3s ease-out';
+            });
+        }
+
+        // Update popup scale on every zoom event
+        map.on('zoom', updatePopupScale);
+
+        // Also update scale when popup opens (for initial positioning)
+        map.on('popupopen', updatePopupScale);
+
         // API base URL
         const API_URL = window.location.origin + '/api';
 
@@ -1255,11 +2444,177 @@
         let layers = [];
         let layerIdCounter = 0;
 
+        // Multi-step query mode state
+        let queryMode = 'single';  // 'single' or 'multi-step'
+        let queryChain = [];  // Array of queries with results
+        let queryChainIdCounter = 0;
+
         // User location state
         let userLocation = null;  // {lat, lon}
         let userLocationMarker = null;
         let userLocationCircle = null;
         let locationWatchId = null;
+
+        // ===== MULTI-STEP QUERY FUNCTIONS =====
+
+        // Set query mode (single or multi-step)
+        function setQueryMode(mode) {
+            queryMode = mode;
+            if (mode === 'single') {
+                // Clear all layers and query chain when switching to single mode
+                clearAllQueries();
+                document.getElementById('queryTimeline').classList.remove('active');
+            } else {
+                // Show timeline when switching to multi-step mode
+                document.getElementById('queryTimeline').classList.add('active');
+            }
+            console.log(`Query mode set to: ${mode}`);
+        }
+
+        // Add query to chain and render timeline
+        function addQueryToChain(query, result) {
+            const queryId = queryChainIdCounter++;
+
+            // Calculate feature count
+            let featureCount = 0;
+            if (result.data && result.data.features) {
+                featureCount = result.data.features.length;
+            }
+
+            // Store query in chain
+            queryChain.push({
+                id: queryId,
+                text: query,
+                result: result,
+                layerId: `query_${queryId}_result`,
+                visible: true,
+                featureCount: featureCount
+            });
+
+            // Render updated timeline
+            renderQueryTimeline();
+        }
+
+        // Render query timeline UI
+        function renderQueryTimeline() {
+            const timelineContent = document.getElementById('timelineContent');
+            timelineContent.innerHTML = '';
+
+            queryChain.forEach((query, index) => {
+                // Create timeline card
+                const card = document.createElement('div');
+                card.className = 'timeline-card';
+
+                const cardNumber = document.createElement('div');
+                cardNumber.className = 'timeline-card-number';
+                cardNumber.textContent = query.id + 1;
+
+                const cardContent = document.createElement('div');
+                cardContent.className = 'timeline-card-content';
+                cardContent.innerHTML = `
+                    <div class="timeline-card-text">${query.text}</div>
+                    <div class="timeline-card-count">📍 ${query.featureCount} features</div>
+                `;
+
+                const cardControls = document.createElement('div');
+                cardControls.className = 'timeline-card-controls';
+                cardControls.innerHTML = `
+                    <button class="timeline-toggle-btn ${!query.visible ? 'hidden' : ''}"
+                        onclick="toggleQueryLayer(${query.id})"
+                        title="Toggle layer visibility">👁️</button>
+                    <button class="timeline-remove-btn"
+                        onclick="removeQuery(${query.id})"
+                        title="Remove query">✕</button>
+                `;
+
+                card.appendChild(cardNumber);
+                card.appendChild(cardContent);
+                card.appendChild(cardControls);
+                timelineContent.appendChild(card);
+
+                // Add arrow between queries (except after last query)
+                if (index < queryChain.length - 1) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'timeline-arrow show';
+                    arrow.innerHTML = '↓';
+                    timelineContent.appendChild(arrow);
+                }
+            });
+        }
+
+        // Clear all queries and reset timeline
+        function clearAllQueries() {
+            queryChain.forEach(query => {
+                // Remove layers from map
+                const layerIndex = layers.findIndex(l => l.id === query.layerId);
+                if (layerIndex !== -1) {
+                    map.removeLayer(layers[layerIndex].layer);
+                    // Also remove from layers-list panel
+                    const layerElement = document.querySelector(`[data-layer-id="${query.layerId}"]`);
+                    if (layerElement) {
+                        layerElement.remove();
+                    }
+                    layers.splice(layerIndex, 1);
+                }
+            });
+
+            queryChain = [];
+            queryChainIdCounter = 0;
+            document.getElementById('timelineContent').innerHTML = '';
+
+            if (queryMode === 'single') {
+                document.getElementById('queryTimeline').classList.remove('active');
+            }
+
+            showNotification('Query chain cleared');
+        }
+
+        // Toggle query layer visibility
+        function toggleQueryLayer(queryId) {
+            const query = queryChain.find(q => q.id === queryId);
+            if (query) {
+                query.visible = !query.visible;
+                const layerIndex = layers.findIndex(l => l.id === query.layerId);
+                if (layerIndex !== -1) {
+                    if (query.visible) {
+                        map.addLayer(layers[layerIndex].layer);
+                        // Update toggle visibility in layers panel
+                        const layerElement = document.querySelector(`[data-layer-id="${query.layerId}"]`);
+                        if (layerElement) {
+                            const toggleBtn = layerElement.querySelector('.layer-toggle');
+                            if (toggleBtn) toggleBtn.classList.remove('hidden');
+                        }
+                    } else {
+                        map.removeLayer(layers[layerIndex].layer);
+                        // Update toggle visibility in layers panel
+                        const layerElement = document.querySelector(`[data-layer-id="${query.layerId}"]`);
+                        if (layerElement) {
+                            const toggleBtn = layerElement.querySelector('.layer-toggle');
+                            if (toggleBtn) toggleBtn.classList.add('hidden');
+                        }
+                    }
+                }
+                renderQueryTimeline();
+            }
+        }
+
+        // Remove single query from chain
+        function removeQuery(queryId) {
+            const layerIndex = layers.findIndex(l => l.id === `query_${queryId}_result`);
+            if (layerIndex !== -1) {
+                map.removeLayer(layers[layerIndex].layer);
+                // Also remove from layers-list panel
+                const layerElement = document.querySelector(`[data-layer-id="query_${queryId}_result"]`);
+                if (layerElement) {
+                    layerElement.remove();
+                }
+                layers.splice(layerIndex, 1);
+            }
+
+            queryChain = queryChain.filter(q => q.id !== queryId);
+            renderQueryTimeline();
+            showNotification('Query removed from chain');
+        }
 
         // Show notification
         function showNotification(message, type = 'success') {
@@ -1465,39 +2820,30 @@
         }
 
         // Add layer to map and panel
-        function addLayer(name, geojsonData, query, operations = null, reasoning = null, datasetsUsed = null, metadata = null, executionTime = null) {
-            const layerId = ++layerIdCounter;
+        function addLayer(name, geojsonData, query, operations = null, reasoning = null, datasetsUsed = null, metadata = null, executionTime = null, layerId = null, parentLayers = null) {
+            const numericId = ++layerIdCounter;
 
             // Generate color for this layer
-            const colors = ['#504E76', '#F1642E', '#C4C3E3', '#A3B565',
-                           '#FCDD9D', '#FDF8E2', '#A3B565', '#F1642E'];
-            const layerColor = colors[layerId % colors.length];
+            const colors = ['#FF6B6B', '#F1642E', '#FFB347', '#A3B565',
+                           '#5DADE2', '#85C1E2', '#52BE80', '#F8B88B'];
+            const layerColor = colors[numericId % colors.length];
 
-            // Create Leaflet layer
-            const geojsonLayer = L.geoJSON(geojsonData, {
-                style: function(feature) {
-                    return {
-                        color: layerColor,
-                        weight: 2,
-                        fillOpacity: 0.3
-                    };
-                },
-                pointToLayer: function(feature, latlng) {
-                    return L.circleMarker(latlng, {
-                        radius: 8,
-                        fillColor: layerColor,
-                        color: '#fff',
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    });
-                },
-                onEachFeature: function(feature, layer) {
-                    if (feature.properties) {
-                        layer.bindPopup(createPopupContent(feature.properties));
-                    }
-                }
-            }).addTo(map);
+            // Default style configuration
+            const defaultStyle = {
+                fillColor: layerColor,
+                borderColor: '#ffffff',
+                fillOpacity: 0.3,
+                borderWidth: 2,
+                iconColor: layerColor,
+                selectedIcon: null,
+                isGradient: false,
+                gradientProperty: null,
+                gradientScheme: 'viridis',
+                gradientRange: { min: null, max: null }
+            };
+
+            // Create Leaflet layer with default styling
+            const geojsonLayer = createStyledLayer(geojsonData, defaultStyle).addTo(map);
 
             // Fit map to layer bounds
             if (geojsonLayer.getBounds().isValid()) {
@@ -1506,7 +2852,7 @@
 
             // Store layer info
             const layerInfo = {
-                id: layerId,
+                id: numericId,
                 name: name,
                 query: query,
                 layer: geojsonLayer,
@@ -1514,12 +2860,15 @@
                 featureCount: geojsonData.features.length,
                 timestamp: new Date(),
                 color: layerColor,
-                geojsonData: geojsonData,  // Store original data for re-styling
-                operations: operations,     // Store operations performed
-                reasoning: reasoning,       // Store AI reasoning
-                datasetsUsed: datasetsUsed, // Store datasets used
-                metadata: metadata,         // Store metadata
-                executionTime: executionTime  // Store execution time
+                style: defaultStyle,                    // Store style configuration
+                geojsonData: geojsonData,              // Store original data for re-styling
+                operations: operations,                 // Store operations performed
+                reasoning: reasoning,                   // Store AI reasoning
+                datasetsUsed: datasetsUsed,            // Store datasets used
+                metadata: metadata,                     // Store metadata
+                executionTime: executionTime,          // Store execution time
+                layerId: layerId,                      // Store API-generated layer ID
+                parentLayers: parentLayers || []       // Store parent layer IDs for dependency tracking
             };
 
             layers.push(layerInfo);
@@ -1530,60 +2879,132 @@
 
         // Create popup content
         function createPopupContent(properties) {
-            // Determine the feature name - check area/subdivision fields first
+            // Determine the feature name and type
             let featureName = properties.name || properties.title || properties.oteil ||
                             properties.amenity || properties.highway || properties.type || 'Feature Details';
+            let featureType = properties.amenity || properties.shop || properties.tourism || properties.type || 'location';
 
+            // Extract key information for badges
+            let badges = [];
+
+            // Add count/market count badge
+            if (properties.market_count || properties.count) {
+                badges.push({
+                    icon: '📍',
+                    text: `${properties.market_count || properties.count} items`
+                });
+            }
+
+            // Add area badge
+            if (properties.area_sq_km) {
+                badges.push({
+                    icon: '📏',
+                    text: `${parseFloat(properties.area_sq_km).toFixed(1)} sq km`
+                });
+            } else if (properties.area_ha) {
+                badges.push({
+                    icon: '📏',
+                    text: `${parseFloat(properties.area_ha).toFixed(1)} ha`
+                });
+            }
+
+            // Add operator/district badge
+            if (properties.operator) {
+                badges.push({
+                    icon: '🏢',
+                    text: properties.operator
+                });
+            } else if (properties.bezirk) {
+                badges.push({
+                    icon: '📍',
+                    text: properties.bezirk
+                });
+            }
+
+            // Get avatar emoji based on feature type
+            let avatarEmoji = '📍';
+            if (featureType.includes('hospital') || properties.amenity === 'hospital') avatarEmoji = '🏥';
+            else if (featureType.includes('school') || properties.amenity === 'school') avatarEmoji = '🎓';
+            else if (featureType.includes('restaurant') || featureType.includes('cafe')) avatarEmoji = '🍽️';
+            else if (featureType.includes('shop') || properties.shop) avatarEmoji = '🛍️';
+            else if (featureType.includes('park') || properties.amenity === 'park') avatarEmoji = '🌳';
+            else if (featureType.includes('water') || properties.type === 'water') avatarEmoji = '💧';
+            else if (featureType.includes('forest')) avatarEmoji = '🌲';
+
+            // Build popup HTML
             let popupContent = '<div class="popup-card">';
-            popupContent += `<div class="popup-header">${featureName}</div>`;
+
+            // Header with avatar and title
+            popupContent += '<div class="popup-header">';
+            popupContent += `<div class="popup-avatar">${avatarEmoji}</div>`;
+            popupContent += '<div class="popup-title-section">';
+            popupContent += `<div class="popup-title">${featureName}</div>`;
+
+            // Add subtitle with type info
+            let subtitleParts = [];
+            if (featureType && featureType !== featureName) {
+                subtitleParts.push(featureType.charAt(0).toUpperCase() + featureType.slice(1).replace(/_/g, ' '));
+            }
+            if (properties.oteil) {
+                subtitleParts.push(properties.oteil);
+            }
+            if (subtitleParts.length > 0) {
+                popupContent += `<div class="popup-subtitle">${subtitleParts.join(' • ')}</div>`;
+            }
+
+            popupContent += '</div>';
+            popupContent += '</div>';
+
+            // Body with badges
             popupContent += '<div class="popup-body">';
 
-            // Enhanced priority list: area/subdivision fields first, then standard OSM tags
+            if (badges.length > 0) {
+                popupContent += '<div class="popup-badges">';
+                badges.forEach(badge => {
+                    popupContent += `<div class="popup-badge"><span class="popup-badge-icon">${badge.icon}</span>${badge.text}</div>`;
+                });
+                popupContent += '</div>';
+            }
+
+            // Add description if available
+            if (properties.description || properties.description_de || properties.note) {
+                let description = properties.description || properties.description_de || properties.note;
+                popupContent += `<div class="popup-description">${description}</div>`;
+            }
+
+            // Add attributes (excluding already used ones)
             const priorityKeys = [
-                'name', 'oteil', 'bezirk',  // Area/subdivision names
+                'name', 'oteil', 'bezirk',  // Already shown in header
                 'amenity', 'shop', 'tourism', 'highway', 'building', 'type',
-                'operator', 'market_count', 'count',  // Counts and metrics
-                'area_sq_km', 'area_ha', 'area',  // Area measurements
-                'addr:street', 'addr:housenumber', 'addr:city', 'phone', 'website'
+                'operator', 'market_count', 'count', 'area_sq_km', 'area_ha', 'area',
+                'description', 'description_de', 'note'  // Already shown in description
             ];
 
-            const sortedEntries = Object.entries(properties).sort((a, b) => {
-                const aIndex = priorityKeys.indexOf(a[0]);
-                const bIndex = priorityKeys.indexOf(b[0]);
-                if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-                if (aIndex !== -1) return -1;
-                if (bIndex !== -1) return 1;
-                return a[0].localeCompare(b[0]);
-            });
+            const excludeKeys = ['geometry', 'description', 'description_de', 'note', 'name', 'amenity', 'shop', 'tourism', 'highway', 'building', 'type', 'operator', 'market_count', 'count', 'area_sq_km', 'area_ha', 'area', 'oteil', 'bezirk'];
 
-            // Add attributes
-            for (const [key, value] of sortedEntries) {
-                if (value !== null && value !== undefined && value !== '') {
-                    // Better display names for area-specific fields
-                    let displayKey = key;
-                    if (key === 'oteil') {
-                        displayKey = 'Area/Neighborhood';
-                    } else if (key === 'bezirk') {
-                        displayKey = 'District';
-                    } else if (key === 'market_count' || key === 'count') {
-                        displayKey = key.replace(/_/g, ' ');
-                    } else if (key === 'area_sq_km') {
-                        displayKey = 'Area (sq km)';
-                    } else if (key === 'area_ha') {
-                        displayKey = 'Area (hectares)';
-                    } else {
-                        displayKey = key.replace(/_/g, ' ').replace(/:/g, ' ');
-                    }
+            const sortedEntries = Object.entries(properties)
+                .filter(([key]) => !excludeKeys.includes(key) && properties[key] !== null && properties[key] !== undefined && properties[key] !== '')
+                .sort((a, b) => {
+                    const aIndex = priorityKeys.indexOf(a[0]);
+                    const bIndex = priorityKeys.indexOf(b[0]);
+                    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                    if (aIndex !== -1) return -1;
+                    if (bIndex !== -1) return 1;
+                    return a[0].localeCompare(b[0]);
+                });
 
+            if (sortedEntries.length > 0) {
+                popupContent += '<div class="popup-attributes">';
+                for (const [key, value] of sortedEntries.slice(0, 5)) {  // Limit to 5 attributes
+                    let displayKey = key.replace(/_/g, ' ').replace(/:/g, ' ');
                     let displayValue = value;
 
                     if (typeof value === 'object') {
-                        displayValue = JSON.stringify(value, null, 2);
+                        displayValue = JSON.stringify(value);
                     } else if (typeof value === 'string' && value.startsWith('http')) {
-                        displayValue = `<a href="${value}" target="_blank" style="color: #504E76; text-decoration: none;">🔗 Link</a>`;
-                    } else if (typeof value === 'number' && (key === 'area_sq_km' || key === 'area_ha')) {
-                        // Format area values with 2 decimal places
-                        displayValue = typeof value === 'number' ? value.toFixed(2) : value;
+                        displayValue = `<a href="${value}" target="_blank" style="color: #f1642e; text-decoration: none;">🔗</a>`;
+                    } else if (typeof value === 'number' && (key.includes('area'))) {
+                        displayValue = value.toFixed(2);
                     }
 
                     popupContent += `
@@ -1593,62 +3014,23 @@
                         </div>
                     `;
                 }
+                popupContent += '</div>';
             }
 
             popupContent += '</div>';
-            popupContent += `<div class="popup-footer">${Object.keys(properties).length} attributes</div>`;
+
+            // Footer with action button
+            popupContent += '<div class="popup-footer">';
+            if (properties.website) {
+                popupContent += `<a href="${properties.website}" target="_blank" class="popup-button">Visit Website</a>`;
+            } else {
+                popupContent += '<button class="popup-button">More Details</button>';
+            }
+            popupContent += '</div>';
+
             popupContent += '</div>';
 
             return popupContent;
-        }
-
-        // Change layer color
-        function changeLayerColor(layerId, newColor) {
-            const layerInfo = layers.find(l => l.id === layerId);
-            if (!layerInfo) return;
-
-            // Update stored color
-            layerInfo.color = newColor;
-
-            // Remove old layer from map
-            map.removeLayer(layerInfo.layer);
-
-            // Create new layer with updated color
-            const geojsonLayer = L.geoJSON(layerInfo.geojsonData, {
-                style: function(feature) {
-                    return {
-                        color: newColor,
-                        weight: 2,
-                        fillOpacity: 0.3
-                    };
-                },
-                pointToLayer: function(feature, latlng) {
-                    return L.circleMarker(latlng, {
-                        radius: 8,
-                        fillColor: newColor,
-                        color: '#fff',
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    });
-                },
-                onEachFeature: function(feature, layer) {
-                    if (feature.properties) {
-                        layer.bindPopup(createPopupContent(feature.properties));
-                    }
-                }
-            });
-
-            // Add new layer to map if it was visible
-            if (layerInfo.visible) {
-                geojsonLayer.addTo(map);
-            }
-
-            // Update layer reference
-            layerInfo.layer = geojsonLayer;
-
-            // Update UI
-            updateLayersPanel();
         }
 
         // Update layers panel
@@ -1678,19 +3060,16 @@
                     <div class="layer-header">
                         <div class="layer-name" title="${layerInfo.name}">${layerInfo.name}</div>
                         <div class="layer-controls">
-                            <div class="layer-color-picker" title="Change color" id="colorPicker${layerInfo.id}">
-                                <div class="layer-color-display" style="background-color: ${layerInfo.color}"></div>
-                                <input type="color" value="${layerInfo.color}" id="colorInput${layerInfo.id}">
-                            </div>
                             <div class="layer-toggle ${layerInfo.visible ? 'active' : ''}"
                                  onclick="toggleLayer(${layerInfo.id})"></div>
-                                                <div class="layer-menu-wrapper">
-                                                    <button class="layer-menu-btn" onclick="toggleLayerMenu(event, ${layerInfo.id})" title="More options">⋮</button>
-                                                    <div class="layer-dropdown-menu" id="menu${layerInfo.id}">
-                                                        <div class="layer-dropdown-item" onclick="openExportDialog(${layerInfo.id}, event)">📥 Export as GeoJSON</div>
-                                                    </div>
-                                                </div>
-                                                                            <span class="layer-remove" onclick="removeLayer(${layerInfo.id})">×</span>
+                            <div class="layer-menu-wrapper">
+                                <button class="layer-menu-btn" onclick="toggleLayerMenu(event, ${layerInfo.id})" title="More options">⋮</button>
+                                <div class="layer-dropdown-menu" id="menu${layerInfo.id}">
+                                    <div class="layer-dropdown-item" onclick="openStyleDialog(event, ${layerInfo.id})">🎨 Style</div>
+                                    <div class="layer-dropdown-item" onclick="openExportDialog(${layerInfo.id}, event)">📥 Export as GeoJSON</div>
+                                </div>
+                            </div>
+                            <span class="layer-remove" onclick="removeLayer(${layerInfo.id})">×</span>
                         </div>
                     </div>
                     <div class="layer-info">
@@ -1705,9 +3084,7 @@
                     // Don't zoom if clicking controls
                     if (e.target.classList.contains('layer-toggle') ||
                         e.target.classList.contains('layer-remove') ||
-                        e.target.classList.contains('layer-color-picker') ||
-                        e.target.classList.contains('layer-color-display') ||
-                        e.target.type === 'color') {
+                        e.target.classList.contains('layer-menu-btn')) {
                         return;
                     }
                     // Display operations when layer is clicked
@@ -1717,17 +3094,6 @@
                 };
 
                 layersList.appendChild(layerItem);
-
-                // Add event listener to color input after appending to DOM
-                const colorInput = document.getElementById(`colorInput${layerInfo.id}`);
-                if (colorInput) {
-                    colorInput.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                    });
-                    colorInput.addEventListener('change', (e) => {
-                        changeLayerColor(layerInfo.id, e.target.value);
-                    });
-                }
             });
         }
 
@@ -1739,6 +3105,54 @@
             if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
             if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
             return `${Math.floor(seconds / 86400)}d ago`;
+        }
+
+        // Fetch and display available temporary layers from API
+        async function refreshAvailableLayers() {
+            try {
+                const sessionId = window.sessionId;
+                if (!sessionId) return; // No session yet
+
+                const response = await fetch(`${API_URL}/layers?session_id=${sessionId}`);
+                const data = await response.json();
+
+                if (data.success && data.layers && data.layers.length > 0) {
+                    console.log(`🎯 Found ${data.layers.length} temporary layer(s) available for use`);
+
+                    // Display temporary layers info in a dedicated section
+                    const layersList = document.getElementById('layersList');
+                    if (layersList && layers.length > 0) {
+                        // Add a separator if there are user-generated layers
+                        const separator = document.createElement('div');
+                        separator.className = 'layer-separator';
+                        separator.innerHTML = '<div style="padding: 8px 12px; color: #888; font-size: 12px; border-top: 1px solid #444; margin: 8px 0;">📚 Available for Reference:</div>';
+                        layersList.appendChild(separator);
+
+                        // Show available layers as read-only references
+                        data.layers.forEach(tempLayer => {
+                            const layerItem = document.createElement('div');
+                            layerItem.className = 'layer-item available-layer';
+                            layerItem.title = `Reference this layer with @${tempLayer.layer_name} in your next query`;
+                            layerItem.innerHTML = `
+                                <div class="layer-header">
+                                    <div class="layer-name" style="font-size: 13px; color: #aaa;">@${tempLayer.layer_name}</div>
+                                    <div class="layer-controls">
+                                        <span style="font-size: 11px; color: #888;">${tempLayer.geometry_type}</span>
+                                    </div>
+                                </div>
+                                <div class="layer-info">
+                                    <div class="layer-count">
+                                        <span style="font-size: 12px;">📍 ${tempLayer.feature_count} features</span>
+                                    </div>
+                                </div>
+                            `;
+                            layersList.appendChild(layerItem);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.log('Could not fetch available layers (non-critical):', error);
+            }
         }
 
         // Display operations for a selected layer
@@ -1833,9 +3247,19 @@
                     content += '<div class="operations-section">';
                     content += '<div class="operations-section-title">Metadata</div>';
 
+                    // Display LLM provider first if available
+                    if (layerInfo.metadata && layerInfo.metadata.llm_provider) {
+                        content += `
+                            <div class="metadata-item" style="background: rgba(241, 100, 46, 0.1); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(241, 100, 46, 0.3); margin-bottom: 0.5rem;">
+                                <span class="metadata-label">🧠 Model</span>
+                                <span class="metadata-value">${layerInfo.metadata.llm_provider}</span>
+                            </div>
+                        `;
+                    }
+
                     for (const [key, value] of Object.entries(layerInfo.metadata)) {
-                        // Skip subdivision-related keys
-                        if (key.includes('subdivision') || key === 'rankings' || key === 'top_subdivision') continue;
+                        // Skip subdivision-related keys and LLM provider (already displayed above)
+                        if (key.includes('subdivision') || key === 'rankings' || key === 'top_subdivision' || key === 'llm_provider') continue;
 
                         const displayKey = key.replace(/_/g, ' ').charAt(0).toUpperCase() +
                                          key.replace(/_/g, ' ').slice(1);
@@ -1871,12 +3295,22 @@
 
             operationsContent.innerHTML = content;
             operationsPanel.classList.remove('operations-panel-hidden');
+
+            // Tell Leaflet the container size changed (after CSS animation completes)
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
         }
 
         // Hide operations panel
         function hideOperationsPanel() {
             const operationsPanel = document.getElementById('operationsPanel');
             operationsPanel.classList.add('operations-panel-hidden');
+
+            // Tell Leaflet the container size changed (after CSS animation completes)
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
         }
 
         // Toggle layer visibility
@@ -2046,6 +3480,770 @@
             // Close dialog
             closeExportDialog();
         }
+
+        // ===== STYLING SYSTEM =====
+
+        // Store the current layer being styled
+        let currentStyleLayerId = null;
+        let styleFormData = null;
+
+        // Open style dialog
+        function openStyleDialog(event, layerId) {
+            event.stopPropagation();
+            currentStyleLayerId = layerId;
+
+            const layerInfo = layers.find(l => l.id === layerId);
+            if (!layerInfo) return;
+
+            // Update dialog title
+            document.getElementById('styleLayerName').textContent = layerInfo.name;
+
+            // Initialize form with current layer styling
+            const style = layerInfo.style || {
+                fillColor: '#FF6B6B',
+                borderColor: '#ffffff',
+                fillOpacity: 0.3,
+                borderWidth: 2,
+                iconColor: '#FF6B6B',
+                selectedIcon: null,
+                isGradient: false,
+                gradientProperty: null,
+                gradientScheme: 'viridis',
+                gradientRange: { min: null, max: null }
+            };
+
+            // Set basic tab values
+            document.getElementById('fillColor').value = style.fillColor || '#FF6B6B';
+            document.getElementById('borderColor').value = style.borderColor || '#ffffff';
+            document.getElementById('fillOpacity').value = style.fillOpacity || 0.3;
+            document.getElementById('borderWidth').value = style.borderWidth || 2;
+            document.getElementById('iconColor').value = style.iconColor || '#FF6B6B';
+            document.getElementById('fillOpacityValue').textContent = (style.fillOpacity || 0.3).toFixed(1);
+            document.getElementById('borderWidthValue').textContent = style.borderWidth || 2;
+
+            // Populate numerical properties
+            const numericProps = detectNumericProperties(layerInfo.geojsonData);
+            populatePropertySelect(numericProps);
+
+            // Set gradient tab values if applicable
+            if (style.isGradient && style.gradientProperty) {
+                document.getElementById('propertySelect').value = style.gradientProperty;
+                document.getElementById('colorScheme').value = style.gradientScheme || 'viridis';
+                if (style.gradientRange) {
+                    document.getElementById('rangeMin').value = style.gradientRange.min || '';
+                    document.getElementById('rangeMax').value = style.gradientRange.max || '';
+                }
+            }
+
+            // Show dialog
+            const overlay = document.getElementById('styleDialogOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+            }
+
+            // Close the menu
+            const menu = document.getElementById(`menu${layerId}`);
+            if (menu) {
+                menu.classList.remove('active');
+            }
+
+            // Add event listeners for sliders
+            addSliderListeners();
+
+            // Initialize icon picker
+            initializeIconPicker(style.selectedIcon);
+        }
+
+        // Close style dialog
+        function closeStyleDialog() {
+            const overlay = document.getElementById('styleDialogOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+            currentStyleLayerId = null;
+            styleFormData = null;
+        }
+
+        // Switch between tabs
+        function switchStyleTab(tabButton) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.style-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Add active class to clicked tab
+            tabButton.classList.add('active');
+
+            // Hide all tab contents
+            document.querySelectorAll('.style-tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            // Show selected tab content
+            const tabName = tabButton.getAttribute('data-tab');
+            const tabContent = document.getElementById(tabName + 'Tab');
+            if (tabContent) {
+                tabContent.classList.remove('hidden');
+            }
+        }
+
+        // Detect numerical properties in GeoJSON data
+        function detectNumericProperties(geojsonData) {
+            const properties = new Set();
+
+            if (!geojsonData || !geojsonData.features) return Array.from(properties);
+
+            // Check first few features for numeric properties
+            const featuresToCheck = geojsonData.features.slice(0, 100);
+            featuresToCheck.forEach(feature => {
+                if (feature.properties) {
+                    Object.keys(feature.properties).forEach(prop => {
+                        const value = feature.properties[prop];
+                        if (typeof value === 'number' && !isNaN(value)) {
+                            properties.add(prop);
+                        }
+                    });
+                }
+            });
+
+            return Array.from(properties).sort();
+        }
+
+        // Populate property select dropdown
+        function populatePropertySelect(properties) {
+            const select = document.getElementById('propertySelect');
+            if (!select) return;
+
+            // Keep the default option
+            select.innerHTML = '<option value="">-- Select a numerical property --</option>';
+
+            // Add each property
+            properties.forEach(prop => {
+                const option = document.createElement('option');
+                option.value = prop;
+                option.textContent = prop;
+                select.appendChild(option);
+            });
+        }
+
+        // Auto detect min/max range for selected property
+        function autoDetectRange() {
+            const layerInfo = layers.find(l => l.id === currentStyleLayerId);
+            if (!layerInfo) return;
+
+            const propertyName = document.getElementById('propertySelect').value;
+            if (!propertyName) {
+                showNotification('Please select a property first', 'error');
+                return;
+            }
+
+            let minVal = Infinity;
+            let maxVal = -Infinity;
+
+            if (layerInfo.geojsonData && layerInfo.geojsonData.features) {
+                layerInfo.geojsonData.features.forEach(feature => {
+                    const value = feature.properties?.[propertyName];
+                    if (typeof value === 'number' && !isNaN(value)) {
+                        minVal = Math.min(minVal, value);
+                        maxVal = Math.max(maxVal, value);
+                    }
+                });
+            }
+
+            if (minVal === Infinity || maxVal === -Infinity) {
+                showNotification('No numerical values found for this property', 'error');
+                return;
+            }
+
+            document.getElementById('rangeMin').value = minVal;
+            document.getElementById('rangeMax').value = maxVal;
+
+            updateGradientPreview();
+            showNotification(`Range: ${minVal.toFixed(2)} to ${maxVal.toFixed(2)}`, 'success');
+        }
+
+        // Update gradient preview and legend
+        function updateGradientPreview() {
+            const propertyName = document.getElementById('propertySelect').value;
+            const colorScheme = document.getElementById('colorScheme').value;
+            const minVal = parseFloat(document.getElementById('rangeMin').value);
+            const maxVal = parseFloat(document.getElementById('rangeMax').value);
+
+            if (!propertyName || isNaN(minVal) || isNaN(maxVal)) {
+                return;
+            }
+
+            generateLegend(propertyName, minVal, maxVal, colorScheme);
+
+            // Update map preview if live preview is enabled
+            if (document.getElementById('livePreview').checked) {
+                applyLayerStyle(true);
+            }
+        }
+
+        // Generate legend visualization
+        function generateLegend(propertyName, minVal, maxVal, colorScheme) {
+            const legend = document.getElementById('styleLegend');
+            if (!legend) return;
+
+            // Create gradient bar
+            const colors = [];
+            for (let i = 0; i <= 10; i++) {
+                const normalized = i / 10;
+                const color = interpolateColor(normalized, colorScheme);
+                colors.push(color);
+            }
+
+            const gradient = 'linear-gradient(to right, ' + colors.join(', ') + ')';
+
+            legend.innerHTML = `
+                <div class="legend-bar" style="background: ${gradient};"></div>
+                <div class="legend-labels">
+                    <span>${minVal.toFixed(2)}</span>
+                    <span>${((minVal + maxVal) / 2).toFixed(2)}</span>
+                    <span>${maxVal.toFixed(2)}</span>
+                </div>
+            `;
+        }
+
+        // Apply layer style
+        function applyLayerStyle(livePreview = false) {
+            const layerInfo = layers.find(l => l.id === currentStyleLayerId);
+            if (!layerInfo) return;
+
+            // Get active tab
+            const basicTab = document.getElementById('basicTab');
+            const gradientTab = document.getElementById('gradientTab');
+            const isGradientMode = !gradientTab.classList.contains('hidden');
+
+            // Collect style data
+            const styleConfig = {
+                fillColor: document.getElementById('fillColor').value,
+                borderColor: document.getElementById('borderColor').value,
+                fillOpacity: parseFloat(document.getElementById('fillOpacity').value),
+                borderWidth: parseInt(document.getElementById('borderWidth').value),
+                iconColor: document.getElementById('iconColor').value,
+                selectedIcon: document.querySelector('.icon-btn.selected')?.dataset.icon || null,
+                isGradient: isGradientMode,
+                gradientProperty: isGradientMode ? document.getElementById('propertySelect').value : null,
+                gradientScheme: isGradientMode ? document.getElementById('colorScheme').value : 'viridis',
+                gradientRange: isGradientMode ? {
+                    min: parseFloat(document.getElementById('rangeMin').value),
+                    max: parseFloat(document.getElementById('rangeMax').value)
+                } : null
+            };
+
+            // Validate gradient settings if in gradient mode
+            if (isGradientMode) {
+                if (!styleConfig.gradientProperty || isNaN(styleConfig.gradientRange.min) || isNaN(styleConfig.gradientRange.max)) {
+                    if (!livePreview) {
+                        showNotification('Please configure gradient settings properly', 'error');
+                    }
+                    return;
+                }
+            }
+
+            // Save style to layer
+            layerInfo.style = styleConfig;
+
+            // Re-render the layer on map
+            if (layerInfo.layer) {
+                map.removeLayer(layerInfo.layer);
+            }
+
+            // Create new layer with updated style
+            const newLayer = createStyledLayer(layerInfo.geojsonData, styleConfig);
+
+            if (layerInfo.visible) {
+                newLayer.addTo(map);
+            }
+
+            layerInfo.layer = newLayer;
+
+            // Close dialog if not live preview
+            if (!livePreview) {
+                closeStyleDialog();
+                showNotification(`Style applied to "${layerInfo.name}"`, 'success');
+            }
+        }
+
+        // Comprehensive SVG Icon Library mapped to Font Awesome icons
+        const ICON_LIBRARY = {
+            // Healthcare & Medical
+            'hospital': 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 11h-2v4h-2v-4H8v-2h2V8h2v4h2v2z',
+            'pharmacy': 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.5-5h-1v-4h-1V7h1V6h1v1h1v2h-1z',
+            'clinic': 'M9 3h2v8h8v2h-8v8h-2v-8H1v-2h8V3z',
+            'ambulance': 'M22 12h-4V8h-2v4h-4v2h4v4h2v-4h4v-2z',
+            'first-aid': 'M12 2c5.5 0 10 4.5 10 10s-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2m0 2c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8m0 5h-2v2H9v2h2v2h2v-2h2v-2h-2V9h-2z',
+
+            // Education
+            'school': 'M5 13.18v2.96c0 .54.45.98.99.98.55 0 1.01-.44 1.01-.98v-2.96c0-.54-.45-.98-.99-.98-.55 0-1.01.44-1.01.98zm4 2.96v-2.96c0-.54-.45-.98-.99-.98-.55 0-1.01.44-1.01.98v2.96c0 .54.45.98.99.98.55 0 1.01-.44 1.01-.98zm4-2.96v2.96c0 .54.45.98.99.98.55 0 1.01-.44 1.01-.98v-2.96c0-.54-.45-.98-.99-.98-.55 0-1.01.44-1.01.98zm4 2.96v-2.96c0-.54-.45-.98-.99-.98-.55 0-1.01.44-1.01.98v2.96c0 .54.45.98.99.98.55 0 1.01-.44 1.01-.98zM12 6c1.66 0 2.99-1.34 2.99-3S13.66 0 12 0C10.34 0 9 1.34 9 3s1.34 3 3 3z',
+            'university': 'M12 1l-6 3v2h1v4h2v-4h2v4h2v-4h1V4l6-3h-8z',
+            'library': 'M3 4v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2zm8 10H7v-2h4v2zm6-6H7V6h10v2z',
+            'book': 'M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z',
+
+            // Food & Beverage
+            'restaurant': 'M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H19V2c-2.76 0-5 2.24-5 4z',
+            'cafe': 'M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z',
+            'pizza': 'M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z',
+            'beer': 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 11h-2v4h-2v-4H8v-2h2V8h2v4h2v2z',
+            'utensils': 'M7 13c.83 0 1.5.67 1.5 1.5V18h-3v-3.5C5.5 13.67 6.17 13 7 13zm0-8C7 4.12 5.88 3 4.5 3S2 4.12 2 5.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z',
+            'apple': 'M20.57 14.86L22 12.43 20.57 12a6 6 0 0 0-5.87-4A6 6 0 0 0 9 6.07V3.5c0-.83-.67-1.5-1.5-1.5S6 2.67 6 3.5v2.57A6 6 0 0 0 1.57 12 6 6 0 0 0 3 14.86 5.991 5.991 0 0 1 6 13h12c.83 0 1.5.67 1.5 1.5v1.36h2v-1.5z',
+
+            // Finance & Banking
+            'bank': 'M11.5.5h1v7h-1z M20.5 8h-17v9h17zm-14.5 3h1v3h-1z M10.5 11h1v3h-1z M14.5 11h1v3h-1z M1 8h22L12 0 1 8z',
+            'money': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-13c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z',
+            'wallet': 'M21 18v1c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v1h2c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2h-2zm0-2h2V9h-2v7zM9 13c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z',
+            'credit-card': 'M20 8H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H4v-6h16v6zm0-8H4v-2h16v2z',
+            'chart': 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z',
+
+            // Transportation & Parking
+            'parking': 'M13 13h-2v-2h2v2zm4-8H7c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 12H7V7h10v10zm-6-3.5h2V9h-2v2.5z',
+            'bus': 'M18 1.01L8 1c-3.3 0-6 2.7-6 6v10c0 1.1.9 2 2 2h1v2h2v-2h12v2h2v-2h1c1.1 0 2-.9 2-2V7c0-3.3-2.7-6-6-6zm0 15H6V7h12v9zm-5-8h-2V8h2v2zm4 0h-2V8h2v2z',
+            'car': 'M18.92 5.01C18.72 4.4 18.16 4 17.5 4h-11c-.66 0-1.22.4-1.42 1.01L3 11v8c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-1h12v1c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-8l-2.08-5.99zM6.5 15c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm11 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM5 11l1.5-4.5h11L19 11H5z',
+            'taxi': 'M18.92 5.01C18.72 4.4 18.16 4 17.5 4h-11c-.66 0-1.22.4-1.42 1.01L3 11v8c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-1h12v1c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-8l-2.08-5.99z',
+            'train': 'M12 2c-4.97 0-9 .9-9 2v6h2c1.1 0 2 .9 2 2 0 1.1-.9 2-2 2H3v2h2c1.1 0 2 .9 2 2 0 1.1-.9 2-2 2H3v2h18v-2h-2c-1.1 0-2-.9-2-2 0-1.1.9-2 2-2h2v-2h-2c-1.1 0-2-.9-2-2 0-1.1.9-2 2-2h2V4c0-1.1-4.03-2-9-2z',
+            'bike': 'M18.29 15.5c-1.26.73-2.74 1.5-3.29 1.5s-2.03-.77-3.29-1.5c-1.26-.73-2.74-1.5-3.29-1.5s-2.03.77-3.29 1.5c-.55.32-1.03.59-1.42.81V5c0-.55.45-1 1-1s1 .45 1 1v3c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V5c0-.55.45-1 1-1s1 .45 1 1v13.31c-.39-.22-.87-.49-1.42-.81z',
+
+            // Recreation & Leisure
+            'park': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-12.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm0 9c1.66 0 3-1.34 3-3h-6c0 1.66 1.34 3 3 3z',
+            'tree': 'M19 12h-2c0-2.76-2.24-5-5-5s-5 2.24-5 5H5c-1.1 0-2 .9-2 2s.9 2 2 2h1c0 1.66 1.34 3 3 3v2h2v-2c1.66 0 3-1.34 3-3h1c1.1 0 2-.9 2-2s-.9-2-2-2z',
+            'soccer': 'M12 2c5.5 0 10 4.5 10 10s-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2m3 13c-.78 0-1.5.67-1.5 1.5S14.22 18 15 18s1.5-.67 1.5-1.5S15.78 15 15 15m-6 0c-.78 0-1.5.67-1.5 1.5S8.22 18 9 18s1.5-.67 1.5-1.5S9.78 15 9 15m3-6c.78 0 1.5-.67 1.5-1.5S12.78 6 12 6s-1.5.67-1.5 1.5S11.22 9 12 9z',
+            'swim': 'M8 19H6c-1.1 0-2-.9-2-2v-3H2V9h18V6h-2v3h-2V6h-2v3H8V9h10v5h-2v3c0 1.1-.9 2-2 2h-2v-2h-2v2z',
+            'gym': 'M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2m-3.6 13.9L7 13.38v-2.14c0-.55-.45-1-1-1H3.65c-.55 0-1 .45-1 1v2.14L.51 19.38C.1 20.33.57 21.5 1.6 21.5h19.8c1.02 0 1.5-1.17 1.08-2.12l-3.85-6.48h.3c.55 0 1-.45 1-1v-5.06c0-.55-.45-1-1-1H8.5c-.55 0-1 .45-1 1v5.06c0 .55.45 1 1 1z',
+
+            // Services & Safety
+            'police': 'M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4zM14 13h-4v-2h4v2z',
+            'fire': 'M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.29-1.45-3.29-3.2.02-2.2 1.9-4.08 4.3-4.08 2.4 0 4.3 1.88 4.3 4.08 0 1.75-1.51 3.2-3.31 3.2z',
+            'cctv': 'M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z',
+            'lifeguard': 'M12 2c5.5 0 10 4.5 10 10s-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2m0 2c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8m0 2c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2m5 10c-1 2-3 3-5 3s-4-1-5-3h10z',
+
+            // Accommodation
+            'hotel': 'M7 13c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm13-8h-8v8h-2v8h2v-8h8V5zm-1 2v4h-6V7h6z',
+            'bed': 'M19 7h-8v6h8V7zM3 7c-1.1 0-2 .9-2 2v10h2V9h13v10h2V9c0-1.1-.9-2-2-2H3z',
+            'door': 'M19 1H5c-1.1 0-2 .9-2 2v4h2V4h12v16H5v-3H3v4c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2z',
+            'key': 'M12.65 10C13.37 10 14 9.37 14 8.65c0-.72-.37-1.35-1.35-1.35h-.3V5.3H12.35V7.3h.3c.72 0 1.35.63 1.35 1.35 0 .72-.63 1.35-1.35 1.35h-1V10h1v4.7h-2V10h.65z',
+
+            // Retail & Shopping
+            'shopping': 'M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z',
+            'store': 'M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z',
+            'storefront': 'M16 6l2.29 2.29-4.88 4.88L9 10.24 4.59 14.65 3 13.06 9 7.06l4.42 4.42 4.58-4.58L21 9v-3z',
+            'gift': 'M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z',
+            'box': 'M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H4V5h16v14zm-8-8l-4-4v6h8v-6l-4 4z',
+
+            // Technology
+            'wifi': 'M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z',
+            'bluetooth': 'M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z',
+            'phone': 'M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z',
+            'computer': 'M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14l4 4V5c0-1.1-.9-2-2-2zm-2 12h-12V5h12v10z',
+            'server': 'M20 13H4c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-6c0-1.1-.9-2-2-2zm0-10H4c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z',
+            'cloud': 'M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 5.23 11.08 5 12 5c3.04 0 5.5 2.46 5.5 5.5v.5H19c2.05 0 3.71 1.66 3.71 3.71 0 1.59-1.15 2.92-2.66 3.2c.03-.2.05-.41.05-.62 0-2.64-2.05-4.78-4.65-4.78z',
+
+            // Other
+            'star': 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2l-2.81 6.63L2 9.24l5.46 4.73L5.82 21z',
+            'heart': 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
+            'location': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-13c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z',
+            'info': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',
+            'warning': 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
+            'error': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'
+        };
+
+        // Get appropriate icon for feature based on properties
+        function getIconForFeature(properties) {
+            if (!properties) return 'location';
+
+            const amenity = properties.amenity || '';
+            const shop = properties.shop || '';
+            const tourism = properties.tourism || '';
+            const leisure = properties.leisure || '';
+            const name = (properties.name || '').toLowerCase();
+            const type = (properties.type || '').toLowerCase();
+
+            // Healthcare
+            if (amenity === 'hospital' || amenity === 'clinic') return 'hospital';
+            if (amenity === 'pharmacy') return 'pharmacy';
+            if (amenity === 'doctors' || amenity === 'dentist' || amenity === 'veterinary') return 'hospital';
+
+            // Education
+            if (amenity === 'school' || amenity === 'university' || amenity === 'college' || amenity === 'library') return 'school';
+
+            // Food & Drink
+            if (amenity === 'restaurant' || shop === 'restaurant') return 'restaurant';
+            if (amenity === 'cafe' || shop === 'cafe' || amenity === 'bar' || amenity === 'pub') return 'cafe';
+            if (shop === 'bakery' || amenity === 'fast_food') return 'shopping';
+
+            // Shopping
+            if (shop === 'supermarket' || amenity === 'supermarket') return 'shopping';
+            if (amenity === 'bank' || amenity === 'atm') return 'bank';
+            if (shop) return 'shopping';
+
+            // Transportation
+            if (amenity === 'parking' || name.includes('parking')) return 'parking';
+            if (amenity === 'bus_station') return 'bus';
+            if (amenity === 'taxi' || amenity === 'car_rental') return 'car';
+
+            // Recreation
+            if (leisure === 'park' || amenity === 'park') return 'park';
+            if (tourism === 'museum' || tourism === 'theatre' || amenity === 'cinema') return 'shopping';
+            if (leisure === 'swimming_pool' || amenity === 'gym' || leisure === 'sports_centre') return 'park';
+
+            // Services
+            if (amenity === 'police') return 'police';
+            if (amenity === 'fire_station') return 'fire';
+            if (amenity === 'hotel') return 'hotel';
+            if (amenity === 'post_office') return 'shopping';
+
+            // Default
+            return 'location';
+        }
+
+        // Create SVG marker with icon and color
+        function createMarkerWithIcon(latlng, feature, iconColor, selectedIcon = null) {
+            const iconName = selectedIcon || getIconForFeature(feature.properties);
+            const iconPath = ICON_LIBRARY[iconName] || ICON_LIBRARY['location'];
+            const size = 40;
+
+            // Create SVG marker with icon
+            const svg = `
+                <svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Marker background circle -->
+                    <circle cx="12" cy="12" r="10.5" fill="${iconColor}" opacity="0.15" stroke="${iconColor}" stroke-width="1.5"/>
+                    <!-- Icon background circle -->
+                    <circle cx="12" cy="12" r="8" fill="${iconColor}" opacity="0.9"/>
+                    <!-- Icon SVG path -->
+                    <g transform="translate(12, 12) scale(0.5) translate(-12, -12)">
+                        <path d="${iconPath}" fill="white"/>
+                    </g>
+                </svg>
+            `;
+
+            const customIcon = L.divIcon({
+                html: svg,
+                iconSize: [size, size],
+                iconAnchor: [size/2, size],
+                popupAnchor: [0, -size],
+                className: 'feature-vector-icon'
+            });
+
+            return L.marker(latlng, { icon: customIcon });
+        }
+
+        // Create styled layer with Leaflet (with clustering for points)
+        function createStyledLayer(geojsonData, styleConfig) {
+            // Check if layer contains Point features
+            const hasPoints = geojsonData.features.some(f => f.geometry.type === 'Point');
+
+            // Create cluster group if points exist
+            let clusterGroup = null;
+            let featureGroup = null;
+
+            if (hasPoints) {
+                clusterGroup = L.markerClusterGroup({
+                    maxClusterRadius: 80,
+                    chunkedLoading: true,
+                    disableClusteringAtZoom: 15,
+                    spiderfyOnMaxZoom: true,
+                    showCoverageOnHover: false,
+                    zoomToBoundsOnClick: true
+                });
+                console.log('✅ Created MarkerClusterGroup for point layer');
+            }
+
+            // Create geoJSON layer
+            const geoJsonLayer = L.geoJSON(geojsonData, {
+                style: function(feature) {
+                    let fillColor = styleConfig.fillColor;
+                    let fillOpacity = styleConfig.fillOpacity;
+
+                    // Apply gradient coloring if enabled
+                    if (styleConfig.isGradient && styleConfig.gradientProperty) {
+                        const value = feature.properties?.[styleConfig.gradientProperty];
+                        if (typeof value === 'number' && !isNaN(value)) {
+                            const minVal = styleConfig.gradientRange.min;
+                            const maxVal = styleConfig.gradientRange.max;
+                            const normalized = (value - minVal) / (maxVal - minVal);
+                            fillColor = interpolateColor(Math.max(0, Math.min(1, normalized)), styleConfig.gradientScheme);
+                        }
+                    }
+
+                    return {
+                        color: 'transparent',
+                        weight: 0,
+                        fillColor: fillColor,
+                        fillOpacity: fillOpacity
+                    };
+                },
+                pointToLayer: function(feature, latlng) {
+                    let iconColor = styleConfig.iconColor || styleConfig.fillColor;
+
+                    // Apply gradient coloring for icons
+                    if (styleConfig.isGradient && styleConfig.gradientProperty) {
+                        const value = feature.properties?.[styleConfig.gradientProperty];
+                        if (typeof value === 'number' && !isNaN(value)) {
+                            const minVal = styleConfig.gradientRange.min;
+                            const maxVal = styleConfig.gradientRange.max;
+                            const normalized = (value - minVal) / (maxVal - minVal);
+                            iconColor = interpolateColor(Math.max(0, Math.min(1, normalized)), styleConfig.gradientScheme);
+                        }
+                    }
+
+                    // Use appropriate icon for the feature type
+                    return createMarkerWithIcon(latlng, feature, iconColor, styleConfig.selectedIcon);
+                },
+                onEachFeature: function(feature, layer) {
+                    // Add to cluster group if points exist
+                    if (hasPoints && feature.geometry.type === 'Point') {
+                        clusterGroup.addLayer(layer);
+                    }
+
+                    // Add popups
+                    if (feature.properties) {
+                        layer.bindPopup(createPopupContent(feature.properties), {
+                            maxWidth: 400,
+                            maxHeight: 500,
+                            autoPan: true,
+                            autoPanPadding: [40, 40],
+                            closeOnClick: false,
+                            offset: [0, 10]
+                        });
+                    }
+                }
+            });
+
+            // If we have a cluster group, add geoJSON to it and return it
+            if (clusterGroup) {
+                // Add non-point features to the geoJSON layer directly
+                const nonPointFeatures = geojsonData.features.filter(f => f.geometry.type !== 'Point');
+                if (nonPointFeatures.length > 0) {
+                    geoJsonLayer.eachLayer(layer => {
+                        if (layer.feature.geometry.type !== 'Point') {
+                            // Non-point features stay in geoJsonLayer (no clustering)
+                        }
+                    });
+                }
+
+                // Create a FeatureGroup to combine both
+                const combinedLayer = L.featureGroup();
+                combinedLayer.addLayer(clusterGroup);
+                combinedLayer.addLayer(geoJsonLayer);
+
+                // Store reference for cluster group
+                combinedLayer._clusterGroup = clusterGroup;
+
+                return combinedLayer;
+            }
+
+            // No points, return regular geoJSON layer
+            return geoJsonLayer;
+        }
+
+        // Interpolate color based on value (0-1) and color scheme
+        function interpolateColor(value, scheme) {
+            value = Math.max(0, Math.min(1, value)); // Clamp between 0-1
+
+            const schemes = {
+                'viridis': [
+                    '#440154', '#482777', '#3b528f', '#2d708e', '#29838f',
+                    '#22a884', '#5ec962', '#b5de2b', '#fde724'
+                ],
+                'plasma': [
+                    '#0d0887', '#46039f', '#7201a8', '#9c179e', '#bd3786',
+                    '#d8576b', '#ed7953', '#fb9f3a', '#fdca26', '#f0f921'
+                ],
+                'inferno': [
+                    '#000004', '#170b3b', '#420a68', '#6b2c7a', '#932667',
+                    '#bb3654', '#dd513a', '#f37819', '#f8b419', '#fcfdbf'
+                ],
+                'cool-warm': [
+                    '#3d4cc8', '#66a6ff', '#9fd0e7', '#d4e9f7', '#ffffbf',
+                    '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026'
+                ],
+                'red-green': [
+                    '#a50026', '#d73027', '#f46d43', '#fdae61', '#fee090',
+                    '#ffffbf', '#e0f3f8', '#abd9e9', '#74add1', '#4575b4'
+                ],
+                'blue-red': [
+                    '#0033ff', '#0066ff', '#0099ff', '#00ccff', '#00ffff',
+                    '#ffff00', '#ffcc00', '#ff9900', '#ff6600', '#ff0000'
+                ]
+            };
+
+            const colors = schemes[scheme] || schemes['viridis'];
+            const index = value * (colors.length - 1);
+            const lowerIndex = Math.floor(index);
+            const upperIndex = Math.ceil(index);
+            const fraction = index - lowerIndex;
+
+            if (lowerIndex === upperIndex) {
+                return colors[lowerIndex];
+            }
+
+            // Linear interpolation between colors
+            const lowerColor = hexToRgb(colors[lowerIndex]);
+            const upperColor = hexToRgb(colors[upperIndex]);
+
+            const r = Math.round(lowerColor.r + (upperColor.r - lowerColor.r) * fraction);
+            const g = Math.round(lowerColor.g + (upperColor.g - lowerColor.g) * fraction);
+            const b = Math.round(lowerColor.b + (upperColor.b - lowerColor.b) * fraction);
+
+            return rgbToHex(r, g, b);
+        }
+
+        // Convert hex color to RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 0, b: 0 };
+        }
+
+        // Convert RGB to hex
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        // Add slider event listeners
+        function addSliderListeners() {
+            const opacitySlider = document.getElementById('fillOpacity');
+            const widthSlider = document.getElementById('borderWidth');
+
+            if (opacitySlider) {
+                opacitySlider.addEventListener('input', (e) => {
+                    document.getElementById('fillOpacityValue').textContent = e.target.value;
+                });
+            }
+
+            if (widthSlider) {
+                widthSlider.addEventListener('input', (e) => {
+                    document.getElementById('borderWidthValue').textContent = e.target.value;
+                });
+            }
+        }
+
+        // Generate all icon buttons in the picker
+        function generateIconPicker() {
+            const iconPicker = document.getElementById('iconPicker');
+            if (!iconPicker) return;
+
+            // Clear existing buttons
+            iconPicker.innerHTML = '';
+
+            // Create buttons for all icons in ICON_LIBRARY
+            const iconNames = Object.keys(ICON_LIBRARY).sort();
+            console.log(`✅ Creating icon picker with ${iconNames.length} icons`);
+
+            iconNames.forEach(iconName => {
+                const btn = document.createElement('button');
+                btn.className = 'icon-btn';
+                btn.dataset.icon = iconName;
+                btn.title = iconName.replace('-', ' ').charAt(0).toUpperCase() + iconName.replace('-', ' ').slice(1);
+
+                // Create Font Awesome icon element
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-' + iconName;
+                btn.appendChild(icon);
+
+                iconPicker.appendChild(btn);
+            });
+
+            // Update icon count
+            document.getElementById('iconCount').textContent = iconNames.length;
+
+            // Attach click listeners to the newly created buttons
+            attachIconPickerListeners();
+        }
+
+        // Attach click listeners to icon picker buttons
+        function attachIconPickerListeners() {
+            const iconPicker = document.getElementById('iconPicker');
+            if (!iconPicker) return;
+
+            // Remove all existing listeners by cloning
+            const newIconPicker = iconPicker.cloneNode(true);
+            iconPicker.parentNode.replaceChild(newIconPicker, iconPicker);
+
+            // Add delegated listener
+            newIconPicker.addEventListener('click', (e) => {
+                const btn = e.target.closest('.icon-btn');
+                if (btn) {
+                    e.preventDefault();
+
+                    // Remove selected class from all buttons
+                    document.querySelectorAll('.icon-btn').forEach(b => {
+                        b.classList.remove('selected');
+                    });
+
+                    // Add selected class to clicked button
+                    btn.classList.add('selected');
+                    const selectedIcon = btn.dataset.icon;
+                    console.log('✅ Icon selected:', selectedIcon);
+                }
+            });
+        }
+
+        // Initialize icon picker with search functionality
+        function initializeIconPicker(selectedIcon) {
+            // Generate all icon buttons first
+            generateIconPicker();
+
+            // Mark previously selected icon
+            if (selectedIcon) {
+                const selectedBtn = document.querySelector(`.icon-btn[data-icon="${selectedIcon}"]`);
+                if (selectedBtn) {
+                    selectedBtn.classList.add('selected');
+                    console.log('✅ Icon picker initialized with selected icon:', selectedIcon);
+                }
+            } else {
+                console.log('✅ Icon picker initialized with no selection');
+            }
+
+            // Add search functionality
+            const searchInput = document.getElementById('iconSearch');
+            if (searchInput) {
+                // Clear previous search input
+                searchInput.value = '';
+
+                // Remove old listener by cloning
+                const newSearchInput = searchInput.cloneNode(true);
+                searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+
+                // Add new search listener
+                newSearchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase();
+                    const iconBtns = document.querySelectorAll('.icon-btn');
+                    let visibleCount = 0;
+
+                    iconBtns.forEach(btn => {
+                        const iconName = btn.dataset.icon.toLowerCase();
+                        const title = btn.title.toLowerCase();
+
+                        // Show button if it matches search query
+                        if (query === '' || iconName.includes(query) || title.includes(query)) {
+                            btn.classList.remove('hidden');
+                            visibleCount++;
+                        } else {
+                            btn.classList.add('hidden');
+                        }
+                    });
+
+                    // Update count
+                    document.getElementById('iconCount').textContent = visibleCount + ' / ' + Object.keys(ICON_LIBRARY).length;
+
+                    if (visibleCount === 0) {
+                        console.log('🔍 No icons match:', query);
+                    }
+                });
+            }
+        }
+
+        // Close style dialog when clicking outside
+        document.getElementById('styleDialogOverlay')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeStyleDialog();
+            }
+        });
 
 
         // Zoom to layer
@@ -2281,6 +4479,46 @@
             };
         }
 
+        // Get selected LLM provider
+        function getSelectedLLMProvider() {
+            const selected = document.querySelector('input[name="llmProvider"]:checked');
+            return selected ? selected.value : 'deepseek';
+        }
+
+        // Check provider health and update UI
+        async function checkProvidersHealth() {
+            // Check Ollama (Gemma3) availability
+            try {
+                const response = await fetch('http://localhost:11434/api/tags', {
+                    method: 'GET',
+                    timeout: 2000
+                });
+
+                if (response.ok) {
+                    // Ollama is available - enable Gemma3
+                    const gemma3Radio = document.getElementById('llmGemma3');
+                    const gemma3Label = document.getElementById('gemma3Label');
+                    const gemma3Dot = gemma3Label.querySelector('.llm-status-dot');
+
+                    gemma3Radio.disabled = false;
+                    gemma3Label.classList.remove('llm-unavailable');
+                    gemma3Label.title = 'Use local Gemma3 model (faster, no API key needed)';
+                    gemma3Dot.classList.remove('unavailable');
+                    gemma3Dot.classList.add('available');
+
+                    console.log('✅ Ollama/Gemma3 is available');
+                }
+            } catch (error) {
+                console.log('⚠️ Ollama/Gemma3 not available - keeping DeepSeek as default');
+                // Keep default state - Gemma3 disabled
+            }
+        }
+
+        // Check provider health on page load
+        window.addEventListener('load', () => {
+            checkProvidersHealth();
+        });
+
         // Execute search
         async function executeSearch() {
             const query = document.getElementById('searchInput').value.trim();
@@ -2296,11 +4534,16 @@
             setLoading(true, 'Processing...');
 
             try {
+                // Get selected LLM provider
+                const llmProvider = getSelectedLLMProvider();
+                console.log(`🧠 Using LLM: ${llmProvider.toUpperCase()}`);
+
                 // Determine query type
                 const isDEM = isDEMQuery(query);
                 const endpoint = isDEM ? '/api/dem/query' : '/api/query';
 
                 console.log(`📍 Query Type: ${isDEM ? 'DEM' : 'Spatial'}`);
+                console.log(`📊 Query Mode: ${queryMode.toUpperCase()}`);
 
                 let response;
 
@@ -2316,14 +4559,26 @@
                         }
                     });
                 } else {
-                    // Spatial query
-                    const payload = { question: query };
+                    // Spatial query with conversation mode
+                    // Generate or reuse session ID for conversation continuity
+                    const sessionId = window.sessionId || `session_${Date.now()}`;
+                    window.sessionId = sessionId;  // Store for future queries
+
+                    const payload = {
+                        question: query,
+                        llm_provider: llmProvider,
+                        context: {
+                            session_id: sessionId
+                        }
+                    };
 
                     // Add user location if available
                     if (userLocation) {
                         payload.user_location = userLocation;
                         console.log('🌍 Using user location:', userLocation);
                     }
+
+                    console.log(`💬 Conversation Mode - Session: ${sessionId}`);
 
                     response = await fetch(`${API_URL}/query`, {
                         method: 'POST',
@@ -2353,6 +4608,11 @@
                             metadata.top_subdivision = data.top_subdivision;
                         }
 
+                        // In single mode, clear previous layers; in multi-step, preserve them
+                        if (queryMode === 'single') {
+                            clearAllQueries();
+                        }
+
                         addLayer(
                             processed.layerName,
                             processed.geojson,
@@ -2364,8 +4624,25 @@
                             data.execution_time || 0
                         );
 
+                        // In multi-step mode, add to query chain
+                        if (queryMode === 'multi-step') {
+                            const result = {
+                                layer_name: processed.layerName,
+                                data: processed.geojson,
+                                operations: data.operations || [],
+                                reasoning: data.reasoning || processed.summary,
+                                datasets_used: data.datasets_used || [],
+                                metadata: metadata,
+                                execution_time: data.execution_time || 0
+                            };
+                            addQueryToChain(query, result);
+                        }
+
                         const featureCount = processed.geojson.features ? processed.geojson.features.length : 1;
                         showNotification(`✅ ${processed.layerName}: ${featureCount} features loaded (Top subdivision)`, 'success');
+
+                        // Refresh available layers for multi-step queries
+                        await refreshAvailableLayers();
                     } else {
                         showNotification(data.error || 'DEM analysis failed', 'error');
                     }
@@ -2379,7 +4656,16 @@
                         // Use DeepSeek-generated layer name if available, fallback to client-side generation
                         const layerName = data.layer_name || generateLayerName(query, data.data);
 
-                        // Pass all operation data to addLayer
+                        // Add LLM provider info to metadata
+                        const metadata = data.metadata || {};
+                        metadata.llm_provider = llmProvider.toUpperCase();
+
+                        // In single mode, clear previous layers; in multi-step, preserve them
+                        if (queryMode === 'single') {
+                            clearAllQueries();
+                        }
+
+                        // Pass all operation data to addLayer, including layer tracking
                         addLayer(
                             layerName,
                             data.data,
@@ -2387,11 +4673,21 @@
                             data.operations,      // Operations performed
                             data.reasoning,       // AI reasoning
                             data.datasets_used,   // Datasets used
-                            data.metadata,        // Metadata
-                            data.execution_time   // Execution time
+                            metadata,             // Metadata (now includes LLM provider)
+                            data.execution_time,  // Execution time
+                            data.layer_id,        // API-generated layer ID
+                            data.parent_layers    // Parent layer IDs for dependency tracking
                         );
 
-                        showNotification(`Found ${data.data.features.length} results`, 'success');
+                        // In multi-step mode, add to query chain
+                        if (queryMode === 'multi-step') {
+                            addQueryToChain(query, data);
+                        }
+
+                        showNotification(`Found ${data.data.features.length} results (${llmProvider.toUpperCase()})`, 'success');
+
+                        // Refresh available layers for multi-step queries
+                        await refreshAvailableLayers();
                     } else {
                         showNotification(data.error || 'No results found', 'error');
                     }

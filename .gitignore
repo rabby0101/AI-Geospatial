@@ -63,3 +63,4 @@ logs/
 .claude/
 claude.md
 CLAUDE.md
+data/raster/dem/demo_results/berlin_development_suitability.geojson
