@@ -4268,12 +4268,26 @@
                         }
                     }
 
-                    return {
-                        color: 'transparent',
-                        weight: 0,
-                        fillColor: fillColor,
-                        fillOpacity: fillOpacity
-                    };
+                    // Different styles for different geometry types
+                    const geomType = feature.geometry?.type;
+                    if (geomType === 'LineString' || geomType === 'MultiLineString') {
+                        // Lines: use color and weight for visibility
+                        return {
+                            color: fillColor,           // Line stroke color
+                            weight: 2,                  // Line width in pixels
+                            opacity: fillOpacity,       // Line opacity
+                            lineCap: 'round',
+                            lineJoin: 'round'
+                        };
+                    } else {
+                        // Polygons: use fillColor and fillOpacity
+                        return {
+                            color: 'transparent',
+                            weight: 0,
+                            fillColor: fillColor,
+                            fillOpacity: fillOpacity
+                        };
+                    }
                 },
                 pointToLayer: function(feature, latlng) {
                     let iconColor = styleConfig.iconColor || styleConfig.fillColor;
