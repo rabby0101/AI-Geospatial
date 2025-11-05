@@ -4361,6 +4361,17 @@
                 });
             }
 
+            getClusterCircleSize(count) {
+                // Smooth, continuous scaling based on cluster count
+                // Larger clusters noticeably bigger than smaller ones
+                // Formula: baseSize + (count × scaleFactor) with min/max bounds
+                const baseSize = 35;                // Minimum visible size
+                const scaleFactor = 0.08;           // Growth rate per point
+                const maxSize = 90;                 // Maximum cluster size
+
+                return Math.min(baseSize + (count * scaleFactor), maxSize);
+            }
+
             renderClusters() {
                 // Render individual markers
                 this.markers.forEach(markerData => {
@@ -4386,39 +4397,35 @@
                     this.markerLayer.addLayer(marker);
                 });
 
-                // Render cluster circles
+                // Render cluster circles (professional design: semi-transparent dark with white center point)
                 this.clusters.forEach(clusterData => {
-                    const clusterColor = this.styleConfig.fillColor;
-                    const clusterSize = Math.min(40 + clusterData.count * 2, 80);
+                    const circleSize = this.getClusterCircleSize(clusterData.count);
+                    const radius = circleSize / 2;
 
-                    // Create cluster circle
+                    // Professional design: semi-transparent dark circle with small white center point
                     const svg = `
-                        <svg width="${clusterSize}" height="${clusterSize}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="${clusterSize/2 - 2}" fill="${clusterColor}" opacity="0.7" stroke="${clusterColor}" stroke-width="2"/>
-                            <text x="12" y="14" text-anchor="middle" font-size="12" font-weight="bold" fill="white">${clusterData.count}</text>
+                        <svg width="${circleSize}" height="${circleSize}" viewBox="0 0 ${circleSize} ${circleSize}" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Semi-transparent dark background circle -->
+                            <circle cx="${radius}" cy="${radius}" r="${radius - 1}" fill="rgba(50, 50, 50, 0.6)" stroke="rgba(100, 100, 100, 0.3)" stroke-width="1"/>
+                            <!-- Small white center point -->
+                            <circle cx="${radius}" cy="${radius}" r="3" fill="white"/>
                         </svg>
                     `;
 
                     const clusterIcon = L.divIcon({
                         html: svg,
-                        iconSize: [clusterSize, clusterSize],
-                        iconAnchor: [clusterSize/2, clusterSize/2],
-                        popupAnchor: [0, 0],
-                        className: 'cluster-icon'
+                        iconSize: [circleSize, circleSize],
+                        iconAnchor: [radius, radius],
+                        popupAnchor: [0, -radius],
+                        className: 'cluster-circle-icon'
                     });
 
                     const clusterMarker = L.marker(clusterData.center, { icon: clusterIcon });
 
-                    // Click to zoom to cluster
+                    // Click to zoom to cluster bounds with animation
                     clusterMarker.on('click', () => {
                         const bounds = L.latLngBounds(clusterData.points.map(p => p.point));
                         this.map.fitBounds(bounds.pad(0.1), { maxZoom: 16, animate: true });
-                    });
-
-                    // Show point count in popup
-                    clusterMarker.bindPopup(`<strong>${clusterData.count} features</strong>`, {
-                        maxWidth: 150,
-                        closeOnClick: false
                     });
 
                     this.clusterLayer.addLayer(clusterMarker);
