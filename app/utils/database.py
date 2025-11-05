@@ -176,21 +176,30 @@ class DatabaseManager:
                 if isinstance(geom, (bytes, memoryview)):
                     # WKB format (binary)
                     try:
-                        return wkb.loads(bytes(geom))
-                    except Exception:
+                        converted = wkb.loads(bytes(geom))
+                        return converted
+                    except Exception as e:
+                        import logging
+                        logging.warning(f"Failed to convert WKB geometry: {e}")
                         return None
                 elif isinstance(geom, str):
                     # Check if it's hex-encoded WKB (EWKB from PostGIS)
                     if geom and all(c in '0123456789ABCDEFabcdef' for c in geom):
                         try:
                             # Hex-encoded WKB - decode and load
-                            return wkb.loads(bytes.fromhex(geom))
-                        except Exception:
+                            converted = wkb.loads(bytes.fromhex(geom))
+                            return converted
+                        except Exception as e:
+                            import logging
+                            logging.warning(f"Failed to convert hex-encoded WKB: {e}")
                             pass
                     # Try WKT format
                     try:
-                        return wkt.loads(geom)
-                    except Exception:
+                        converted = wkt.loads(geom)
+                        return converted
+                    except Exception as e:
+                        import logging
+                        logging.warning(f"Failed to convert WKT geometry: {e}")
                         return None
                 else:
                     # Try to use geoalchemy2 if available
@@ -200,7 +209,15 @@ class DatabaseManager:
                         # Already a shapely object or unknown type
                         return geom
 
-            df[geom_col] = df[geom_col].apply(convert_geometry)
+            # Apply conversion with tracking
+            converted_geoms = df[geom_col].apply(convert_geometry)
+            null_count_before = df[geom_col].isna().sum()
+            null_count_after = converted_geoms.isna().sum()
+            if null_count_after > null_count_before:
+                import logging
+                logging.warning(f"Geometry conversion failed for {null_count_after - null_count_before} features. "
+                               f"Check for corrupt or unsupported geometry formats.")
+            df[geom_col] = converted_geoms
 
             # Create GeoDataFrame
             gdf = gpd.GeoDataFrame(df, geometry=geom_col, crs="EPSG:4326")
@@ -391,6 +408,105 @@ class DatabaseManager:
 
         except Exception as e:
             raise Exception(f"Query execution failed: {str(e)}")
+
+    def get_schema_with_descriptions(self, schema: str = "vector") -> list:
+        """
+        Get all tables with descriptions from metadata.table_descriptions.
+
+        This is the single source of truth for LLM knowledge about available tables.
+        Reads from metadata.table_descriptions which is updated via the UI.
+        Fetches live schema from database including descriptions, row counts, geometry types.
+
+        Args:
+            schema: Database schema to query (default: vector)
+
+        Returns:
+            List of dicts with table info:
+            [
+                {
+                    "table": "osm_hospitals",
+                    "description": "Emergency and general hospitals...",
+                    "row_count": 59,
+                    "geometry": "POINT",
+                    "columns": ["osm_id", "name", "operator", "geometry"]
+                },
+                ...
+            ]
+        """
+        if not self.engine:
+            self.initialize()
+
+        try:
+            with self.engine.connect() as conn:
+                # Get metadata from metadata.table_descriptions (UI-managed source of truth)
+                query = text("""
+                    SELECT
+                        table_name,
+                        description,
+                        row_count,
+                        geometry_type
+                    FROM metadata.table_descriptions
+                    ORDER BY table_name
+                """)
+                result = conn.execute(query)
+                metadata = {row[0]: {
+                    "description": row[1],
+                    "row_count": row[2],
+                    "geometry_type": row[3]
+                } for row in result}
+
+            # Build result with column info
+            tables_data = []
+            for table_name in metadata.keys():
+                try:
+                    table_info = self.get_table_info(table_name, schema)
+
+                    tables_data.append({
+                        "table": table_name,
+                        "description": metadata[table_name]["description"],
+                        "row_count": table_info["row_count"],
+                        "geometry": metadata[table_name]["geometry_type"] or "NONE",
+                        "columns": [col["name"] for col in table_info["columns"]]
+                    })
+                except Exception as e:
+                    # Skip tables that can't be queried
+                    print(f"Warning: Could not get info for table {table_name}: {e}")
+                    continue
+
+            return tables_data
+
+        except Exception as e:
+            print(f"Error fetching schema with descriptions: {e}")
+            return []
+
+    def update_table_description(self, table_name: str, description: str, schema: str = "vector") -> bool:
+        """
+        Update the description for a table in metadata.
+
+        Args:
+            table_name: Name of the table
+            description: New description text
+            schema: Database schema
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.engine:
+            self.initialize()
+
+        try:
+            with self.engine.connect() as conn:
+                query = text(f"""
+                    UPDATE {schema}.table_metadata
+                    SET description = :desc, updated_at = CURRENT_TIMESTAMP
+                    WHERE table_name = :table
+                """)
+                conn.execute(query, {"desc": description, "table": table_name})
+                conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating description: {e}")
+            return False
 
 
 # Global instance

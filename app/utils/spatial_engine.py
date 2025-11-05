@@ -15,7 +15,7 @@ class SpatialEngine:
     """
     Executes geospatial operations by running SQL queries in PostGIS.
     Extended to support raster operations (NDVI, DEM, land cover).
-    Simple and clean: DeepSeek generates SQL → PostGIS executes → Return GeoJSON
+    DeepSeek generates SQL → PostGIS executes → Return GeoJSON
     """
 
     def __init__(self, data_dir: str = "./data"):
@@ -45,7 +45,11 @@ class SpatialEngine:
                 logger.info(f"Result GDF length: {len(result_gdf)}")
 
             if result_gdf is not None and len(result_gdf) > 0:
-                return self._format_result(result_gdf)
+                # Apply MCDA scoring if applicable
+                query = plan.reasoning if plan.reasoning else ""  # Use reasoning as fallback for query context
+                result_gdf = self.apply_mcda_scoring(result_gdf, query, plan)
+
+                return self._format_result(result_gdf, plan)
             else:
                 return {
                     "error": "No results found",
@@ -60,6 +64,128 @@ class SpatialEngine:
                 "success": False,
                 "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
             }
+
+    def apply_mcda_scoring(
+        self,
+        result_gdf: gpd.GeoDataFrame,
+        query: str,
+        plan: OperationPlan
+    ) -> gpd.GeoDataFrame:
+        """
+        Apply multi-criteria decision analysis (MCDA) scoring to results.
+
+        This method:
+        1. Extracts criteria from the user query
+        2. Assigns dynamic weights based on context
+        3. Calculates normalized density scores
+        4. Computes composite suitability scores
+
+        OPTIMIZATION: Skip MCDA if query already has density columns calculated in SQL
+        (e.g., when SQL query includes density calculations like '*_density', '*_per_km2')
+
+        Args:
+            result_gdf: GeoDataFrame with density data
+            query: Original user query
+            plan: OperationPlan with reasoning and context
+
+        Returns:
+            GeoDataFrame with added scoring columns
+        """
+        try:
+            from app.utils.criteria_extractor import CriteriaExtractor
+            from app.utils.weight_calculator import WeightCalculator
+            from app.utils.density_scorer import DensityScorer
+
+            # OPTIMIZATION: Check if density is already calculated in SQL
+            # If the result already has density columns, skip expensive MCDA scoring
+            density_columns = [col for col in result_gdf.columns if '_density' in col or '_per_km2' in col]
+            if len(density_columns) >= 2:
+                logger.info(f"MCDA: Density already calculated in SQL ({len(density_columns)} columns), skipping MCDA scoring")
+                return result_gdf
+
+            # Step 1: Extract criteria from query
+            criteria_data = CriteriaExtractor.extract_criteria(query)
+
+            logger.info(f"MCDA: Extracted {criteria_data['available_count']} criteria "
+                       f"({criteria_data['missing_count']} unavailable)")
+
+            # Only apply MCDA if we have multi-criteria scoring query AND small result set (< 100 rows)
+            # For large aggregation queries (districts), density is calculated in SQL to avoid Python overhead
+            if not criteria_data['has_scoring'] or criteria_data['available_count'] < 2 or len(result_gdf) > 100:
+                logger.info(f"MCDA: Skipping MCDA - scoring={criteria_data.get('has_scoring', False)}, "
+                           f"criteria={criteria_data.get('available_count', 0)}, rows={len(result_gdf)}")
+                return result_gdf
+
+            # Step 2: Calculate dynamic weights
+            weights_result = WeightCalculator.calculate_weights(
+                criteria_data,
+                context=criteria_data['query_context']
+            )
+
+            if 'error' in weights_result:
+                logger.warning(f"MCDA: Weight calculation failed: {weights_result['error']}")
+                return result_gdf
+
+            weights = weights_result['weights']
+            criteria_tables = criteria_data['available_tables']
+
+            logger.info(f"MCDA: Applied weights - {weights}")
+
+            # Step 3: Convert GeoDataFrame to list of features for scoring
+            features = []
+            for idx, row in result_gdf.iterrows():
+                feature = {
+                    'properties': row.to_dict(),
+                    'geometry': row.geometry.__geo_interface__ if hasattr(row.geometry, '__geo_interface__') else None
+                }
+                features.append(feature)
+
+            # Step 4: Calculate composite scores
+            scored_features, stats = DensityScorer.calculate_composite_scores(
+                features,
+                weights,
+                criteria_tables
+            )
+
+            logger.info(f"MCDA: Calculated composite scores - "
+                       f"min={stats['composite_score_range']['min']}, "
+                       f"max={stats['composite_score_range']['max']}, "
+                       f"mean={stats['composite_score_range']['mean']}")
+
+            # Step 5: Update result_gdf with scores
+            result_gdf['composite_score'] = [f['properties'].get('composite_score', 0) for f in scored_features]
+            result_gdf['score_breakdown'] = [f['properties'].get('score_breakdown', {}) for f in scored_features]
+            result_gdf['criterion_scores'] = [f['properties'].get('criterion_scores', {}) for f in scored_features]
+            result_gdf['weights_used'] = [f['properties'].get('weights_used', {}) for f in scored_features]
+            result_gdf['included_criteria'] = [criteria_data['available_tables']] * len(result_gdf)
+            result_gdf['excluded_criteria'] = [
+                [{'name': c['name'], 'reason': c.get('reason', 'Unknown')}
+                 for c in criteria_data['criteria'] if not c['available']]
+            ] * len(result_gdf)
+
+            # Store metadata for response
+            result_gdf.attrs['mcda_metadata'] = {
+                'scoring_applied': True,
+                'context': criteria_data['query_context'],
+                'available_criteria': criteria_data['available_tables'],
+                'excluded_criteria': criteria_data['missing_tables'],
+                'weights': weights,
+                'weight_metadata': weights_result.get('weight_metadata', {}),
+                'statistics': stats,
+                'redistribution_applied': weights_result.get('redistribution_applied', False),
+                'weight_method': weights_result.get('weight_method', 'unknown')
+            }
+
+            # Sort by composite score
+            result_gdf = result_gdf.sort_values('composite_score', ascending=False)
+
+            return result_gdf
+
+        except Exception as e:
+            logger.error(f"MCDA scoring failed: {e}")
+            logger.exception(e)
+            # Return original GDF without scoring if MCDA fails
+            return result_gdf
 
     def execute_stats_plan(self, plan: OperationPlan) -> Dict[str, Any]:
         """
@@ -120,16 +246,44 @@ class SpatialEngine:
             }
 
 
-    def _format_result(self, gdf: gpd.GeoDataFrame) -> Dict[str, Any]:
-        """Format GeoDataFrame as GeoJSON response"""
+    def _format_result(self, gdf: gpd.GeoDataFrame, plan: OperationPlan = None) -> Dict[str, Any]:
+        """
+        Format GeoDataFrame as GeoJSON response.
+
+        Args:
+            gdf: GeoDataFrame with results
+            plan: Optional OperationPlan for including reasoning and other metadata
+
+        Returns:
+            Dictionary with GeoJSON and metadata
+        """
         # Convert to WGS84 for GeoJSON
         if gdf.crs and gdf.crs != "EPSG:4326":
             gdf = gdf.to_crs("EPSG:4326")
 
+        # Check geometry before filtering
+        total_before = len(gdf)
+        null_geoms = gdf.geometry.isna().sum()
+        if null_geoms > 0:
+            logger.warning(f"Found {null_geoms} features with NULL geometries before validation")
+
         # Filter out invalid geometries (None, empty, or with NaN bounds)
-        gdf = gdf[gdf.geometry.is_valid].copy()
+        gdf_valid = gdf[gdf.geometry.is_valid].copy()
+        invalid_count = total_before - len(gdf_valid)
+
+        if invalid_count > 0:
+            logger.warning(f"Filtered out {invalid_count}/{total_before} features with invalid geometries")
+            # Log sample of invalid geometries for debugging
+            invalid_gdf = gdf[~gdf.geometry.is_valid]
+            for _, (i, row) in enumerate(invalid_gdf.head(3).iterrows()):
+                geom_type = type(row.geometry).__name__ if row.geometry is not None else "None"
+                logger.warning(f"  Invalid geometry {i}: type={geom_type}, {row.geometry}")
+
+        gdf = gdf_valid
 
         if len(gdf) == 0:
+            error_msg = f"No valid geometries found (filtered {invalid_count} invalid, {null_geoms} NULL)"
+            logger.error(error_msg)
             return {
                 "success": True,
                 "result_type": "geojson",
@@ -138,7 +292,10 @@ class SpatialEngine:
                     "count": 0,
                     "crs": "EPSG:4326",
                     "bounds": [],
-                    "message": "No valid geometries found"
+                    "message": error_msg,
+                    "total_features_before_filter": total_before,
+                    "invalid_geometries_filtered": invalid_count,
+                    "null_geometries": null_geoms
                 }
             }
 
@@ -155,6 +312,10 @@ class SpatialEngine:
             "bounds": bounds
         }
 
+        # Add MCDA metadata if available
+        if hasattr(gdf, 'attrs') and 'mcda_metadata' in gdf.attrs:
+            metadata['mcda'] = gdf.attrs['mcda_metadata']
+
         # Add any custom metadata
         if hasattr(gdf, 'metadata'):
             metadata.update(gdf.metadata)
@@ -168,12 +329,16 @@ class SpatialEngine:
 
             if gdf_copy[col].dtype == 'datetime64[ns]' or str(gdf_copy[col].dtype) == 'datetime64[ns, UTC]':
                 gdf_copy[col] = gdf_copy[col].astype(str)
-            # Convert Decimal/object types that might contain Decimal
+            # Handle object types (could be Decimal, dict, list, or string)
             elif gdf_copy[col].dtype == 'object':
-                # Check if first non-null value is Decimal
+                # Check if first non-null value to determine type
                 first_val = gdf_copy[col].dropna().iloc[0] if len(gdf_copy[col].dropna()) > 0 else None
-                if first_val is not None and str(type(first_val).__name__) == 'Decimal':
-                    gdf_copy[col] = gdf_copy[col].astype(float)
+                if first_val is not None:
+                    first_type = type(first_val).__name__
+                    if first_type == 'Decimal':
+                        # Convert Decimal to float
+                        gdf_copy[col] = gdf_copy[col].astype(float)
+                    # Otherwise keep dicts, lists, and strings as-is (they're JSON serializable)
             # Replace NaN values in numeric columns with None (which becomes null in JSON)
             else:
                 try:

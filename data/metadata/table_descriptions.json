@@ -1,6 +1,13 @@
 {
+  "abstell_mikromob": "Parking locations for small vehicles like bikes and scooters.",
   "admin_boundaries": "National and regional administrative borders with country codes and names.",
   "berlin_districts": "Berlin administrative districts (Bezirke) with official boundaries",
+  "berlin_subdivision_population": "Population of Berlin's subdivisions, including districts and neighborhoods.",
+  "bplan_official_documents": "Official urban development plans and their associated legal documents.",
+  "detailnetz_connection_points": "Connection points for traffic networks, including road and path junctions.",
+  "detailnetz_road_segments": "Road network segments with street names, classifications, and traffic direction information.",
+  "detailnetz_structures": "Transport infrastructure structures including bridges, tunnels, and culverts along road networks.",
+  "gewerbedaten": "Business location points with geographic identifiers for urban planning districts in Berlin.",
   "landmarks": "Unified location index of all major landmarks, districts, and named locations in Berlin",
   "osm_allotment_gardens": "Polygon features representing allotment gardens, including their names, access rules, and operators.",
   "osm_atm": "Automated teller machines and cash points",
@@ -13,6 +20,7 @@
   "osm_forests": "Forest areas and wooded zones",
   "osm_gyms": "Fitness centers, gyms, and sports facilities",
   "osm_hospitals": "Medical facilities providing hospital services and emergency care",
+  "osm_landuse": "Land use areas from OpenStreetMap, including classifications and identifiers.",
   "osm_libraries": "Public libraries and lending libraries",
   "osm_museums": "Museums and cultural institutions",
   "osm_parking": "Parking areas, garages, and parking facilities",
@@ -29,5 +37,8 @@
   "osm_universities": "Universities and higher education institutions",
   "osm_veterinary": "Veterinary clinics and animal medical services",
   "osm_water_bodies": "Water bodies including lakes, rivers, and ponds",
-  "vegetation_ndvi": "Normalized Difference Vegetation Index (NDVI) data from Sentinel-2 for vegetation monitoring"
+  "parkplaetze": "Parking space locations with capacity, restrictions, fees, and operating hours.",
+  "table_metadata": "Catalog of geospatial datasets with their names, descriptions, and schemas.",
+  "vegetation_ndvi": "Normalized Difference Vegetation Index (NDVI) data from Sentinel-2 for vegetation monitoring",
+  "wasserschutzgebiete": "Water protection zones for waterworks, including legal ordinance details and boundaries."
 }

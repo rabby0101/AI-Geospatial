@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Inspector - GeoAssist</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0d1a 0%, #251f35 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(80, 78, 118, 0.3);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(241, 100, 46, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #F1642E 0%, #504E76 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-box input {
+            padding: 10px 15px;
+            border: 1px solid rgba(241, 100, 46, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            width: 300px;
+        }
+
+        .search-box input::placeholder {
+            color: #888;
+        }
+
+        /* Layout */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            height: 600px;
+        }
+
+        /* Tables List */
+        .tables-list {
+            background: rgba(80, 78, 118, 0.2);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(241, 100, 46, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .tables-list h2 {
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #F1642E;
+        }
+
+        .table-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(241, 100, 46, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .table-item:hover {
+            background: rgba(241, 100, 46, 0.1);
+            border-color: rgba(241, 100, 46, 0.3);
+            transform: translateX(5px);
+        }
+
+        .table-item.active {
+            background: rgba(241, 100, 46, 0.2);
+            border-color: #F1642E;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-badge.documented {
+            background: #4CAF50;
+            color: white;
+            title: 'Table documented';
+        }
+
+        .status-badge.partial {
+            background: #FF9800;
+            color: white;
+        }
+
+        .status-badge.empty {
+            background: #f44336;
+            color: white;
+        }
+
+        .table-item-name {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        /* Table Details */
+        .table-details {
+            background: rgba(80, 78, 118, 0.2);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(241, 100, 46, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .table-details h2 {
+            color: #F1642E;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(241, 100, 46, 0.1);
+        }
+
+        .detail-section:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: #F1642E;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(241, 100, 46, 0.15);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-wrap: break-word;
+        }
+
+        /* Textarea for descriptions */
+        textarea {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(241, 100, 46, 0.3);
+            border-radius: 6px;
+            color: #e0e0e0;
+            resize: vertical;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
+        }
+
+        textarea::placeholder {
+            color: #666;
+        }
+
+        /* Columns Grid */
+        .columns-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .column-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(241, 100, 46, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .column-name {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #F1642E;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .column-type {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .column-description {
+            font-size: 12px;
+            color: #ccc;
+            margin-bottom: 8px;
+            min-height: 40px;
+        }
+
+        .column-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            background: rgba(241, 100, 46, 0.2);
+            border: 1px solid rgba(241, 100, 46, 0.3);
+            color: #F1642E;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: rgba(241, 100, 46, 0.4);
+            border-color: #F1642E;
+        }
+
+        .btn.primary {
+            background: #F1642E;
+            color: white;
+            border-color: #F1642E;
+        }
+
+        .btn.primary:hover {
+            background: #d9511d;
+        }
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .spinner {
+            border: 3px solid rgba(241, 100, 46, 0.1);
+            border-top: 3px solid #F1642E;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #0f0d1a 0%, #251f35 100%);
+            border: 1px solid rgba(241, 100, 46, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+            color: #F1642E;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #F1642E;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(241, 100, 46, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(241, 100, 46, 0.5);
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Back button */
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            background: rgba(241, 100, 46, 0.2);
+            border: 1px solid rgba(241, 100, 46, 0.3);
+            color: #F1642E;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .back-button:hover {
+            background: rgba(241, 100, 46, 0.3);
+            border-color: #F1642E;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1><i class="fas fa-database"></i> Database Inspector</h1>
+                <p style="font-size: 12px; color: #999; margin-top: 5px;">View and document all available tables and columns</p>
+            </div>
+            <a href="index.html" class="back-button">
+                <i class="fas fa-arrow-left"></i> Back to Map
+            </a>
+        </div>
+
+        <!-- Search -->
+        <div style="margin-bottom: 20px;">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search tables...">
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Tables List -->
+            <div class="tables-list">
+                <h2><i class="fas fa-table"></i> Tables</h2>
+                <div id="tablesList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading tables...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Details -->
+            <div class="table-details">
+                <div id="tableDetails">
+                    <div class="empty-state">
+                        <i class="fas fa-arrow-left"></i>
+                        <p>Select a table to view and edit its documentation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <h3>Edit Column Description</h3>
+            <div class="form-group">
+                <label>Column Name</label>
+                <div class="detail-value" id="editColumnName" style="cursor: default;"></div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="editColumnDescription" placeholder="What does this column contain?"></textarea>
+            </div>
+            <div class="form-group">
+                <label>English Name (for German columns)</label>
+                <input type="text" id="editColumnEnglish" placeholder="e.g., 'Description' for 'beschreibung'">
+            </div>
+            <div class="form-group">
+                <label>Example Value</label>
+                <input type="text" id="editColumnExample" placeholder="e.g., 'Hospital Name'">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeEditModal()">Cancel</button>
+                <button class="btn primary" onclick="saveColumnDescription()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="tableDescModal">
+        <div class="modal-content">
+            <h3>Edit Table Description</h3>
+            <p style="margin-bottom: 15px; color: #888; font-size: 12px;">
+                This description is used by the LLM to understand what data is available.
+                Make it clear and concise so the AI knows when to use this table.
+            </p>
+            <div class="form-group">
+                <label>Table Name</label>
+                <div class="detail-value" id="editTableName" style="cursor: default;"></div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="editTableDesc" placeholder="What data does this table contain? Who should use it? What are its key features?" style="height: 150px;"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeTableDescriptionModal()">Cancel</button>
+                <button class="btn primary" onclick="saveTableDescriptionModal()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let tables = [];
+        let selectedTable = null;
+        let editingColumn = null;
+        let editingTable = null;
+
+        // Load tables on page load
+        window.addEventListener('load', loadTables);
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.table-item').forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(query) ? 'flex' : 'none';
+            });
+        });
+
+        async function loadTables() {
+            try {
+                const response = await fetch(`${API_BASE}/database/tables`);
+                const data = await response.json();
+
+                if (data.success) {
+                    tables = data.tables;
+                    renderTablesList();
+                }
+            } catch (error) {
+                console.error('Error loading tables:', error);
+                document.getElementById('tablesList').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Error loading tables. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderTablesList() {
+            const list = document.getElementById('tablesList');
+            list.innerHTML = tables.map(table => `
+                <div class="table-item ${selectedTable === table.table_name ? 'active' : ''}" onclick="selectTable('${table.table_name}')">
+                    <div class="status-badge ${getStatusBadge(table)}">
+                        ${getStatusIcon(table)}
+                    </div>
+                    <div class="table-item-name">${table.table_name}</div>
+                    <div style="font-size: 11px; color: #999;">${table.row_count?.toLocaleString() || '?'} rows</div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusBadge(table) {
+            if (table.description) return 'documented';
+            if (table.category || table.source) return 'partial';
+            return 'empty';
+        }
+
+        function getStatusIcon(table) {
+            const status = getStatusBadge(table);
+            if (status === 'documented') return '✓';
+            if (status === 'partial') return '◐';
+            return '◯';
+        }
+
+        async function selectTable(tableName) {
+            selectedTable = tableName;
+            renderTablesList();
+
+            try {
+                const response = await fetch(`${API_BASE}/database/tables/${tableName}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderTableDetails(data.table);
+                }
+            } catch (error) {
+                console.error('Error loading table details:', error);
+            }
+        }
+
+        function renderTableDetails(table) {
+            const details = document.getElementById('tableDetails');
+            const geometry = table.geometry_type ? `${table.geometry_type}` : 'None';
+
+            let html = `<h2>${table.table_name}</h2>`;
+
+            // Table info
+            html += `
+                <div class="detail-section">
+                    <div class="detail-label">
+                        Description
+                        <button class="btn" style="float: right; padding: 5px 10px; font-size: 11px;" onclick="openTableDescriptionModal('${table.table_name}', '${(table.description || '').replace(/'/g, "\\'")}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                    <p style="margin-top: 10px; line-height: 1.5; color: #bbb;">${table.description || '<em style="color: #666;">No description provided</em>'}</p>
+                </div>
+            `;
+
+            // Table metadata
+            html += `
+                <div class="detail-section">
+                    <div class="detail-label">Table Information</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                        <div>
+                            <strong>Schema:</strong> ${table.schema}
+                        </div>
+                        <div>
+                            <strong>Records:</strong> ${table.row_count?.toLocaleString() || 'Unknown'}
+                        </div>
+                        <div>
+                            <strong>Geometry:</strong> ${geometry}
+                        </div>
+                        <div>
+                            <strong>Columns:</strong> ${table.columns.length}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Columns
+            html += `
+                <div class="detail-section">
+                    <div class="detail-label">Columns</div>
+                    <div class="columns-grid">
+            `;
+
+            table.columns.forEach(col => {
+                const isMissing = !col.metadata || !col.metadata.description;
+                html += `
+                    <div class="column-item" style="border-color: ${isMissing ? 'rgba(244, 67, 54, 0.3)' : 'rgba(241, 100, 46, 0.2)'};">
+                        <div class="column-name">${col.name}</div>
+                        <div class="column-type">${col.type}</div>
+                        <div class="column-description">
+                            ${col.metadata?.description || '<em style="color: #999;">No description</em>'}
+                        </div>
+                        <div class="column-actions">
+                            <button class="btn" onclick="openEditModal('${table.table_name}', '${col.name}', ${JSON.stringify(col.metadata || {})})">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            details.innerHTML = html;
+        }
+
+        async function saveTableDescription(tableName) {
+            const description = document.getElementById('tableDesc').value;
+
+            try {
+                const params = new URLSearchParams();
+                params.append('table_name', tableName);
+                params.append('description', description);
+
+                const url = `${API_BASE}/database/table-description?${params.toString()}`;
+                console.log('Saving table description to:', url);
+
+                const response = await fetch(url, {
+                    method: 'POST'
+                });
+
+                const text = await response.text();
+                console.log('Response status:', response.status);
+                console.log('Response text:', text);
+
+                const data = JSON.parse(text);
+                if (data.success) {
+                    alert('Table description saved!');
+                    await loadTables();
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving table description:', error);
+                alert('Error saving description: ' + error.message);
+            }
+        }
+
+        function openTableDescriptionModal(tableName, currentDescription = '') {
+            editingTable = tableName;
+            document.getElementById('editTableName').textContent = tableName;
+            document.getElementById('editTableDesc').value = currentDescription;
+            document.getElementById('tableDescModal').classList.add('active');
+        }
+
+        function closeTableDescriptionModal() {
+            document.getElementById('tableDescModal').classList.remove('active');
+            editingTable = null;
+        }
+
+        async function saveTableDescriptionModal() {
+            const description = document.getElementById('editTableDesc').value;
+
+            try {
+                const params = new URLSearchParams();
+                params.append('table_name', editingTable);
+                params.append('description', description);
+
+                const url = `${API_BASE}/database/table-description?${params.toString()}`;
+                const response = await fetch(url, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    closeTableDescriptionModal();
+                    await loadTables();
+                    alert('Table description updated!');
+                } else {
+                    alert('Error: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving table description:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function openEditModal(tableName, columnName, metadata = {}) {
+            editingTable = tableName;
+            editingColumn = columnName;
+
+            document.getElementById('editColumnName').textContent = `${tableName}.${columnName}`;
+            document.getElementById('editColumnDescription').value = metadata.description || '';
+            document.getElementById('editColumnEnglish').value = metadata.english_name || '';
+            document.getElementById('editColumnExample').value = metadata.example_value || '';
+
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            editingTable = null;
+            editingColumn = null;
+        }
+
+        async function saveColumnDescription() {
+            const description = document.getElementById('editColumnDescription').value;
+            const englishName = document.getElementById('editColumnEnglish').value;
+            const exampleValue = document.getElementById('editColumnExample').value;
+
+            try {
+                const params = new URLSearchParams();
+                params.append('table_name', editingTable);
+                params.append('column_name', editingColumn);
+                params.append('description', description);
+                params.append('english_name', englishName);
+                params.append('example_value', exampleValue);
+
+                const url = `${API_BASE}/database/columns?${params.toString()}`;
+                console.log('Saving column to:', url);
+
+                const response = await fetch(url, {
+                    method: 'POST'
+                });
+
+                const text = await response.text();
+                console.log('Response status:', response.status);
+                console.log('Response text:', text);
+
+                const data = JSON.parse(text);
+                if (data.success) {
+                    closeEditModal();
+                    await selectTable(editingTable);
+                    alert('Column description saved!');
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving column description:', error);
+                alert('Error saving description: ' + error.message);
+            }
+        }
+
+        // Close modals on background click
+        document.getElementById('editModal').addEventListener('click', (e) => {
+            if (e.target.id === 'editModal') {
+                closeEditModal();
+            }
+        });
+
+        document.getElementById('tableDescModal').addEventListener('click', (e) => {
+            if (e.target.id === 'tableDescModal') {
+                closeTableDescriptionModal();
+            }
+        });
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadTables();
+        });
+    </script>
+</body>
+</html>

@@ -2131,7 +2131,7 @@
                 </div>
                 <button id="searchBtn" onclick="executeSearch()">Search</button>
             </div>
-            <a href="database-inspector.html" class="location-btn" style="text-decoration: none; background: rgba(241, 100, 46, 0.2); border: 1px solid rgba(241, 100, 46, 0.4); white-space: nowrap;">
+            <a href="/database-inspector" class="location-btn" style="text-decoration: none; background: rgba(241, 100, 46, 0.2); border: 1px solid rgba(241, 100, 46, 0.4); white-space: nowrap;">
                 <span style="font-size: 16px;">📊</span>
                 <span>Database</span>
             </a>
@@ -2842,6 +2842,55 @@
                 gradientRange: { min: null, max: null }
             };
 
+            // Auto-detect density-based properties and enable gradient coloring
+            if (geojsonData.features && geojsonData.features.length > 0) {
+                const firstFeature = geojsonData.features[0];
+                const props = firstFeature.properties || {};
+
+                // Check for MCDA composite score first (highest priority)
+                let gradientProperty = null;
+                let colorScheme = 'viridis';
+                let minVal = null;
+                let maxVal = null;
+
+                if (props.composite_score !== undefined) {
+                    // MCDA composite score (0.0-1.0 scale)
+                    gradientProperty = 'composite_score';
+                    colorScheme = 'plasma'; // Use plasma for MCDA scores (purple-yellow progression)
+                    minVal = 0;
+                    maxVal = 1;
+                } else {
+                    // Check for density metrics as fallback
+                    if (props.amenities_per_km2 !== undefined) {
+                        gradientProperty = 'amenities_per_km2';
+                    } else if (props.density_per_sq_km !== undefined) {
+                        gradientProperty = 'density_per_sq_km';
+                    }
+
+                    // If density property found, collect range
+                    if (gradientProperty) {
+                        const densityValues = geojsonData.features
+                            .map(f => f.properties[gradientProperty])
+                            .filter(v => typeof v === 'number');
+
+                        if (densityValues.length > 0) {
+                            minVal = Math.min(...densityValues);
+                            maxVal = Math.max(...densityValues);
+                            colorScheme = 'viridis'; // Use viridis for density (green=low, yellow=high)
+                        }
+                    }
+                }
+
+                // Enable gradient mode if a property was found
+                if (gradientProperty && minVal !== null && maxVal !== null) {
+                    defaultStyle.isGradient = true;
+                    defaultStyle.gradientProperty = gradientProperty;
+                    defaultStyle.gradientScheme = colorScheme;
+                    defaultStyle.gradientRange = { min: minVal, max: maxVal };
+                    defaultStyle.fillOpacity = 0.3; // Default opacity at 30%
+                }
+            }
+
             // Create Leaflet layer with default styling
             const geojsonLayer = createStyledLayer(geojsonData, defaultStyle).addTo(map);
 
@@ -2872,6 +2921,9 @@
             };
 
             layers.push(layerInfo);
+
+            // Create map legend if this is a density-based query
+            createMapLegend(layerInfo);
 
             // Update UI
             updateLayersPanel();
@@ -3089,6 +3141,8 @@
                     }
                     // Display operations when layer is clicked
                     displayLayerOperations(layerInfo.id);
+                    // Update map legend for this layer
+                    createMapLegend(layerInfo);
                     // Zoom to layer
                     zoomToLayer(layerInfo.id);
                 };
@@ -3177,6 +3231,218 @@
                         <div class="reasoning-box">${layerInfo.reasoning}</div>
                     </div>
                 `;
+            }
+
+            // Display MCDA composite scores and breakdown
+            if (layerInfo.geojsonData && layerInfo.geojsonData.features && layerInfo.geojsonData.features.length > 0) {
+                const firstFeature = layerInfo.geojsonData.features[0];
+                const props = firstFeature.properties || {};
+
+                // Check if this has MCDA scoring (composite_score field)
+                if (props.composite_score !== undefined) {
+                    content += '<div class="operations-section">';
+                    content += '<div class="operations-section-title">🎯 Multi-Criteria Scoring Results</div>';
+
+                    // Find score range across all features
+                    let scores = [];
+                    layerInfo.geojsonData.features.forEach(f => {
+                        if (f.properties && f.properties.composite_score !== undefined) {
+                            scores.push(f.properties.composite_score);
+                        }
+                    });
+
+                    if (scores.length > 0) {
+                        const minScore = Math.min(...scores);
+                        const maxScore = Math.max(...scores);
+                        const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+
+                        content += `
+                            <div style="background: rgba(80, 78, 118, 0.15); padding: 1rem; border-radius: 6px; border-left: 4px solid #504E76; margin-bottom: 1rem;">
+                                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7); margin-bottom: 0.25rem;">Score Range</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6);">Min</div>
+                                        <div style="font-weight: 700; color: #f5f5f5;">${minScore.toFixed(3)}</div>
+                                    </div>
+                                    <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); border-right: 1px solid rgba(255,255,255,0.1);">
+                                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6);">Avg</div>
+                                        <div style="font-weight: 700; color: #f5f5f5;">${avgScore.toFixed(3)}</div>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6);">Max</div>
+                                        <div style="font-weight: 700; color: #4CAF50;">${maxScore.toFixed(3)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        // Show first feature's detailed breakdown as example
+                        const exampleProps = firstFeature.properties || {};
+                        if (exampleProps.score_breakdown && typeof exampleProps.score_breakdown === 'object') {
+                            content += '<div style="background: rgba(241, 100, 46, 0.08); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">';
+                            content += '<div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #f5f5f5;">Score Breakdown (Example: ' + exampleProps.name + ')</div>';
+
+                            const breakdown = exampleProps.score_breakdown;
+                            let totalContribution = 0;
+                            for (const criterion in breakdown) {
+                                if (breakdown[criterion] && breakdown[criterion].contribution !== undefined) {
+                                    totalContribution += breakdown[criterion].contribution;
+                                }
+                            }
+
+                            for (const criterion in breakdown) {
+                                const data = breakdown[criterion];
+                                if (!data) continue;
+
+                                const normalized = data.normalized || 0;
+                                const weight = data.weight || 0;
+                                const contribution = data.contribution || 0;
+                                const percentContrib = totalContribution > 0 ? (contribution / totalContribution * 100) : 0;
+
+                                content += `
+                                    <div style="margin-bottom: 0.75rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                                            <span style="font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 500;">${criterion.replace(/_/g, ' ')}</span>
+                                            <span style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">Score: ${normalized.toFixed(3)} (${percentContrib.toFixed(1)}%)</span>
+                                        </div>
+                                        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                                            <div style="height: 100%; width: ${normalized * 100}%; background: linear-gradient(90deg, #504E76, #F1642E); transition: width 0.3s ease;"></div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            content += '</div>';
+                        }
+
+                        // Show included/excluded criteria if available
+                        if (exampleProps.included_criteria || exampleProps.excluded_criteria) {
+                            content += '<div style="font-size: 0.9rem;">';
+
+                            if (exampleProps.included_criteria && exampleProps.included_criteria.length > 0) {
+                                const criteria = Array.isArray(exampleProps.included_criteria) ? exampleProps.included_criteria : [];
+                                content += `
+                                    <div style="margin-bottom: 0.5rem;">
+                                        <div style="font-weight: 600; color: #4CAF50; margin-bottom: 0.3rem; font-size: 0.85rem;">✓ Included Criteria</div>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                                            ${criteria.map(c => `<span style="background: rgba(76, 175, 80, 0.2); border: 1px solid rgba(76, 175, 80, 0.4); padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">${c.replace(/osm_/g, '').replace(/_/g, ' ')}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            if (exampleProps.excluded_criteria && exampleProps.excluded_criteria.length > 0) {
+                                const excluded = Array.isArray(exampleProps.excluded_criteria) ? exampleProps.excluded_criteria : [];
+                                const excludedNames = excluded.map(e => typeof e === 'object' ? e.name : e);
+                                content += `
+                                    <div>
+                                        <div style="font-weight: 600; color: #E91E63; margin-bottom: 0.3rem; font-size: 0.85rem;">✗ Excluded Criteria</div>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                                            ${excludedNames.map(c => `<span style="background: rgba(233, 30, 99, 0.2); border: 1px solid rgba(233, 30, 99, 0.4); padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">${c.replace(/osm_/g, '').replace(/_/g, ' ')}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            content += '</div>';
+                        }
+                    }
+
+                    content += '</div>';
+                }
+            }
+
+            // Display legend for density-based scoring (e.g., family-friendly areas, amenity density)
+            if (layerInfo.geojsonData && layerInfo.geojsonData.features && layerInfo.geojsonData.features.length > 0) {
+                const firstFeature = layerInfo.geojsonData.features[0];
+                const props = firstFeature.properties || {};
+
+                // Check if this is a density-based scoring query
+                if (props.amenities_per_km2 !== undefined || props.density_per_sq_km !== undefined) {
+                    content += '<div class="operations-section">';
+                    content += '<div class="operations-section-title">📊 Legend & Metrics</div>';
+
+                    // Display current layer styling
+                    if (layerInfo.style) {
+                        const style = layerInfo.style;
+                        content += `
+                            <div class="legend-section" style="margin-bottom: 1rem;">
+                                <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">🎨 Layer Styling:</div>
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                                        <div style="width: 24px; height: 24px; background-color: ${style.fillColor}; border: 2px solid ${style.borderColor}; border-radius: 4px;"></div>
+                                        <div>
+                                            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">Color</div>
+                                            <div style="font-weight: 600; font-size: 0.85rem;">${style.fillColor}</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">Opacity</div>
+                                        <div style="font-weight: 600; font-size: 0.85rem;">${(style.fillOpacity * 100).toFixed(0)}%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Find min and max values for the density metric
+                    let densityValues = [];
+                    let metricsIncluded = [];
+
+                    layerInfo.geojsonData.features.forEach(feature => {
+                        const p = feature.properties || {};
+                        if (p.amenities_per_km2) densityValues.push(p.amenities_per_km2);
+                        if (p.density_per_sq_km) densityValues.push(p.density_per_sq_km);
+
+                        // Identify included metrics
+                        if (p.schools !== undefined) metricsIncluded.push('Schools');
+                        if (p.parks !== undefined) metricsIncluded.push('Parks');
+                        if (p.police_stations !== undefined) metricsIncluded.push('Police');
+                        if (p.fire_stations !== undefined) metricsIncluded.push('Fire');
+                        if (p.hospitals !== undefined) metricsIncluded.push('Hospitals');
+                        if (p.restaurants !== undefined) metricsIncluded.push('Restaurants');
+                        if (p.supermarkets !== undefined) metricsIncluded.push('Supermarkets');
+                    });
+
+                    // Show metrics included
+                    const uniqueMetrics = [...new Set(metricsIncluded)];
+                    if (uniqueMetrics.length > 0) {
+                        content += `
+                            <div class="legend-section">
+                                <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">📍 Metrics Included:</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    ${uniqueMetrics.map(m => `<span style="background: rgba(241, 100, 46, 0.2); border: 1px solid rgba(241, 100, 46, 0.4); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">${m}</span>`).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Show density range
+                    if (densityValues.length > 0) {
+                        const minDensity = Math.min(...densityValues);
+                        const maxDensity = Math.max(...densityValues);
+                        const avgDensity = (densityValues.reduce((a, b) => a + b, 0) / densityValues.length).toFixed(2);
+
+                        content += `
+                            <div class="legend-section" style="margin-top: 0.75rem;">
+                                <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">📈 Density Score Range (amenities/km²):</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem;">
+                                    <div style="background: rgba(76, 175, 80, 0.1); padding: 0.5rem; border-radius: 4px; border-left: 3px solid #4CAF50;">
+                                        <span style="font-weight: 600;">Highest:</span><br>${maxDensity.toFixed(2)}
+                                    </div>
+                                    <div style="background: rgba(233, 30, 99, 0.1); padding: 0.5rem; border-radius: 4px; border-left: 3px solid #E91E63;">
+                                        <span style="font-weight: 600;">Lowest:</span><br>${minDensity.toFixed(2)}
+                                    </div>
+                                    <div style="background: rgba(255, 193, 7, 0.1); padding: 0.5rem; border-radius: 4px; grid-column: 1 / -1; border-left: 3px solid #FFC107;">
+                                        <span style="font-weight: 600;">Average:</span> ${avgDensity}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    content += '</div>';
+                }
             }
 
             // Display operations
@@ -3336,6 +3602,13 @@
 
             map.removeLayer(layerInfo.layer);
             layers = layers.filter(l => l.id !== layerId);
+
+            // Remove map legend if this was the active layer
+            if (currentLegendControl) {
+                map.removeControl(currentLegendControl);
+                currentLegendControl = null;
+            }
+
             updateLayersPanel();
 
             showNotification(`Layer "${layerInfo.name}" removed`, 'success');
@@ -3760,6 +4033,13 @@
 
             layerInfo.layer = newLayer;
 
+            // Refresh operations panel/legend and map legend to reflect style changes (both live preview and final)
+            if (currentStyleLayerId) {
+                displayLayerOperations(currentStyleLayerId);
+                // Update map legend with new style
+                createMapLegend(layerInfo);
+            }
+
             // Close dialog if not live preview
             if (!livePreview) {
                 closeStyleDialog();
@@ -3930,8 +4210,30 @@
 
         // Create styled layer with Leaflet (with clustering for points)
         function createStyledLayer(geojsonData, styleConfig) {
+            // Validate geometry data
+            console.log(`📐 Layer has ${geojsonData.features.length} features`);
+
+            // Check geometry types and log any missing geometries
+            let geometryTypeCount = {};
+            let missingGeometries = 0;
+            geojsonData.features.forEach((f, idx) => {
+                if (!f.geometry) {
+                    console.warn(`⚠️  Feature ${idx} has no geometry`, f);
+                    missingGeometries++;
+                } else {
+                    const gtype = f.geometry.type;
+                    geometryTypeCount[gtype] = (geometryTypeCount[gtype] || 0) + 1;
+                }
+            });
+
+            if (missingGeometries > 0) {
+                console.error(`❌ ${missingGeometries} features are missing geometries!`);
+            }
+
+            console.log('📊 Geometry types:', geometryTypeCount);
+
             // Check if layer contains Point features
-            const hasPoints = geojsonData.features.some(f => f.geometry.type === 'Point');
+            const hasPoints = geojsonData.features.some(f => f.geometry && f.geometry.type === 'Point');
 
             // Create cluster group if points exist
             let clusterGroup = null;
@@ -4035,6 +4337,97 @@
 
             // No points, return regular geoJSON layer
             return geoJsonLayer;
+        }
+
+        // Store map legend control reference
+        let currentLegendControl = null;
+
+        // Create and add Leaflet map legend
+        function createMapLegend(layerInfo) {
+            if (!layerInfo.geojsonData || !layerInfo.geojsonData.features) return;
+
+            const features = layerInfo.geojsonData.features;
+            const firstFeature = features[0];
+            const props = firstFeature.properties || {};
+
+            // Only create legend for gradient-based queries (density, MCDA scores, etc.)
+            const hasCompositeScore = props.composite_score !== undefined;
+            const hasDensity = props.amenities_per_km2 !== undefined || props.density_per_sq_km !== undefined;
+
+            if (!hasCompositeScore && !hasDensity) {
+                return;
+            }
+
+            // Remove existing legend
+            if (currentLegendControl) {
+                map.removeControl(currentLegendControl);
+            }
+
+            // Create custom Leaflet control - GRADIENT BAR WITH LABELS
+            const LegendControl = L.Control.extend({
+                options: {
+                    position: 'bottomleft'
+                },
+                onAdd: function(map) {
+                    const div = L.DomUtil.create('div', 'map-legend');
+
+                    // Build legend HTML - GRADIENT BAR with appropriate labels
+                    let html = '';
+
+                    if (layerInfo.style && layerInfo.style.isGradient && layerInfo.style.gradientProperty && layerInfo.style.gradientRange) {
+                        const style = layerInfo.style;
+                        const isCompositeScore = style.gradientProperty === 'composite_score';
+
+                        // Generate gradient color bar
+                        const colors = [];
+                        for (let i = 0; i <= 10; i++) {
+                            const normalized = i / 10;
+                            const color = interpolateColor(normalized, style.gradientScheme || 'viridis');
+                            colors.push(color);
+                        }
+                        const gradientBarStyle = 'linear-gradient(to right, ' + colors.join(', ') + ')';
+
+                        // Get label text based on property type
+                        let minLabel = style.gradientRange.min?.toFixed(2) || '0';
+                        let maxLabel = style.gradientRange.max?.toFixed(2) || '10';
+                        let legendTitle = 'Gradient Legend';
+                        let legendUnit = '';
+
+                        if (isCompositeScore) {
+                            minLabel = '0.0';
+                            maxLabel = '1.0';
+                            legendTitle = '🎯 Suitability Score';
+                            legendUnit = '(0=Poor, 1=Excellent)';
+                        } else if (style.gradientProperty === 'amenities_per_km2' || style.gradientProperty === 'density_per_sq_km') {
+                            legendTitle = '📍 Density (amenities/km²)';
+                        }
+
+                        html = `
+                            <div style="background: rgba(26, 24, 37, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(241, 100, 46, 0.3); border-radius: 6px; padding: 10px 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+                                ${legendTitle ? `<div style="font-size: 0.75rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); margin-bottom: 6px;">${legendTitle}</div>` : ''}
+                                <div style="width: 140px; height: 20px; background: ${gradientBarStyle}; border-radius: 2px; border: 1px solid rgba(255, 255, 255, 0.2); margin-bottom: 4px;"></div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: rgba(255, 255, 255, 0.7); margin-bottom: ${legendUnit ? '4px' : '0'};">
+                                    <span>${minLabel}</span>
+                                    <span>${maxLabel}</span>
+                                </div>
+                                ${legendUnit ? `<div style="font-size: 0.6rem; color: rgba(255, 255, 255, 0.6); text-align: center;">${legendUnit}</div>` : ''}
+                            </div>
+                        `;
+                    }
+
+                    div.innerHTML = html;
+
+                    // Prevent click propagation to map
+                    L.DomEvent.disableClickPropagation(div);
+                    L.DomEvent.disableScrollPropagation(div);
+
+                    return div;
+                }
+            });
+
+            // Add legend to map
+            currentLegendControl = new LegendControl();
+            currentLegendControl.addTo(map);
         }
 
         // Interpolate color based on value (0-1) and color scheme

@@ -2,7 +2,7 @@ import time
 from fastapi import APIRouter, HTTPException, status
 from typing import Dict, Any
 from app.models.query_model import NLQuery, QueryResponse, DatasetInfo
-from app.utils.deepseek import parse_geospatial_query, get_available_datasets
+from app.utils.deepseek import parse_geospatial_query, get_available_datasets, clear_query_cache
 from app.utils.spatial_engine import SpatialEngine
 from app.utils.database import db_manager
 
@@ -290,4 +290,28 @@ async def get_districts_geojson():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch district boundaries: {str(e)}"
+        )
+
+
+@router.post("/cache/clear")
+async def clear_cache():
+    """
+    Clear the query response cache.
+
+    This endpoint clears the in-memory cache that stores DeepSeek responses.
+    Use this when you need to retry a query without cached results.
+
+    Returns:
+        Status message confirming cache was cleared
+    """
+    try:
+        clear_query_cache()
+        return {
+            "status": "success",
+            "message": "Query cache cleared successfully"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to clear cache: {str(e)}"
         )

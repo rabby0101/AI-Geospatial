@@ -44,8 +44,10 @@ class SQLValidator:
     @staticmethod
     def validate_round_function(sql: str) -> Tuple[bool, str]:
         """
-        Fix ROUND() function syntax errors
-        Common error: ROUND(AVG(...))::int instead of ROUND(AVG(...)::int)
+        Fix ROUND() function syntax errors and ST_Transform syntax errors
+        Common errors:
+        - ROUND(AVG(...))::int instead of ROUND(AVG(...)::int)
+        - ST_Transform(geometry)::numeric, srid) instead of ST_Transform(geometry, srid)
 
         Args:
             sql: SQL query string
@@ -53,10 +55,34 @@ class SQLValidator:
         Returns:
             Tuple of (needs_fix, fixed_sql)
         """
-        # Pattern: ROUND(AVG(...))::int (missing parenthesis before ::int)
-        # Should be: ROUND(AVG(...)::int) or ROUND(AVG(...))::numeric
+        fixed_sql = sql
+        needs_fix = False
 
-        # Find problematic patterns
+        # CRITICAL: Only fix ST_Transform errors when the pattern is EXACTLY:
+        # ST_Transform(something)::numeric, digit) - where the ::numeric is directly after the )
+        # This pattern should ONLY match when ::numeric is mistakenly after ST_Transform
+        # NOT when ::numeric appears elsewhere in the query
+
+        # ONLY fix if we have the exact bad pattern: ST_Transform(X)::numeric, DIGIT)
+        # where X doesn't contain unmatched parentheses
+        if 'ST_Transform' in fixed_sql and '::numeric,' in fixed_sql:
+            # More conservative pattern: Only match ST_Transform with simple content
+            # This avoids matching cases where the ::numeric is elsewhere
+            pattern = r'ST_Transform\s*\(\s*([a-zA-Z0-9_\.]+(?:\s*,\s*[a-zA-Z0-9_]+)*)\s*\)\s*::\s*numeric\s*,\s*(\d+)\s*\)'
+            matches = list(re.finditer(pattern, fixed_sql))
+
+            if matches:
+                # Apply fixes from end to start to preserve positions
+                for match in reversed(matches):
+                    start, end = match.span()
+                    content = match.group(1)  # What's inside ST_Transform(...)
+                    srid = match.group(2)      # The SRID number
+                    replacement = f'ST_Transform({content}, {srid})'
+                    fixed_sql = fixed_sql[:start] + replacement + fixed_sql[end:]
+                    needs_fix = True
+
+        # Pattern: ROUND(AVG(...))::int (missing parenthesis before ::int)
+        # Should be: ROUND(AVG(...)::numeric)
         pattern = r'ROUND\(AVG\(([^)]+)\)\)::int'
         matches = re.findall(pattern, sql)
 
@@ -65,59 +91,36 @@ class SQLValidator:
             fixed_sql = re.sub(
                 pattern,
                 r'ROUND(AVG(\1)::numeric)',
-                sql
+                fixed_sql
             )
-            return True, fixed_sql
+            needs_fix = True
 
         # Pattern 2: Missing closing paren in subquery with ::int FROM
         # Fix: ))::int FROM → ))::numeric) FROM
         pattern2 = r'\)\)::int\s+FROM'
-        if re.search(pattern2, sql):
+        if re.search(pattern2, fixed_sql):
             fixed_sql = re.sub(
                 pattern2,
                 ')::numeric) FROM',
-                sql
+                fixed_sql
             )
-            return True, fixed_sql
+            needs_fix = True
 
-        # Pattern 3: ROUND(division, integer) - PostgreSQL ROUND expects numeric type
-        # Fix: ROUND(a / b, 2) → ROUND((a / b)::numeric, 2)
-        # But only if not already cast to numeric
-        pattern3 = r'ROUND\(([^,]+)\s*/\s*([^,)]+),\s*(\d+)\)'
-        if re.search(pattern3, sql):
-            # Check if already has ::numeric
-            if not re.search(r'ROUND\(\([^)]+\)::numeric,', sql):
-                fixed_sql = re.sub(
-                    pattern3,
-                    r'ROUND((\1 / \2)::numeric, \3)',
-                    sql
-                )
-                return True, fixed_sql
-
-        # Pattern 4: ST_Area(ST_Transform(geometry)::numeric, srid)) - full context
-        # This happens when DeepSeek incorrectly casts geometry before ST_Transform
-        # Fix: ST_Area(ST_Transform(d.geometry)::numeric, 3857)) → ST_Area(ST_Transform(d.geometry, 3857))
-        pattern4 = r'ST_Area\(ST_Transform\(([^)]+)\)::numeric,\s*(\d+)\)\)'
-        if re.search(pattern4, sql):
+        # Pattern 3: ROUND(ST_Area(...) / number, 2) without ::numeric cast
+        # PostgreSQL ROUND requires numeric type for first arg
+        # Fix: ROUND(ST_Area(ST_Transform(...)) / 1000000.0, 2)
+        #   → ROUND((ST_Area(ST_Transform(...)) / 1000000.0)::numeric, 2)
+        pattern3 = r'ROUND\((ST_Area\([^)]+\)\s*/\s*[\d.]+),\s*(\d+)\)'
+        if re.search(pattern3, fixed_sql):
+            # Find and wrap with ::numeric cast
             fixed_sql = re.sub(
-                pattern4,
-                r'ST_Area(ST_Transform(\1, \2))',
-                sql
+                pattern3,
+                r'ROUND((\1)::numeric, \2)',
+                fixed_sql
             )
-            return True, fixed_sql
+            needs_fix = True
 
-        # Pattern 5: ST_Transform(geometry)::numeric, srid) alone (simpler case)
-        # Fix: ST_Transform(d.geometry)::numeric, 3857) → ST_Transform(d.geometry, 3857)
-        pattern5 = r'ST_Transform\(([^)]+)\)::numeric,\s*(\d+)\)'
-        if re.search(pattern5, sql):
-            fixed_sql = re.sub(
-                pattern5,
-                r'ST_Transform(\1, \2)',
-                sql
-            )
-            return True, fixed_sql
-
-        return False, sql
+        return needs_fix, fixed_sql
 
     @staticmethod
     def validate_select_from(sql: str) -> Tuple[bool, str]:

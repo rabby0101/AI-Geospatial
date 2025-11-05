@@ -8,6 +8,8 @@ import os
 from app.routes import query_router
 from app.routes.raster import router as raster_router
 from app.routes.dem_query import router as dem_router
+from app.routes.location_suitability import router as location_router
+from app.routes.database import router as database_router
 from app.utils.database import db_manager
 from app.utils.auto_discovery import auto_discovery
 
@@ -76,6 +78,8 @@ async def shutdown_event():
 app.include_router(query_router)
 app.include_router(raster_router)  # NDVI, terrain, land cover endpoints
 app.include_router(dem_router)  # DEM (Digital Elevation Model) endpoints
+app.include_router(location_router)  # Location optimization endpoints
+app.include_router(database_router)  # Database metadata and schema endpoints
 
 
 # Serve static files (dashboards, assets)
@@ -133,6 +137,24 @@ async def get_dashboard():
             <h1>Dashboard Not Found</h1>
             <p>The analytics dashboard file is missing.</p>
             <p><a href="/docs">Go to API docs</a></p>
+        </body>
+    </html>
+    """
+
+
+@app.get("/database-inspector", response_class=HTMLResponse)
+async def get_database_inspector():
+    """Serve the database inspector tool"""
+    inspector_path = Path(__file__).parent.parent / "frontend" / "database-inspector.html"
+    if inspector_path.exists():
+        return inspector_path.read_text()
+    return """
+    <html>
+        <head><title>Database Inspector Not Found</title></head>
+        <body>
+            <h1>Database Inspector Not Found</h1>
+            <p>The database inspector file is missing.</p>
+            <p><a href="/">Go home</a></p>
         </body>
     </html>
     """
