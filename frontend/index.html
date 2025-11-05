@@ -9,10 +9,6 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-    <!-- Leaflet MarkerCluster CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.Default.css" />
-
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -2336,9 +2332,6 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Leaflet MarkerCluster JS -->
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.0/dist/leaflet.markercluster.js"></script>
-
     <script>
         // Initialize map centered on Berlin with smooth interaction settings
         const map = L.map('map', {
@@ -4177,11 +4170,23 @@
             return 'location';
         }
 
-        // Create SVG marker with icon and color
-        function createMarkerWithIcon(latlng, feature, iconColor, selectedIcon = null) {
+        // Calculate marker size based on zoom level
+        function getMarkerSize(zoomLevel) {
+            // Zoom 10-12: Small (20px)
+            // Zoom 13-14: Medium (32px)
+            // Zoom 15+: Large (40px)
+            if (zoomLevel <= 11) return 20;
+            if (zoomLevel <= 13) return 32;
+            return 40;
+        }
+
+        // Create SVG marker with icon and color, with zoom-responsive sizing
+        function createMarkerWithIcon(latlng, feature, iconColor, selectedIcon = null, zoomLevel = null) {
             const iconName = selectedIcon || getIconForFeature(feature.properties);
             const iconPath = ICON_LIBRARY[iconName] || ICON_LIBRARY['location'];
-            const size = 40;
+
+            // Determine size based on zoom level
+            const size = zoomLevel ? getMarkerSize(zoomLevel) : 40;
 
             // Create SVG marker with icon
             const svg = `
@@ -4208,7 +4213,233 @@
             return L.marker(latlng, { icon: customIcon });
         }
 
-        // Create styled layer with Leaflet (with clustering for points)
+        // Efficient clustering system with zoom-level awareness
+        class PointClusterManager {
+            constructor(map, styleConfig) {
+                this.map = map;
+                this.styleConfig = styleConfig;
+                this.pointFeatures = [];
+                this.clusters = new Map();
+                this.markers = new Map();
+                this.clusterLayer = L.featureGroup();
+                this.markerLayer = L.featureGroup();
+                this.currentZoom = map.getZoom();
+                this.clusterRadius = this.getClusterRadius(this.currentZoom);
+
+                // Update on zoom change
+                map.on('zoomend', () => this.handleZoomChange());
+
+                // Add layers to map
+                this.clusterLayer.addTo(map);
+                this.markerLayer.addTo(map);
+            }
+
+            getClusterRadius(zoom) {
+                // Adaptive cluster radius based on zoom level
+                if (zoom <= 11) return 100;      // Large clusters at low zoom
+                if (zoom <= 13) return 70;       // Medium clusters
+                if (zoom <= 14) return 40;       // Smaller clusters
+                return 0;                         // No clustering at zoom 15+
+            }
+
+            addFeatures(features) {
+                this.pointFeatures = features.filter(f => f.geometry && f.geometry.type === 'Point');
+                this.updateClusters();
+            }
+
+            handleZoomChange() {
+                const newZoom = this.map.getZoom();
+                const newRadius = this.getClusterRadius(newZoom);
+
+                if (newRadius !== this.clusterRadius) {
+                    this.clusterRadius = newRadius;
+                    this.updateClusters();
+                }
+
+                this.currentZoom = newZoom;
+            }
+
+            updateClusters() {
+                // Clear existing clusters and markers
+                this.clusterLayer.clearLayers();
+                this.markerLayer.clearLayers();
+                this.clusters.clear();
+                this.markers.clear();
+
+                // If no clustering needed or no points
+                if (this.clusterRadius === 0 || this.pointFeatures.length === 0) {
+                    this.renderAllMarkers();
+                    return;
+                }
+
+                // Perform clustering
+                this.performClustering();
+                this.renderClusters();
+            }
+
+            performClustering() {
+                const gridMap = new Map();
+
+                this.pointFeatures.forEach(feature => {
+                    const latlng = feature.geometry.coordinates;
+                    const point = L.latLng(latlng[1], latlng[0]);
+                    const gridKey = this.getGridKey(point);
+
+                    if (!gridMap.has(gridKey)) {
+                        gridMap.set(gridKey, []);
+                    }
+                    gridMap.get(gridKey).push({ feature, point });
+                });
+
+                gridMap.forEach((items, gridKey) => {
+                    if (items.length === 1) {
+                        // Single point - add directly
+                        this.markers.set(gridKey, {
+                            type: 'single',
+                            feature: items[0].feature,
+                            point: items[0].point,
+                            count: 1
+                        });
+                    } else {
+                        // Multiple points - create cluster
+                        const center = this.getClusterCenter(items.map(i => i.point));
+                        this.clusters.set(gridKey, {
+                            center,
+                            points: items,
+                            count: items.length
+                        });
+                    }
+                });
+            }
+
+            getGridKey(point) {
+                // Convert point to grid cell key
+                const cellSize = this.clusterRadius * 0.0001;
+                const x = Math.floor(point.lat / cellSize);
+                const y = Math.floor(point.lng / cellSize);
+                return `${x},${y}`;
+            }
+
+            getClusterCenter(points) {
+                const sum = points.reduce((acc, p) => {
+                    return { lat: acc.lat + p.lat, lng: acc.lng + p.lng };
+                }, { lat: 0, lng: 0 });
+
+                return L.latLng(sum.lat / points.length, sum.lng / points.length);
+            }
+
+            renderAllMarkers() {
+                this.pointFeatures.forEach((feature, idx) => {
+                    const latlng = feature.geometry.coordinates;
+                    const point = L.latLng(latlng[1], latlng[0]);
+                    let iconColor = this.styleConfig.iconColor || this.styleConfig.fillColor;
+
+                    if (this.styleConfig.isGradient && this.styleConfig.gradientProperty) {
+                        const value = feature.properties?.[this.styleConfig.gradientProperty];
+                        if (typeof value === 'number' && !isNaN(value)) {
+                            const minVal = this.styleConfig.gradientRange.min;
+                            const maxVal = this.styleConfig.gradientRange.max;
+                            const normalized = (value - minVal) / (maxVal - minVal);
+                            iconColor = interpolateColor(Math.max(0, Math.min(1, normalized)), this.styleConfig.gradientScheme);
+                        }
+                    }
+
+                    const marker = createMarkerWithIcon(point, feature, iconColor, this.styleConfig.selectedIcon, this.currentZoom);
+
+                    if (feature.properties) {
+                        marker.bindPopup(createPopupContent(feature.properties), {
+                            maxWidth: 400,
+                            maxHeight: 500,
+                            autoPan: true,
+                            autoPanPadding: [40, 40],
+                            closeOnClick: false,
+                            offset: [0, 10]
+                        });
+                    }
+
+                    this.markerLayer.addLayer(marker);
+                });
+            }
+
+            renderClusters() {
+                // Render individual markers
+                this.markers.forEach(markerData => {
+                    const marker = createMarkerWithIcon(
+                        markerData.point,
+                        markerData.feature,
+                        this.styleConfig.iconColor || this.styleConfig.fillColor,
+                        this.styleConfig.selectedIcon,
+                        this.currentZoom
+                    );
+
+                    if (markerData.feature.properties) {
+                        marker.bindPopup(createPopupContent(markerData.feature.properties), {
+                            maxWidth: 400,
+                            maxHeight: 500,
+                            autoPan: true,
+                            autoPanPadding: [40, 40],
+                            closeOnClick: false,
+                            offset: [0, 10]
+                        });
+                    }
+
+                    this.markerLayer.addLayer(marker);
+                });
+
+                // Render cluster circles
+                this.clusters.forEach(clusterData => {
+                    const clusterColor = this.styleConfig.fillColor;
+                    const clusterSize = Math.min(40 + clusterData.count * 2, 80);
+
+                    // Create cluster circle
+                    const svg = `
+                        <svg width="${clusterSize}" height="${clusterSize}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="${clusterSize/2 - 2}" fill="${clusterColor}" opacity="0.7" stroke="${clusterColor}" stroke-width="2"/>
+                            <text x="12" y="14" text-anchor="middle" font-size="12" font-weight="bold" fill="white">${clusterData.count}</text>
+                        </svg>
+                    `;
+
+                    const clusterIcon = L.divIcon({
+                        html: svg,
+                        iconSize: [clusterSize, clusterSize],
+                        iconAnchor: [clusterSize/2, clusterSize/2],
+                        popupAnchor: [0, 0],
+                        className: 'cluster-icon'
+                    });
+
+                    const clusterMarker = L.marker(clusterData.center, { icon: clusterIcon });
+
+                    // Click to zoom to cluster
+                    clusterMarker.on('click', () => {
+                        const bounds = L.latLngBounds(clusterData.points.map(p => p.point));
+                        this.map.fitBounds(bounds.pad(0.1), { maxZoom: 16, animate: true });
+                    });
+
+                    // Show point count in popup
+                    clusterMarker.bindPopup(`<strong>${clusterData.count} features</strong>`, {
+                        maxWidth: 150,
+                        closeOnClick: false
+                    });
+
+                    this.clusterLayer.addLayer(clusterMarker);
+                });
+            }
+
+            getLayers() {
+                const fg = L.featureGroup();
+                fg.addLayer(this.clusterLayer);
+                fg.addLayer(this.markerLayer);
+                return fg;
+            }
+
+            remove() {
+                this.map.off('zoomend', () => this.handleZoomChange());
+                this.map.removeLayer(this.clusterLayer);
+                this.map.removeLayer(this.markerLayer);
+            }
+        }
+
+        // Create styled layer with Leaflet (with advanced clustering for points)
         function createStyledLayer(geojsonData, styleConfig) {
             // Validate geometry data
             console.log(`📐 Layer has ${geojsonData.features.length} features`);
@@ -4235,24 +4466,12 @@
             // Check if layer contains Point features
             const hasPoints = geojsonData.features.some(f => f.geometry && f.geometry.type === 'Point');
 
-            // Create cluster group if points exist
-            let clusterGroup = null;
-            let featureGroup = null;
-
-            if (hasPoints) {
-                clusterGroup = L.markerClusterGroup({
-                    maxClusterRadius: 80,
-                    chunkedLoading: true,
-                    disableClusteringAtZoom: 15,
-                    spiderfyOnMaxZoom: true,
-                    showCoverageOnHover: false,
-                    zoomToBoundsOnClick: true
-                });
-                console.log('✅ Created MarkerClusterGroup for point layer');
-            }
-
-            // Create geoJSON layer
+            // Create geoJSON layer for non-point features
             const geoJsonLayer = L.geoJSON(geojsonData, {
+                filter: function(feature) {
+                    // Skip point features - they'll be handled by cluster manager
+                    return feature.geometry.type !== 'Point';
+                },
                 style: function(feature) {
                     let fillColor = styleConfig.fillColor;
                     let fillOpacity = styleConfig.fillOpacity;
@@ -4289,30 +4508,8 @@
                         };
                     }
                 },
-                pointToLayer: function(feature, latlng) {
-                    let iconColor = styleConfig.iconColor || styleConfig.fillColor;
-
-                    // Apply gradient coloring for icons
-                    if (styleConfig.isGradient && styleConfig.gradientProperty) {
-                        const value = feature.properties?.[styleConfig.gradientProperty];
-                        if (typeof value === 'number' && !isNaN(value)) {
-                            const minVal = styleConfig.gradientRange.min;
-                            const maxVal = styleConfig.gradientRange.max;
-                            const normalized = (value - minVal) / (maxVal - minVal);
-                            iconColor = interpolateColor(Math.max(0, Math.min(1, normalized)), styleConfig.gradientScheme);
-                        }
-                    }
-
-                    // Use appropriate icon for the feature type
-                    return createMarkerWithIcon(latlng, feature, iconColor, styleConfig.selectedIcon);
-                },
                 onEachFeature: function(feature, layer) {
-                    // Add to cluster group if points exist
-                    if (hasPoints && feature.geometry.type === 'Point') {
-                        clusterGroup.addLayer(layer);
-                    }
-
-                    // Add popups
+                    // Add popups for non-point features
                     if (feature.properties) {
                         layer.bindPopup(createPopupContent(feature.properties), {
                             maxWidth: 400,
@@ -4326,30 +4523,26 @@
                 }
             });
 
-            // If we have a cluster group, add geoJSON to it and return it
-            if (clusterGroup) {
-                // Add non-point features to the geoJSON layer directly
-                const nonPointFeatures = geojsonData.features.filter(f => f.geometry.type !== 'Point');
-                if (nonPointFeatures.length > 0) {
-                    geoJsonLayer.eachLayer(layer => {
-                        if (layer.feature.geometry.type !== 'Point') {
-                            // Non-point features stay in geoJsonLayer (no clustering)
-                        }
-                    });
-                }
+            // If we have points, use the advanced cluster manager
+            if (hasPoints) {
+                const clusterManager = new PointClusterManager(map, styleConfig);
+                clusterManager.addFeatures(geojsonData.features);
 
-                // Create a FeatureGroup to combine both
                 const combinedLayer = L.featureGroup();
-                combinedLayer.addLayer(clusterGroup);
+                combinedLayer.addLayer(clusterManager.getLayers());
                 combinedLayer.addLayer(geoJsonLayer);
 
-                // Store reference for cluster group
-                combinedLayer._clusterGroup = clusterGroup;
+                // Store reference for management
+                combinedLayer._clusterManager = clusterManager;
+
+                console.log('✅ Created advanced PointClusterManager with zoom-aware clustering');
+                console.log(`   🎯 Auto-clustering on zoom 10-14, individual markers on zoom 15+`);
 
                 return combinedLayer;
             }
 
             // No points, return regular geoJSON layer
+            console.log('ℹ️  No point features - using regular GeoJSON layer');
             return geoJsonLayer;
         }
 
