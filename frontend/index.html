@@ -4206,11 +4206,18 @@
 
         // Calculate marker size based on zoom level
         function getMarkerSize(zoomLevel) {
-            // Zoom 10-12: Small (20px)
-            // Zoom 13-14: Medium (32px)
-            // Zoom 15+: Large (40px)
-            if (zoomLevel <= 11) return 20;
-            if (zoomLevel <= 13) return 32;
+            // Aggressive scaling: icons shrink dramatically when zoomed out
+            // Zoom 10: 4px (barely visible when city-level zoomed out)
+            // Zoom 11: 6px (tiny dots at regional view)
+            // Zoom 12: 12px (small icons at city/district view)
+            // Zoom 13: 18px (medium-small at neighborhood view)
+            // Zoom 14: 28px (medium at street-level view)
+            // Zoom 15+: 40px (full size at detailed street view)
+            if (zoomLevel <= 10) return 4;
+            if (zoomLevel === 11) return 6;
+            if (zoomLevel === 12) return 12;
+            if (zoomLevel === 13) return 18;
+            if (zoomLevel === 14) return 28;
             return 40;
         }
 
@@ -4447,7 +4454,7 @@
                 });
 
                 // Render cluster circles with layer color and high transparency
-                this.clusters.forEach(clusterData => {
+                this.clusters.forEach((clusterData, index) => {
                     const circleSize = this.getClusterCircleSize(clusterData.count);
                     const radius = circleSize / 2;
 
@@ -4456,15 +4463,29 @@
 
                     // Convert hex to RGB for rgba transparency
                     const rgb = this.hexToRgb(layerColor);
-                    const fillColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`;  // Very transparent (15% opacity)
                     const strokeColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`; // Slightly more opaque for border
 
-                    // Colorful design: layer color with high transparency and subtle border
+                    // Create unique gradient ID for this cluster
+                    const gradientId = `clusterGradient-${this.layerId}-${index}`;
+
+                    // Radial gradient hotspot effect: intense center fading to transparent edges
                     const svg = `
                         <svg width="${circleSize}" height="${circleSize}" viewBox="0 0 ${circleSize} ${circleSize}" xmlns="http://www.w3.org/2000/svg">
-                            <!-- Transparent colored background circle -->
-                            <circle cx="${radius}" cy="${radius}" r="${radius - 1}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2"/>
-                            <!-- Small colored center point -->
+                            <defs>
+                                <radialGradient id="${gradientId}" cx="50%" cy="50%" r="50%">
+                                    <!-- Center: 90% opacity (intense hotspot) -->
+                                    <stop offset="0%" style="stop-color:${layerColor};stop-opacity:0.9"/>
+                                    <!-- Mid-radius: 40% opacity (softer transition) -->
+                                    <stop offset="50%" style="stop-color:${layerColor};stop-opacity:0.4"/>
+                                    <!-- Extended fade: 10% opacity (long fade zone) -->
+                                    <stop offset="85%" style="stop-color:${layerColor};stop-opacity:0.1"/>
+                                    <!-- Edges: 0% opacity (fade to transparent) -->
+                                    <stop offset="100%" style="stop-color:${layerColor};stop-opacity:0"/>
+                                </radialGradient>
+                            </defs>
+                            <!-- Radial gradient circle with hotspot effect -->
+                            <circle cx="${radius}" cy="${radius}" r="${radius - 1}" fill="url(#${gradientId})"/>
+                            <!-- Small colored center point for visual emphasis -->
                             <circle cx="${radius}" cy="${radius}" r="4" fill="${layerColor}"/>
                         </svg>
                     `;
@@ -5177,6 +5198,15 @@
 
         // Select a feature for context-aware queries
         async function selectFeatureForContext(feature, layer) {
+            // Clear styling from previously selected feature
+            if (selectedFeatureLayer && selectedFeatureLayer.setStyle) {
+                selectedFeatureLayer.setStyle({
+                    color: 'white',
+                    weight: 2,
+                    opacity: 0.7
+                });
+            }
+
             // Store the selected feature
             selectedFeature = feature;
             selectedFeatureLayer = layer;
