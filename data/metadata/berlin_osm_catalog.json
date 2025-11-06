@@ -290,6 +290,65 @@
         "Mobility analysis",
         "First/last mile connectivity"
       ]
+    },
+    {
+      "id": "berlin_street_lights",
+      "name": "Berlin Street Lights",
+      "description": "Street lighting infrastructure and lamps across Berlin including location, type, status, and operational details from Berlin GDI",
+      "feature_type": "Point",
+      "source": "Berlin GDI WFS Service (https://gdi.berlin.de/services/wfs/beleuchtung)",
+      "file": "data/vector/wfs/berlin_street_lights.geojson",
+      "table": "vector.osm_street_lights",
+      "category": "infrastructure",
+      "subcategory": "street_lighting",
+      "crs": "EPSG:4326",
+      "geometry_type": "Point",
+      "feature_count": 100000,
+      "attributes": [
+        "id",
+        "leuchtstelle",
+        "kurznummer",
+        "betriebsart",
+        "status",
+        "bezirk",
+        "ortsteil",
+        "strasse",
+        "east",
+        "north",
+        "rotation",
+        "leuchtentyp",
+        "symbolnr"
+      ],
+      "attribute_descriptions": {
+        "leuchtstelle": "Unique identifier for the light fixture (Leuchtstelle)",
+        "kurznummer": "Short number identifier",
+        "betriebsart": "Operating type (e.g., 'Strom' for electricity)",
+        "status": "Current status (e.g., 'In Betrieb' = in operation)",
+        "bezirk": "Berlin district (Bezirk) location",
+        "ortsteil": "District subdivision (Ortsteil)",
+        "strasse": "Street name where the light is located",
+        "east": "UTM Zone 33N East coordinate",
+        "north": "UTM Zone 33N North coordinate",
+        "rotation": "Rotation angle in degrees",
+        "leuchtentyp": "Type of light fixture (e.g., 'Oberirdischer Schaltkasten' = above-ground switch cabinet)",
+        "symbolnr": "Symbol number for categorization"
+      },
+      "use_cases": [
+        "Street lighting infrastructure planning",
+        "Public safety and visibility analysis",
+        "Lighting maintenance and operations",
+        "Urban night-time environment mapping",
+        "Light pollution and energy consumption studies",
+        "Infrastructure asset management",
+        "Accessibility and public walkway analysis",
+        "Integration with smart city initiatives"
+      ],
+      "data_quality": {
+        "total_features": 100000,
+        "coverage": "City-wide (Berlin)",
+        "completeness": "100% for all attributes",
+        "currency": "From official Berlin GDI service"
+      }
     }
   ],
   "spatial_queries": {
@@ -309,6 +368,22 @@
       {
         "query": "Find the nearest fire station to each school",
         "sql": "SELECT DISTINCT ON (s.osm_id) s.name as school, f.name as nearest_fire_station, ST_Distance(s.geometry::geography, f.geometry::geography) as distance_m FROM vector.osm_schools s CROSS JOIN vector.osm_fire_stations f ORDER BY s.osm_id, ST_Distance(s.geometry::geography, f.geometry::geography)"
+      },
+      {
+        "query": "Show all street lights in a specific district",
+        "sql": "SELECT id, leuchtstelle, status, bezirk, ortsteil, strasse, leuchtentyp, geometry FROM vector.osm_street_lights WHERE bezirk = 'Mitte' ORDER BY ortsteil, strasse"
+      },
+      {
+        "query": "Find street lights near parks (within 100m)",
+        "sql": "SELECT DISTINCT s.id, s.leuchtstelle, s.strasse, p.name as nearby_park, ST_Distance(s.geometry::geography, p.geometry::geography) as distance_m FROM vector.osm_street_lights s JOIN vector.osm_parks p ON ST_DWithin(s.geometry::geography, p.geometry::geography, 100) ORDER BY distance_m"
+      },
+      {
+        "query": "Count street lights by district",
+        "sql": "SELECT bezirk, COUNT(*) as light_count FROM vector.osm_street_lights GROUP BY bezirk ORDER BY light_count DESC"
+      },
+      {
+        "query": "Find street lights near schools (within 50m)",
+        "sql": "SELECT DISTINCT s.id, s.leuchtstelle, s.status, sch.name as school, ST_Distance(s.geometry::geography, sch.geometry::geography) as distance_m FROM vector.osm_street_lights s JOIN vector.osm_schools sch ON ST_DWithin(s.geometry::geography, sch.geometry::geography, 50) ORDER BY distance_m LIMIT 100"
       }
     ]
   },
@@ -318,7 +393,15 @@
       "Show me toilets near Alexanderplatz",
       "Which parks are within 1km of the city center?",
       "Find restaurants within 500m of transport stops",
-      "What is the nearest pharmacy to Brandenburger Tor?"
+      "What is the nearest pharmacy to Brandenburger Tor?",
+      "Show all street lights in Mitte district",
+      "Find street lights near parks",
+      "How many street lights are in each Berlin district?",
+      "Which street lights are near schools?",
+      "Show street lights on Unter den Linden",
+      "Find broken or inactive street lights",
+      "Count street lights by fixture type",
+      "Which areas have the most street lighting?"
     ]
   },
   "notes": [

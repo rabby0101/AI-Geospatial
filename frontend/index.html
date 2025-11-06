@@ -2929,148 +2929,105 @@
                             properties.amenity || properties.highway || properties.type || 'Feature Details';
             let featureType = properties.amenity || properties.shop || properties.tourism || properties.type || 'location';
 
-            // Extract key information for badges
-            let badges = [];
+            // Get Font Awesome icon for header
+            let headerIcon = 'fa-location-dot';
+            if (featureType.includes('atm') || properties.amenity === 'atm') headerIcon = 'fa-money-bill';
+            else if (featureType.includes('hospital') || properties.amenity === 'hospital') headerIcon = 'fa-hospital';
+            else if (featureType.includes('school') || properties.amenity === 'school') headerIcon = 'fa-school';
+            else if (featureType.includes('restaurant') || featureType.includes('cafe')) headerIcon = 'fa-utensils';
+            else if (featureType.includes('shop') || properties.shop) headerIcon = 'fa-shopping-bag';
+            else if (featureType.includes('park') || properties.amenity === 'park') headerIcon = 'fa-tree';
+            else if (featureType.includes('water') || properties.type === 'water') headerIcon = 'fa-water';
+            else if (featureType.includes('forest')) headerIcon = 'fa-tree';
+            else if (featureType.includes('bank') || properties.amenity === 'bank') headerIcon = 'fa-bank';
+            else if (featureType.includes('pharmacy') || properties.amenity === 'pharmacy') headerIcon = 'fa-pills';
 
-            // Add count/market count badge
-            if (properties.market_count || properties.count) {
-                badges.push({
-                    icon: '📍',
-                    text: `${properties.market_count || properties.count} items`
-                });
-            }
+            // Get secondary icon for brand/operator section
+            let secondaryIcon = 'fa-building';
+            if (properties.brand) secondaryIcon = 'fa-tag';
+            else if (properties.operator) secondaryIcon = 'fa-building';
+            else if (properties.oteil || properties.bezirk) secondaryIcon = 'fa-map-location-dot';
 
-            // Add area badge
-            if (properties.area_sq_km) {
-                badges.push({
-                    icon: '📏',
-                    text: `${parseFloat(properties.area_sq_km).toFixed(1)} sq km`
-                });
-            } else if (properties.area_ha) {
-                badges.push({
-                    icon: '📏',
-                    text: `${parseFloat(properties.area_ha).toFixed(1)} ha`
-                });
-            }
+            // Build popup HTML with dark frosted glass design
+            let popupContent = '<div style="background: rgba(30, 30, 35, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); overflow: hidden; width: 380px; display: flex; flex-direction: column;">';
 
-            // Add operator/district badge
-            if (properties.operator) {
-                badges.push({
-                    icon: '🏢',
-                    text: properties.operator
-                });
-            } else if (properties.bezirk) {
-                badges.push({
-                    icon: '📍',
-                    text: properties.bezirk
-                });
-            }
-
-            // Get avatar emoji based on feature type
-            let avatarEmoji = '📍';
-            if (featureType.includes('hospital') || properties.amenity === 'hospital') avatarEmoji = '🏥';
-            else if (featureType.includes('school') || properties.amenity === 'school') avatarEmoji = '🎓';
-            else if (featureType.includes('restaurant') || featureType.includes('cafe')) avatarEmoji = '🍽️';
-            else if (featureType.includes('shop') || properties.shop) avatarEmoji = '🛍️';
-            else if (featureType.includes('park') || properties.amenity === 'park') avatarEmoji = '🌳';
-            else if (featureType.includes('water') || properties.type === 'water') avatarEmoji = '💧';
-            else if (featureType.includes('forest')) avatarEmoji = '🌲';
-
-            // Build popup HTML
-            let popupContent = '<div class="popup-card">';
-
-            // Header with avatar and title
-            popupContent += '<div class="popup-header">';
-            popupContent += `<div class="popup-avatar">${avatarEmoji}</div>`;
-            popupContent += '<div class="popup-title-section">';
-            popupContent += `<div class="popup-title">${featureName}</div>`;
-
-            // Add subtitle with type info
-            let subtitleParts = [];
-            if (featureType && featureType !== featureName) {
-                subtitleParts.push(featureType.charAt(0).toUpperCase() + featureType.slice(1).replace(/_/g, ' '));
-            }
-            if (properties.oteil) {
-                subtitleParts.push(properties.oteil);
-            }
-            if (subtitleParts.length > 0) {
-                popupContent += `<div class="popup-subtitle">${subtitleParts.join(' • ')}</div>`;
-            }
-
-            popupContent += '</div>';
+            // Header with icon and type
+            popupContent += '<div style="display: flex; align-items: center; gap: 14px; padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); flex-shrink: 0;">';
+            popupContent += `<i style="font-size: 24px; color: #F1642E; width: 24px; text-align: center; flex-shrink: 0;" class="fas ${headerIcon}"></i>`;
+            popupContent += `<h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px;">${featureType.replace(/_/g, ' ')}</h3>`;
             popupContent += '</div>';
 
-            // Body with badges
-            popupContent += '<div class="popup-body">';
-
-            if (badges.length > 0) {
-                popupContent += '<div class="popup-badges">';
-                badges.forEach(badge => {
-                    popupContent += `<div class="popup-badge"><span class="popup-badge-icon">${badge.icon}</span>${badge.text}</div>`;
-                });
+            // Brand/Operator subtitle
+            let brandInfo = properties.brand || properties.operator || properties.oteil || properties.bezirk || '';
+            if (brandInfo) {
+                popupContent += '<div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03); flex-shrink: 0;">';
+                popupContent += `<i style="font-size: 14px; color: #b0b0b0; width: 16px; text-align: center; flex-shrink: 0;" class="fas ${secondaryIcon}"></i>`;
+                popupContent += `<h4 style="margin: 0; font-size: 16px; font-weight: 600; color: #e0e0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.2px;">${brandInfo}</h4>`;
                 popupContent += '</div>';
             }
 
-            // Add description if available
-            if (properties.description || properties.description_de || properties.note) {
-                let description = properties.description || properties.description_de || properties.note;
-                popupContent += `<div class="popup-description">${description}</div>`;
-            }
+            // Information grid (two-column layout) - with overflow handling
+            popupContent += '<div style="padding: 12px 16px; display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; max-height: 240px; overflow-y: auto; font-size: 12px; flex-grow: 1;">';
 
-            // Add attributes (excluding already used ones)
-            const priorityKeys = [
-                'name', 'oteil', 'bezirk',  // Already shown in header
-                'amenity', 'shop', 'tourism', 'highway', 'building', 'type',
-                'operator', 'market_count', 'count', 'area_sq_km', 'area_ha', 'area',
-                'description', 'description_de', 'note'  // Already shown in description
-            ];
+            // Priority keys to show first
+            const keyPriority = {
+                'cash_in': 1, 'cash in': 1,
+                'check_date': 2, 'check date': 2,
+                'indoor': 3,
+                'opening_hours': 4, 'opening hours': 4,
+                'wheelchair': 5,
+                'osm_id': 6, 'osm id': 6,
+                'website': 7,
+                'phone': 8, 'contact:phone': 8,
+                'address': 9, 'addr:street': 9,
+                'email': 10, 'contact:email': 10
+            };
 
-            const excludeKeys = ['geometry', 'description', 'description_de', 'note', 'name', 'amenity', 'shop', 'tourism', 'highway', 'building', 'type', 'operator', 'market_count', 'count', 'area_sq_km', 'area_ha', 'area', 'oteil', 'bezirk'];
+            const excludeKeys = new Set([
+                'geometry', 'description', 'description_de', 'note', 'name', 'amenity', 'shop',
+                'tourism', 'highway', 'building', 'type', 'operator', 'brand', 'market_count', 'count',
+                'area_sq_km', 'area_ha', 'area', 'oteil', 'bezirk', 'title'
+            ]);
 
-            const sortedEntries = Object.entries(properties)
-                .filter(([key]) => !excludeKeys.includes(key) && properties[key] !== null && properties[key] !== undefined && properties[key] !== '')
+            const visibleEntries = Object.entries(properties)
+                .filter(([key]) => !excludeKeys.has(key) && properties[key] !== null && properties[key] !== undefined && properties[key] !== '')
                 .sort((a, b) => {
-                    const aIndex = priorityKeys.indexOf(a[0]);
-                    const bIndex = priorityKeys.indexOf(b[0]);
-                    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-                    if (aIndex !== -1) return -1;
-                    if (bIndex !== -1) return 1;
-                    return a[0].localeCompare(b[0]);
-                });
+                    const aPriority = keyPriority[a[0].toLowerCase()] || 999;
+                    const bPriority = keyPriority[b[0].toLowerCase()] || 999;
+                    return aPriority - bPriority;
+                })
+                .slice(0, 10);  // Show max 10 attributes
 
-            if (sortedEntries.length > 0) {
-                popupContent += '<div class="popup-attributes">';
-                for (const [key, value] of sortedEntries.slice(0, 5)) {  // Limit to 5 attributes
-                    let displayKey = key.replace(/_/g, ' ').replace(/:/g, ' ');
-                    let displayValue = value;
+            visibleEntries.forEach(([key, value]) => {
+                let displayKey = key.replace(/_/g, ' ').replace(/:/g, ' ').replace('addr ', '').replace('contact ', '');
+                let displayValue = value;
 
-                    if (typeof value === 'object') {
-                        displayValue = JSON.stringify(value);
-                    } else if (typeof value === 'string' && value.startsWith('http')) {
-                        displayValue = `<a href="${value}" target="_blank" style="color: #f1642e; text-decoration: none;">🔗</a>`;
-                    } else if (typeof value === 'number' && (key.includes('area'))) {
-                        displayValue = value.toFixed(2);
-                    }
-
-                    popupContent += `
-                        <div class="popup-attribute">
-                            <div class="popup-label">${displayKey}</div>
-                            <div class="popup-value">${displayValue}</div>
-                        </div>
-                    `;
+                // Format value
+                if (typeof value === 'boolean') {
+                    displayValue = value ? 'yes' : 'no';
+                } else if (typeof value === 'number') {
+                    displayValue = value.toFixed && !Number.isInteger(value) ? value.toFixed(2) : value;
+                } else if (typeof value === 'object') {
+                    displayValue = JSON.stringify(value);
+                } else if (typeof value === 'string' && value.startsWith('http')) {
+                    displayValue = '🔗 Link';
                 }
-                popupContent += '</div>';
-            }
+
+                // Capitalize first letter
+                displayKey = displayKey.charAt(0).toUpperCase() + displayKey.slice(1);
+
+                popupContent += `<div style="color: #a0a0a0; font-weight: 500; font-size: 13px; word-break: break-word;">${displayKey}</div>`;
+                popupContent += `<div style="color: #f0f0f0; text-align: right; font-weight: 600; font-size: 13px; word-break: break-word;">${displayValue}</div>`;
+            });
 
             popupContent += '</div>';
 
             // Footer with action button
-            popupContent += '<div class="popup-footer">';
+            popupContent += '<div style="padding: 12px 16px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 10px; background: rgba(255, 255, 255, 0.03); flex-shrink: 0;">';
             if (properties.website) {
-                popupContent += `<a href="${properties.website}" target="_blank" class="popup-button">Visit Website</a>`;
-            } else {
-                popupContent += '<button class="popup-button">More Details</button>';
+                popupContent += `<a href="${properties.website}" target="_blank" style="flex: 1; padding: 11px 14px; background: rgba(59, 130, 246, 0.2); color: #64B5F6; border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 8px; text-align: center; text-decoration: none; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; font-family: inherit;">Website</a>`;
             }
+            popupContent += `<button class="popup-button" style="flex: 1; padding: 11px 14px; background: rgba(59, 130, 246, 0.2); color: #64B5F6; border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; font-family: inherit;">More Details</button>`;
             popupContent += '</div>';
 
             popupContent += '</div>';
@@ -4363,13 +4320,18 @@
 
             getClusterCircleSize(count) {
                 // Smooth, continuous scaling based on cluster count
-                // Larger clusters noticeably bigger than smaller ones
-                // Formula: baseSize + (count × scaleFactor) with min/max bounds
-                const baseSize = 35;                // Minimum visible size
-                const scaleFactor = 0.08;           // Growth rate per point
-                const maxSize = 90;                 // Maximum cluster size
+                // Uses logarithmic scaling for better visual distribution
+                // Small differences between 2-5 points are more apparent
+                // Large clusters (50+) show dramatic size differences
+                const baseSize = 30;                // Minimum size for single/small clusters
+                const maxSize = 120;                // Maximum cluster size
 
-                return Math.min(baseSize + (count * scaleFactor), maxSize);
+                // Logarithmic scaling: log(count) creates better visual differentiation
+                // scale = 1 + log10(count) gives smooth progression:
+                // 2 points: 1.3x, 5 points: 1.7x, 10 points: 2x, 100 points: 3x, 1000 points: 4x
+                const scaleFactor = 1 + Math.log10(Math.max(count, 1));
+
+                return Math.min(baseSize * scaleFactor, maxSize);
             }
 
             renderClusters() {
@@ -4397,18 +4359,26 @@
                     this.markerLayer.addLayer(marker);
                 });
 
-                // Render cluster circles (professional design: semi-transparent dark with white center point)
+                // Render cluster circles with layer color and high transparency
                 this.clusters.forEach(clusterData => {
                     const circleSize = this.getClusterCircleSize(clusterData.count);
                     const radius = circleSize / 2;
 
-                    // Professional design: semi-transparent dark circle with small white center point
+                    // Get layer color (default to orange if not specified)
+                    const layerColor = this.styleConfig.fillColor || this.styleConfig.color || '#F1642E';
+
+                    // Convert hex to RGB for rgba transparency
+                    const rgb = this.hexToRgb(layerColor);
+                    const fillColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`;  // Very transparent (15% opacity)
+                    const strokeColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`; // Slightly more opaque for border
+
+                    // Colorful design: layer color with high transparency and subtle border
                     const svg = `
                         <svg width="${circleSize}" height="${circleSize}" viewBox="0 0 ${circleSize} ${circleSize}" xmlns="http://www.w3.org/2000/svg">
-                            <!-- Semi-transparent dark background circle -->
-                            <circle cx="${radius}" cy="${radius}" r="${radius - 1}" fill="rgba(50, 50, 50, 0.6)" stroke="rgba(100, 100, 100, 0.3)" stroke-width="1"/>
-                            <!-- Small white center point -->
-                            <circle cx="${radius}" cy="${radius}" r="3" fill="white"/>
+                            <!-- Transparent colored background circle -->
+                            <circle cx="${radius}" cy="${radius}" r="${radius - 1}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2"/>
+                            <!-- Small colored center point -->
+                            <circle cx="${radius}" cy="${radius}" r="4" fill="${layerColor}"/>
                         </svg>
                     `;
 
@@ -4437,6 +4407,31 @@
                 fg.addLayer(this.clusterLayer);
                 fg.addLayer(this.markerLayer);
                 return fg;
+            }
+
+            hexToRgb(hex) {
+                // Convert hex color to RGB object
+                // Handles both #RRGGBB and #RGB formats
+                const result = /^#?([a-f\d]{1,2})([a-f\d]{1,2})([a-f\d]{1,2})$/i.exec(hex);
+                if (!result) {
+                    // Fallback to orange if invalid hex
+                    return { r: 241, g: 100, b: 46 };
+                }
+
+                let r = result[1];
+                let g = result[2];
+                let b = result[3];
+
+                // Expand shorthand hex format (#RGB) to full format (#RRGGBB)
+                if (r.length === 1) r = r + r;
+                if (g.length === 1) g = g + g;
+                if (b.length === 1) b = b + b;
+
+                return {
+                    r: parseInt(r, 16),
+                    g: parseInt(g, 16),
+                    b: parseInt(b, 16)
+                };
             }
 
             remove() {

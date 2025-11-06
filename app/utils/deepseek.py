@@ -87,7 +87,7 @@ LIMIT 20
 - osm_universities, osm_libraries
 
 **Commerce & Services (4):**
-- osm_supermarkets, osm_banks, osm_atm, osm_post_offices
+- osm_supermarkets, osm_banks, osm_atm (NOT osm_atms), osm_post_offices
 
 **Recreation (4):**
 - osm_museums, osm_theatres, osm_allotment_gardens
@@ -394,7 +394,8 @@ If user asks "show all districts", generate:
 - "Find all hospitals and clinics within 1km of each other in Mitte district"
 - "Show universities near public transport stops"
 - "Which districts have the most doctors per capita?"
-- "Find ATMs near supermarkets"
+- "Find ATMs in Mitte" → SELECT * FROM vector.osm_atm WHERE ST_Within(geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
+- "Find ATMs near supermarkets" → SELECT a.* FROM vector.osm_atm a WHERE EXISTS (SELECT 1 FROM vector.osm_supermarkets s WHERE ST_DWithin(ST_Transform(a.geometry, 3857), ST_Transform(s.geometry, 3857), 500))
 - "Show forests and water bodies in relation to residential areas"
 - "Hospitals and dentists in close proximity (within 500m)"
 - "List all recreation facilities (gyms, museums, theaters) near me"
