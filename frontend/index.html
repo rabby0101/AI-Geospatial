@@ -2448,6 +2448,13 @@
         let userLocationCircle = null;
         let locationWatchId = null;
 
+        // Feature selection state for context-aware queries
+        let selectedFeature = null;  // {geometry, properties, type}
+        let selectedFeatureLayer = null;  // Reference to the selected layer
+        let selectedFeatureMarker = null;  // Highlight marker/border for selected feature
+        let selectedFeatureGeometry = null;  // WKT format geometry for API
+        let contextMode = false;  // Whether in context-aware query mode
+
         // ===== MULTI-STEP QUERY FUNCTIONS =====
 
         // Set query mode (single or multi-step)
@@ -4314,6 +4321,11 @@
                         });
                     }
 
+                    // Add click handler for feature selection (context-aware queries)
+                    marker.on('click', function(e) {
+                        selectFeatureForContext(feature, marker);
+                    });
+
                     this.markerLayer.addLayer(marker);
                 });
             }
@@ -4355,6 +4367,11 @@
                             offset: [0, 10]
                         });
                     }
+
+                    // Add click handler for feature selection (context-aware queries)
+                    marker.on('click', function(e) {
+                        selectFeatureForContext(markerData.feature, marker);
+                    });
 
                     this.markerLayer.addLayer(marker);
                 });
@@ -4522,6 +4539,11 @@
                             offset: [0, 10]
                         });
                     }
+
+                    // Add click handler for feature selection (context-aware queries)
+                    layer.on('click', function(e) {
+                        selectFeatureForContext(feature, layer);
+                    });
                 }
             });
 
@@ -5081,6 +5103,107 @@
             };
         }
 
+        // ===== CONTEXT-AWARE QUERY FUNCTIONS =====
+
+        // Select a feature for context-aware queries
+        function selectFeatureForContext(feature, layer) {
+            // Store the selected feature
+            selectedFeature = feature;
+            selectedFeatureLayer = layer;
+            selectedFeatureGeometry = geometryToWKT(feature.geometry);
+
+            // Log for debugging
+            console.log('✅ Feature selected for context:', {
+                type: feature.geometry.type,
+                properties: feature.properties,
+                wkt: selectedFeatureGeometry
+            });
+
+            // Show notification
+            const featureName = feature.properties?.name ||
+                               feature.properties?.amenity ||
+                               feature.geometry.type;
+            showNotification(`Selected: ${featureName}. Ask a follow-up question about this feature!`, 'success');
+
+            // Optional: Add visual highlight to selected feature
+            if (layer.setStyle) {
+                layer.setStyle({
+                    color: '#FFD700',
+                    weight: 3,
+                    opacity: 1
+                });
+            }
+        }
+
+        // Deselect the current feature
+        function deselectFeature() {
+            if (selectedFeatureLayer && selectedFeatureLayer.setStyle) {
+                selectedFeatureLayer.setStyle({
+                    color: 'white',
+                    weight: 2,
+                    opacity: 0.7
+                });
+            }
+            selectedFeature = null;
+            selectedFeatureLayer = null;
+            selectedFeatureGeometry = null;
+        }
+
+        // Convert GeoJSON geometry to WKT format for API transmission
+        function geometryToWKT(geometry) {
+            if (!geometry) return null;
+
+            const type = geometry.type;
+            const coords = geometry.coordinates;
+
+            switch(type) {
+                case 'Point':
+                    // POINT(lon lat)
+                    return `POINT(${coords[0]} ${coords[1]})`;
+
+                case 'LineString':
+                    // LINESTRING(x1 y1, x2 y2, ...)
+                    const lineCoords = coords.map(c => `${c[0]} ${c[1]}`).join(', ');
+                    return `LINESTRING(${lineCoords})`;
+
+                case 'Polygon':
+                    // POLYGON((x1 y1, x2 y2, ..., x1 y1))
+                    const rings = coords.map(ring => {
+                        const ringCoords = ring.map(c => `${c[0]} ${c[1]}`).join(', ');
+                        return `(${ringCoords})`;
+                    }).join(', ');
+                    return `POLYGON(${rings})`;
+
+                case 'MultiPoint':
+                    // MULTIPOINT(x1 y1, x2 y2, ...)
+                    const points = coords.map(c => `${c[0]} ${c[1]}`).join(', ');
+                    return `MULTIPOINT(${points})`;
+
+                case 'MultiLineString':
+                    // MULTILINESTRING((x1 y1, x2 y2), (x3 y3, x4 y4))
+                    const lines = coords.map(line => {
+                        const lineCoords = line.map(c => `${c[0]} ${c[1]}`).join(', ');
+                        return `(${lineCoords})`;
+                    }).join(', ');
+                    return `MULTILINESTRING(${lines})`;
+
+                case 'MultiPolygon':
+                    // MULTIPOLYGON(((x1 y1, x2 y2, ...), (x3 y3, x4 y4, ...)))
+                    const polygons = coords.map(polygon => {
+                        const rings = polygon.map(ring => {
+                            const ringCoords = ring.map(c => `${c[0]} ${c[1]}`).join(', ');
+                            return `(${ringCoords})`;
+                        }).join(', ');
+                        return `(${rings})`;
+                    }).join(', ');
+                    return `MULTIPOLYGON(${polygons})`;
+
+                default:
+                    console.error('Unknown geometry type:', type);
+                    return null;
+            }
+        }
+
         // Get selected LLM provider
         function getSelectedLLMProvider() {
             const selected = document.querySelector('input[name="llmProvider"]:checked');
@@ -5178,6 +5301,17 @@
                     if (userLocation) {
                         payload.user_location = userLocation;
                         console.log('🌍 Using user location:', userLocation);
+                    }
+
+                    // Add selected feature for context-aware queries
+                    if (selectedFeature && selectedFeatureGeometry) {
+                        payload.selected_feature = {
+                            geometry: selectedFeatureGeometry,
+                            geometry_type: selectedFeature.geometry.type,
+                            properties: selectedFeature.properties,
+                            name: selectedFeature.properties?.name || selectedFeature.properties?.amenity || 'unknown feature'
+                        };
+                        console.log('🎯 Using selected feature for context:', payload.selected_feature);
                     }
 
                     console.log(`💬 Conversation Mode - Session: ${sessionId}`);

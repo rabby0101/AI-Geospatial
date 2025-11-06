@@ -1139,7 +1139,7 @@ def _build_dynamic_system_prompt(user_query: str) -> str:
         return SYSTEM_PROMPT
 
 
-def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None) -> str:
+def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None) -> str:
     """
     Query DeepSeek API with a prompt, using simple in-memory cache.
     Dynamically builds prompts with only relevant tables for the query.
@@ -1149,6 +1149,7 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
         context: Optional context information
         user_location: Optional user GPS coordinates {'lat': float, 'lon': float}
         query_type: Optional query type ('spatial', 'stats', 'raster') to guide LLM response format
+        selected_feature: Optional selected feature from map for context-aware queries
 
     Returns:
         Raw text response from DeepSeek
@@ -1180,6 +1181,19 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
     # Add additional context if provided
     if context:
         full_prompt = f"{full_prompt}\n\nContext: {json.dumps(context)}"
+
+    # Add selected feature for context-aware queries
+    if selected_feature:
+        feature_info = f"""
+Selected Feature (from map):
+- Type: {selected_feature.get('geometry_type')}
+- Name: {selected_feature.get('name', 'unknown')}
+- Geometry (WKT): {selected_feature.get('geometry')}
+- Properties: {json.dumps(selected_feature.get('properties', {}))}
+
+IMPORTANT: When the user mentions "the selected [feature]", use this geometry in ST_Within(), ST_DWithin(), ST_Intersects() or similar spatial operators.
+"""
+        full_prompt = f"{full_prompt}\n{feature_info}"
 
     payload = {
         "model": DEEPSEEK_MODEL,
@@ -1222,7 +1236,7 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
     except (KeyError, IndexError) as e:
         raise Exception(f"Unexpected response format from DeepSeek: {str(e)}")
 
-def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None) -> OperationPlan:
+def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None) -> OperationPlan:
     """
     Parse a natural language geospatial query into structured operations.
     Uses DeepSeek API to convert natural language to SQL.
@@ -1232,12 +1246,13 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
         context: Optional context (city, timeframe, etc.)
         user_location: Optional user GPS coordinates {'lat': float, 'lon': float}
         query_type: Optional query type ('spatial', 'stats', 'raster') to guide response format
+        selected_feature: Optional selected feature from map for context-aware queries
 
     Returns:
         OperationPlan with structured operations
     """
     # Query DeepSeek for ALL queries (consistent behavior)
-    raw_response = query_deepseek(question, context, user_location, query_type)
+    raw_response = query_deepseek(question, context, user_location, query_type, selected_feature)
 
     # Try to parse the JSON response
     try:

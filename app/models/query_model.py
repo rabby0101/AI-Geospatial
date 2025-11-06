@@ -38,6 +38,10 @@ class NLQuery(BaseModel):
         default=None,
         description="User's GPS coordinates {'lat': latitude, 'lon': longitude}"
     )
+    selected_feature: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Selected feature from map for context-aware queries {'geometry': 'WKT', 'geometry_type': 'Point/Polygon/...', 'properties': {...}, 'name': 'feature_name'}"
+    )
 
     class Config:
         json_schema_extra = {

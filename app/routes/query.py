@@ -32,7 +32,8 @@ async def geospatial_query(request: NLQuery) -> QueryResponse:
         operation_plan = parse_geospatial_query(
             question=request.question,
             context=request.context,
-            user_location=request.user_location
+            user_location=request.user_location,
+            selected_feature=request.selected_feature
         )
 
         # Execute the operation plan
