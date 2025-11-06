@@ -390,6 +390,14 @@ If user asks "show all districts", generate:
    LIMIT 20
    ```
 
+7. **⭐ TEMPORARY SELECTED FEATURE LAYERS (temp_selected_*):**
+   When a user selects a feature on the map, a temporary PostGIS table is created with the prefix "temp_selected_"
+   These tables contain a single geometry in the "geometry" column (already a PostGIS geometry type - NOT text)
+   - ✅ CORRECT: ST_DWithin(a.geometry, (SELECT geometry FROM temp.temp_selected_session), 1000)
+   - ❌ WRONG: ST_GeomFromText((SELECT geometry FROM temp.temp_selected_session), 4326)
+   - ❌ WRONG: ST_DWithin(a.geometry, ST_GeomFromText((SELECT geometry FROM temp.temp_selected_session), 4326), 1000)
+   The temp table geometry is already a PostGIS geometry object - use it directly without ST_GeomFromText()!
+
 **Example Queries Enabled by New Datasets:**
 - "Find all hospitals and clinics within 1km of each other in Mitte district"
 - "Show universities near public transport stops"
@@ -1018,7 +1026,37 @@ User: "Welche Gegenden eignen sich am besten für Familien (Schulen + Parks + Si
 - Example: "Families (schools + kindergartens + parks)" but kindergartens table doesn't exist
 - SKIP the unavailable table in the SQL
 - Include in reasoning: "Note: Kindergarten data not available. Analysis based on schools and parks."
-- System backend will redistribute weights proportionally"""
+- System backend will redistribute weights proportionally
+
+**⭐ SELECTED FEATURE CONTEXT (CRITICAL - AUTOMATIC USAGE):**
+When a selected_feature is provided in the context (user selected a feature on the map):
+- ALWAYS use the selected feature's geometry in spatial operations - DO NOT require explicit mention
+- The selected feature is provided as: geometry (WKT format), geometry_type, name, properties
+- Apply the selected geometry AUTOMATICALLY to spatial queries:
+
+**For "within" / "inside" type queries:**
+```sql
+SELECT <table>.*
+FROM vector.<table>
+WHERE ST_Within(geometry, ST_GeomFromText('<selected_geometry_wkt>', 4326))
+```
+
+**For "near" / "within distance" type queries:**
+```sql
+SELECT <table>.*
+FROM vector.<table>
+WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_GeomFromText('<selected_geometry_wkt>', 4326), 3857), <distance_meters>)
+ORDER BY ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_GeomFromText('<selected_geometry_wkt>', 4326), 3857))
+```
+
+**IMPORTANT:**
+- User does NOT need to say "the selected [feature]" - just ask the question naturally
+- Example user queries (all should use selected geometry automatically):
+  - "find ATMs within 1 km" → applies within selected geometry + 1km
+  - "show restaurants" → applies ST_Within selected geometry
+  - "what hospitals are nearby" → applies ST_DWithin from selected geometry
+- Extract distance from query (default to 500m if not specified)
+- If no selected feature, treat as normal query (search globally)"""
 
 
 def _get_location_filter_column(location_name: str) -> str:
@@ -1047,6 +1085,24 @@ def _get_location_filter_column(location_name: str) -> str:
         return 'name'
 
 
+def _hash_selected_feature(selected_feature: Optional[Dict[str, Any]]) -> Optional[str]:
+    """
+    Create a hash of selected feature (excluding the large WKT geometry).
+    This prevents cache keys from becoming too large.
+    """
+    if not selected_feature:
+        return None
+
+    import hashlib
+    # Only hash the feature name and type, not the massive geometry
+    feature_summary = {
+        'name': selected_feature.get('name'),
+        'geometry_type': selected_feature.get('geometry_type')
+    }
+    feature_str = json.dumps(feature_summary, sort_keys=True)
+    return hashlib.md5(feature_str.encode()).hexdigest()
+
+
 def _generate_cache_key(prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
     """Generate a unique cache key for a query."""
     cache_str = prompt.lower().strip()
@@ -1060,25 +1116,28 @@ def _get_database_schema_for_llm() -> str:
     Get the LIVE database schema from PostGIS.
 
     Fetches descriptions, row counts, and column info directly from the database.
-    This is the single source of truth - all descriptions are stored in vector.table_metadata.
+    Also checks for temporary layers created from selected features.
 
     Returns:
         Formatted string with all available tables and descriptions for LLM
     """
     try:
         from app.utils.database import db_manager
+        from sqlalchemy import text
 
-        # Fetch live schema from database
+        # Fetch live schema from database (vector schema)
         tables_data = db_manager.get_schema_with_descriptions()
 
         if not tables_data:
-            # Fallback to minimal info
-            return "No table metadata available in database"
+            tables_data = []
 
         # Format for LLM
-        schema_text = "**Available Tables in Database (schema: vector):**\n\n"
+        schema_text = "**Available Tables in Database:**\n\n"
 
-        # Group tables by type based on their description
+        # Add vector schema tables
+        schema_text += "**SCHEMA: vector (main spatial data)**\n"
+        schema_text += "-" * 60 + "\n"
+
         for table_info in sorted(tables_data, key=lambda x: x["table"]):
             table_name = table_info["table"]
             description = table_info["description"]
@@ -1096,6 +1155,48 @@ def _get_database_schema_for_llm() -> str:
                 schema_text += f", ... ({len(columns)} total)"
 
             schema_text += "\n\n"
+
+        # Check for temporary selected feature layers
+        try:
+            temp_tables = []
+            with db_manager.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT table_name
+                    FROM information_schema.tables
+                    WHERE table_schema = 'temp' AND table_name LIKE 'temp_selected_%'
+                    ORDER BY table_name
+                """))
+                temp_tables = [row[0] for row in result]
+
+            if temp_tables:
+                schema_text += "\n**SCHEMA: temp (selected feature layers)**\n"
+                schema_text += "-" * 60 + "\n"
+
+                for temp_table in temp_tables:
+                    # Get info about temp table using a fresh connection
+                    try:
+                        with db_manager.engine.connect() as conn2:
+                            result = conn2.execute(text(f"""
+                                SELECT COUNT(*) as count,
+                                       ST_GeometryType((array_agg(geometry))[1]) as geom_type
+                                FROM temp.{temp_table}
+                            """))
+                            row = result.first()
+                            count = row[0] if row else 0
+                            geom_type = row[1] if row else "Unknown"
+
+                            schema_text += f"**{temp_table}**\n"
+                            schema_text += f"  Description: Temporary layer from selected feature\n"
+                            schema_text += f"  Records: {count} | Geometry: {geom_type}\n"
+                            schema_text += f"  Columns: id, geometry\n\n"
+                    except Exception as table_error:
+                        print(f"⚠️ Could not get info for temp table {temp_table}: {table_error}")
+                        # Still list the temp table even if we can't get info
+                        schema_text += f"**{temp_table}**\n"
+                        schema_text += f"  Description: Temporary layer from selected feature\n"
+                        schema_text += f"  Columns: id, geometry\n\n"
+        except Exception as e:
+            print(f"⚠️ Note: Could not query temp schema: {e}")
 
         return schema_text
 
@@ -1158,6 +1259,7 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
         raise ValueError("DEEPSEEK_API_KEY not found in environment variables")
 
     # Check cache first (include user_location and query_type in cache key)
+    # Note: selected_feature is now handled via temp database layers, not in cache key
     cache_context = {**(context or {}), **({"user_location": user_location} if user_location else {}), **({"query_type": query_type} if query_type else {})}
     cache_key = _generate_cache_key(prompt, cache_context if cache_context else None)
     if cache_key in _query_cache:
@@ -1182,18 +1284,8 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
     if context:
         full_prompt = f"{full_prompt}\n\nContext: {json.dumps(context)}"
 
-    # Add selected feature for context-aware queries
-    if selected_feature:
-        feature_info = f"""
-Selected Feature (from map):
-- Type: {selected_feature.get('geometry_type')}
-- Name: {selected_feature.get('name', 'unknown')}
-- Geometry (WKT): {selected_feature.get('geometry')}
-- Properties: {json.dumps(selected_feature.get('properties', {}))}
-
-IMPORTANT: When the user mentions "the selected [feature]", use this geometry in ST_Within(), ST_DWithin(), ST_Intersects() or similar spatial operators.
-"""
-        full_prompt = f"{full_prompt}\n{feature_info}"
+    # Note: selected_feature is now handled via temp database layers
+    # The schema automatically includes temp_selected_* tables that the LLM can query
 
     payload = {
         "model": DEEPSEEK_MODEL,
@@ -1214,7 +1306,7 @@ IMPORTANT: When the user mentions "the selected [feature]", use this geometry in
                 "Content-Type": "application/json"
             },
             json=payload,
-            timeout=30  # Increased for complex raster queries (was 15s)
+            timeout=60  # Increased for selected features with large geometries
         )
         response.raise_for_status()
 

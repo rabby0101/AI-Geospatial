@@ -316,3 +316,102 @@ async def clear_cache():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to clear cache: {str(e)}"
         )
+
+
+@router.post("/create-temp-layer")
+async def create_temp_layer(request: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Create a temporary PostGIS layer from a selected feature geometry.
+
+    This layer will be available to DeepSeek for generating spatial queries.
+
+    Body:
+        {
+            "geometry": {GeoJSON geometry object},
+            "session_id": "unique_session_id"
+        }
+
+    Returns:
+        {
+            "success": true,
+            "table_name": "temp_selected_[session_id]",
+            "message": "Temporary layer created"
+        }
+    """
+    try:
+        geometry = request.get("geometry")
+        session_id = request.get("session_id")
+
+        if not geometry or not session_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="geometry and session_id are required"
+            )
+
+        # Create temp layer in database
+        temp_table_name = db_manager.create_temp_layer(geometry, session_id, schema="temp")
+
+        if not temp_table_name:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create temporary layer"
+            )
+
+        return {
+            "success": True,
+            "table_name": temp_table_name,
+            "schema": "temp",
+            "message": f"Temporary layer created: temp.{temp_table_name}"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create temporary layer: {str(e)}"
+        )
+
+
+@router.post("/drop-temp-layer")
+async def drop_temp_layer(request: Dict[str, str]) -> Dict[str, Any]:
+    """
+    Drop a temporary PostGIS layer.
+
+    Body:
+        {
+            "session_id": "unique_session_id"
+        }
+
+    Returns:
+        {
+            "success": true,
+            "message": "Temporary layer dropped"
+        }
+    """
+    try:
+        session_id = request.get("session_id")
+
+        if not session_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="session_id is required"
+            )
+
+        # Drop temp layer from database
+        success = db_manager.drop_temp_layer(session_id, schema="temp")
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to drop temporary layer"
+            )
+
+        return {
+            "success": True,
+            "message": "Temporary layer dropped successfully"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to drop temporary layer: {str(e)}"
+        )

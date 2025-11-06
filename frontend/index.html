@@ -150,6 +150,68 @@
             cursor: not-allowed;
         }
 
+        /* Selected Feature Pill */
+        .selected-feature-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.5rem 1rem;
+            background: rgba(80, 78, 118, 0.5);
+            border: 1px solid rgba(241, 100, 46, 0.5);
+            border-radius: 20px;
+            margin-left: 0.5rem;
+            animation: slideInPill 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+        }
+
+        @keyframes slideInPill {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .pill-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .pill-text {
+            font-size: 0.9rem;
+            color: #C4C3E3;
+            font-weight: 500;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pill-close {
+            background: none;
+            border: none;
+            color: rgba(241, 100, 46, 0.7);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0;
+            margin-left: 0.3rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .pill-close:hover {
+            color: #F1642E;
+            transform: scale(1.15);
+        }
+
         /* Main Content Area */
         .main-container {
             display: flex;
@@ -2118,6 +2180,14 @@
     <div class="search-header">
         <div class="search-container">
             <div class="logo">🌍 GeoAssist</div>
+
+            <!-- Selected Feature Pill -->
+            <div class="selected-feature-pill" id="selectedFeaturePill" style="display: none;">
+                <span class="pill-icon">🎯</span>
+                <span class="pill-text" id="pillText"></span>
+                <button class="pill-close" onclick="clearSelectedFeature()" title="Clear selection">✕</button>
+            </div>
+
             <div class="search-wrapper">
                 <span class="search-icon">🔍</span>
                 <input type="text" id="searchInput" placeholder="Ask a question... (e.g., hospitals in Mitte OR terrain elevation in Berlin)">
@@ -5106,7 +5176,7 @@
         // ===== CONTEXT-AWARE QUERY FUNCTIONS =====
 
         // Select a feature for context-aware queries
-        function selectFeatureForContext(feature, layer) {
+        async function selectFeatureForContext(feature, layer) {
             // Store the selected feature
             selectedFeature = feature;
             selectedFeatureLayer = layer;
@@ -5115,17 +5185,19 @@
             // Log for debugging
             console.log('✅ Feature selected for context:', {
                 type: feature.geometry.type,
-                properties: feature.properties,
-                wkt: selectedFeatureGeometry
+                properties: feature.properties
             });
 
             // Show notification
             const featureName = feature.properties?.name ||
                                feature.properties?.amenity ||
                                feature.geometry.type;
-            showNotification(`Selected: ${featureName}. Ask a follow-up question about this feature!`, 'success');
+            showNotification(`Selected: ${featureName}`, 'success');
 
-            // Optional: Add visual highlight to selected feature
+            // Update the pill in the search bar
+            updateSelectedFeaturePill();
+
+            // Add visual highlight to selected feature
             if (layer.setStyle) {
                 layer.setStyle({
                     color: '#FFD700',
@@ -5133,10 +5205,60 @@
                     opacity: 1
                 });
             }
+
+            // Create a temporary PostGIS layer for this selected feature
+            try {
+                const tempLayerResponse = await fetch(`${API_URL}/create-temp-layer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        geometry: feature.geometry,
+                        session_id: window.sessionId || `session_${Date.now()}`
+                    })
+                });
+
+                if (tempLayerResponse.ok) {
+                    const result = await tempLayerResponse.json();
+                    console.log('✅ Created temporary layer:', result.table_name);
+                    // Store the temp table name for reference
+                    window.tempLayerName = result.table_name;
+                    console.log('🗄️ Temp layer available to DeepSeek as:', result.schema + '.' + result.table_name);
+                } else {
+                    console.error('Failed to create temp layer:', await tempLayerResponse.text());
+                    showNotification('Warning: Could not create temp layer for queries', 'warning');
+                }
+            } catch (error) {
+                console.error('Error creating temp layer:', error);
+            }
         }
 
-        // Deselect the current feature
-        function deselectFeature() {
+        // Update the selected feature pill in search bar
+        function updateSelectedFeaturePill() {
+            const pill = document.getElementById('selectedFeaturePill');
+            const pillText = document.getElementById('pillText');
+
+            if (selectedFeature && selectedFeature.properties) {
+                // Get feature name
+                const featureName = selectedFeature.properties?.name ||
+                                  selectedFeature.properties?.amenity ||
+                                  selectedFeature.geometry.type;
+
+                pillText.textContent = featureName;
+                pill.style.display = 'inline-flex';
+                pill.style.animation = 'none'; // Reset animation
+                setTimeout(() => {
+                    pill.style.animation = 'slideInPill 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                }, 10);
+            } else {
+                pill.style.display = 'none';
+            }
+        }
+
+        // Clear the current feature selection
+        async function clearSelectedFeature() {
+            // Remove highlight from feature on map
             if (selectedFeatureLayer && selectedFeatureLayer.setStyle) {
                 selectedFeatureLayer.setStyle({
                     color: 'white',
@@ -5144,9 +5266,46 @@
                     opacity: 0.7
                 });
             }
+
+            // Drop the temporary PostGIS layer
+            try {
+                if (window.sessionId) {
+                    const dropResponse = await fetch(`${API_URL}/drop-temp-layer`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            session_id: window.sessionId
+                        })
+                    });
+
+                    if (dropResponse.ok) {
+                        console.log('✅ Dropped temporary layer');
+                        window.tempLayerName = null;
+                    } else {
+                        console.warn('Failed to drop temp layer:', await dropResponse.text());
+                    }
+                }
+            } catch (error) {
+                console.error('Error dropping temp layer:', error);
+            }
+
+            // Clear state
             selectedFeature = null;
             selectedFeatureLayer = null;
             selectedFeatureGeometry = null;
+
+            // Hide pill
+            const pill = document.getElementById('selectedFeaturePill');
+            pill.style.display = 'none';
+
+            showNotification('Selection cleared', 'success');
+        }
+
+        // Legacy alias for backwards compatibility
+        function deselectFeature() {
+            clearSelectedFeature();
         }
 
         // Convert GeoJSON geometry to WKT format for API transmission
@@ -5303,15 +5462,10 @@
                         console.log('🌍 Using user location:', userLocation);
                     }
 
-                    // Add selected feature for context-aware queries
-                    if (selectedFeature && selectedFeatureGeometry) {
-                        payload.selected_feature = {
-                            geometry: selectedFeatureGeometry,
-                            geometry_type: selectedFeature.geometry.type,
-                            properties: selectedFeature.properties,
-                            name: selectedFeature.properties?.name || selectedFeature.properties?.amenity || 'unknown feature'
-                        };
-                        console.log('🎯 Using selected feature for context:', payload.selected_feature);
+                    // Note: selected feature is now handled via temporary PostGIS layer
+                    // The layer is automatically included in the schema for DeepSeek to discover
+                    if (window.tempLayerName) {
+                        console.log('🗄️ Temporary layer will be available to DeepSeek:', `temp.${window.tempLayerName}`);
                     }
 
                     console.log(`💬 Conversation Mode - Session: ${sessionId}`);

@@ -285,6 +285,10 @@ For additional data:
 - [Copernicus DEM](https://spacedata.copernicus.eu/) - Elevation data
 - [ESA WorldCover](https://worldcover2021.esa.int/) - Land cover
 
+**Berlin-specific data sources (free)**:
+- [WFS Explorer](https://wfsexplorer.netlify.app/) - Query and download Berlin geospatial data via WFS
+- [FIS-Broker Berlin](https://fbinter.stadt-berlin.de/fb/index.jsp) - Official Berlin geospatial data portal
+
 ## Development
 
 ### Running Tests

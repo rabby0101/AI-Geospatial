@@ -508,6 +508,102 @@ class DatabaseManager:
             print(f"Error updating description: {e}")
             return False
 
+    def create_temp_layer(self, geometry_json: dict, session_id: str, schema: str = "temp") -> Optional[str]:
+        """
+        Create a temporary PostGIS layer from a GeoJSON geometry.
+
+        Args:
+            geometry_json: GeoJSON geometry object (with type, coordinates)
+            session_id: Session ID for isolation (table name: temp_selected_{session_id})
+            schema: Schema to create temp table in
+
+        Returns:
+            Table name if successful, None otherwise
+        """
+        if not self.engine:
+            self.initialize()
+
+        try:
+            # Sanitize session_id to prevent SQL injection
+            safe_session_id = session_id.replace('-', '_').replace(' ', '_')[:50]
+            temp_table_name = f"temp_selected_{safe_session_id}"
+
+            # Ensure schema exists
+            with self.engine.connect() as conn:
+                conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+                conn.commit()
+
+            # Drop existing temp table if it exists
+            with self.engine.connect() as conn:
+                conn.execute(text(f"DROP TABLE IF EXISTS {schema}.{temp_table_name} CASCADE"))
+                conn.commit()
+
+            # Create GeoDataFrame from geometry
+            from shapely.geometry import shape
+
+            geom = shape(geometry_json)
+            gdf = gpd.GeoDataFrame(
+                {'id': [1]},
+                geometry=[geom],
+                crs='EPSG:4326'
+            )
+
+            # Write to PostGIS temp table
+            gdf.to_postgis(
+                temp_table_name,
+                self.engine,
+                schema=schema,
+                if_exists='replace',
+                index=False
+            )
+
+            # Create spatial index on temp table
+            with self.engine.connect() as conn:
+                conn.execute(text(f"""
+                    CREATE INDEX IF NOT EXISTS idx_{temp_table_name}_geom
+                    ON {schema}.{temp_table_name} USING GIST(geometry)
+                """))
+                conn.commit()
+
+            print(f"✅ Created temporary layer: {schema}.{temp_table_name}")
+            return temp_table_name
+
+        except Exception as e:
+            print(f"❌ Error creating temp layer: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def drop_temp_layer(self, session_id: str, schema: str = "temp") -> bool:
+        """
+        Drop a temporary PostGIS layer.
+
+        Args:
+            session_id: Session ID matching the temp layer name
+            schema: Schema of temp table
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.engine:
+            self.initialize()
+
+        try:
+            # Sanitize session_id to prevent SQL injection
+            safe_session_id = session_id.replace('-', '_').replace(' ', '_')[:50]
+            temp_table_name = f"temp_selected_{safe_session_id}"
+
+            with self.engine.connect() as conn:
+                conn.execute(text(f"DROP TABLE IF EXISTS {schema}.{temp_table_name} CASCADE"))
+                conn.commit()
+
+            print(f"✅ Dropped temporary layer: {schema}.{temp_table_name}")
+            return True
+
+        except Exception as e:
+            print(f"❌ Error dropping temp layer: {e}")
+            return False
+
 
 # Global instance
 db_manager = DatabaseManager()
