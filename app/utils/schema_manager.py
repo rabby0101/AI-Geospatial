@@ -25,6 +25,7 @@ class SchemaManager:
         """Initialize schema manager and cache all table schemas."""
         self.tables_cache: Dict[str, List[str]] = {}  # {table_name: [col1, col2, ...]}
         self.tables_info: Dict[str, Dict] = {}  # Full table info
+        self.keyword_mappings: Dict[str, str] = {}  # Empty - keywords now come from database descriptions
 
         # Note: Keyword mappings have been moved to database.table_metadata descriptions.
         # The LLM now reads table descriptions directly from the database to understand

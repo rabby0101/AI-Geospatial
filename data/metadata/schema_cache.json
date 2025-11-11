@@ -8114,7 +8114,7 @@
         "type": "text"
       },
       {
-        "name": "payment:sofort\u00fcberweisung",
+        "name": "payment:sofortüberweisung",
         "type": "text"
       },
       {
@@ -14136,6 +14136,120 @@
       {
         "name": "geometry",
         "type": "USER-DEFINED"
+      }
+    ]
+  },
+  "vector.osm_landuse": {
+    "columns": {
+      "gml_id": {
+        "type": "object",
+        "description": "Gml Id"
+      },
+      "identifier": {
+        "type": "object",
+        "description": "Identifier"
+      },
+      "localid": {
+        "type": "object",
+        "description": "Localid"
+      },
+      "namespace": {
+        "type": "object",
+        "description": "Namespace"
+      },
+      "beginlifespanversion": {
+        "type": "object",
+        "description": "Beginlifespanversion"
+      },
+      "hilucspresence": {
+        "type": "object",
+        "description": "Hilucspresence"
+      },
+      "specificlanduse": {
+        "type": "object",
+        "description": "Specificlanduse"
+      },
+      "specificpresence": {
+        "type": "object",
+        "description": "Specificpresence"
+      },
+      "observationdate": {
+        "type": "object",
+        "description": "Observationdate"
+      }
+    },
+    "geometry_type": "Polygon",
+    "crs": "EPSG:4326",
+    "feature_count": 107375,
+    "last_updated": "2025-11-08T18:31:15.579812"
+  },
+  "osm_buildings": {
+    "row_count": 760088,
+    "geometry_type": "MULTIPOLYGON",
+    "columns": [
+      {
+        "name": "ogc_fid",
+        "type": "integer"
+      },
+      {
+        "name": "geometry",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "gfk",
+        "type": "numeric",
+        "description": "Building use code (numeric GFK = Gebäudeformgruppe)"
+      },
+      {
+        "name": "bezgfk",
+        "type": "character varying",
+        "description": "Building use/function type in German (Wohnhaus, Wohngebäude, Schule, Bürogebäude, etc.)"
+      },
+      {
+        "name": "nam",
+        "type": "character varying"
+      },
+      {
+        "name": "bat",
+        "type": "numeric"
+      },
+      {
+        "name": "bezbat",
+        "type": "character varying",
+        "description": "Building structure component type in German (Arkade, Hochhaus, etc.)"
+      },
+      {
+        "name": "hoh",
+        "type": "character varying"
+      },
+      {
+        "name": "aog",
+        "type": "numeric"
+      },
+      {
+        "name": "aug",
+        "type": "numeric"
+      },
+      {
+        "name": "baw",
+        "type": "numeric"
+      },
+      {
+        "name": "bez",
+        "type": "character varying"
+      },
+      {
+        "name": "gkn",
+        "type": "character varying"
+      },
+      {
+        "name": "des",
+        "type": "character varying"
+      },
+      {
+        "name": "use",
+        "type": "ARRAY",
+        "description": "Array of landuse categories (TEXT[]): RESIDENTIAL, COMMERCIAL, INDUSTRIAL, EDUCATION, HEALTHCARE, RELIGIOUS, CULTURAL, SPORTS, HOSPITALITY, TRANSPORTATION, UTILITIES, AGRICULTURE, FUNERARY, PUBLIC_SAFETY, ADMINISTRATION, PARKING, OTHER"
       }
     ]
   }

@@ -112,6 +112,38 @@ def _get_special_table_rules(table_schemas: Dict[str, List[str]]) -> str:
         String with special rules, or empty string if no special rules needed
     """
     rules = ""
+
+    # German Building Type Handling
+    if "osm_buildings" in table_schemas:
+        rules += """
+**CRITICAL GERMAN BUILDING TYPE RULES (osm_buildings table):**
+
+1. **User says "residential", "apartment", "house", "detached", etc.**
+   → These ENGLISH terms must be translated to GERMAN database values in `bezgfk` column
+   → DO NOT use non-existent `building` column
+   → DO NOT filter on `bezbat` (that's architectural structure, not use type)
+
+2. **Mapping English queries to German `bezgfk` values:**
+   - "residential buildings" / "houses" / "apartments" → WHERE bezgfk ILIKE '%Wohnen%' (catches all residential variants)
+   - "residential building" / "wohngebäude" → WHERE bezgfk ILIKE 'Wohngebäude'
+   - "residential house" / "wohnhaus" → WHERE bezgfk ILIKE 'Wohnhaus'
+   - "apartment" / "wohnheim" → WHERE bezgfk ILIKE 'Wohnheim'
+   - "detached house" → Combine: (bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Freistehendes%')
+   - "row house" / "terraced" → Combine: (bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Reihenhaus')
+   - "semi-detached" / "duplex" → Combine: (bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Doppelhaus%')
+
+3. **IMPORTANT:**
+   - `bezgfk` = Building USE/FUNCTION (Wohnhaus, Schule, Büro, etc.) ← Use for building type queries
+   - `bezbaw` = Building FORM/DESIGN (Reihenhaus, Einzelgebäude, Gruppenhaus) ← Use for construction method
+   - `bezbat` = Building STRUCTURE (Arkade, Hochhaus) ← Architectural elements only
+   - Always use ILIKE for German text (case-insensitive, wildcards)
+   - Default pattern for residential: `bezgfk ILIKE '%Wohnen%'` catches all residential variants
+
+4. **Example Queries:**
+   - "Find residential buildings near hospital" → SELECT * FROM osm_buildings WHERE bezgfk ILIKE '%Wohnen%' AND ST_DWithin(...)
+   - "Show detached houses in Mitte" → SELECT * FROM osm_buildings WHERE bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Freistehendes%' AND ST_Within(...)
+"""
+
     return rules
 
 
@@ -178,13 +210,14 @@ SELECT * FROM vector.landmarks WHERE name = '<location>'
 - Test that your SQL returns results quickly (< 10 seconds)
 
 Distance defaults:
-- "near me" / "nearby" → 500m radius
-- "closest" / "nearest" → 2km radius, ORDER BY distance, LIMIT 10
-- "within walking distance" → 800m radius
-- "near <location>" (landmark/station) → 15km radius (landmarks like train stations are specific points)
-- Custom: "within 5km of me" → use specified distance
+- "near me" / "nearby" → 500m radius (return ALL results, NO LIMIT)
+- "closest" / "nearest" (SINGULAR) → 2km radius, ORDER BY distance, LIMIT 1 (return only closest ONE)
+- "find all X near me" → 500m radius, NO LIMIT (return all results, user said "all")
+- "within walking distance" → 800m radius (return ALL results, NO LIMIT)
+- "near <location>" (landmark/station) → 15km radius (landmarks like train stations are specific points, return ALL results)
+- Custom: "within 5km of me" → use specified distance (return ALL results unless number specified)
 
-SQL Template for proximity:
+SQL Template for proximity queries (NO LIMIT unless user specifies a number):
 SELECT *,
        ST_Distance(
          ST_Transform(geometry, 3857),
@@ -197,9 +230,9 @@ WHERE ST_DWithin(
   {{radius_meters}}
 )
 ORDER BY distance_m
-LIMIT 20
+(NO LIMIT - return all results unless explicitly asking for singular "nearest" which uses LIMIT 1)
 
-**Available Tables (schema: vector) - 24 Total Datasets:**
+**Available Tables (schema: vector) - 26 Total Datasets:**
 
 **Original Amenities (10):**
 - osm_hospitals, osm_toilets, osm_pharmacies, osm_fire_stations, osm_police_stations
@@ -220,9 +253,68 @@ LIMIT 20
 **Land Use (2):**
 - osm_forests, osm_water_bodies
 
+**Building Infrastructure (1):**
+- **osm_buildings** (760,088 official Berlin building footprints from cadastral sources)
+
 **Administrative (2):**
 - osm_districts (LineString boundaries - for reference only)
 - **berlin_districts** (POLYGON/MULTIPOLYGON boundaries from LOR Ortsteile with proper district names) ← USE THIS!
+
+**Official Buildings Table - Berlin Cadastral Data:**
+- Table: `vector.osm_buildings` (760,088 MULTIPOLYGON features from official Berlin cadastral sources)
+- **Primary Key: `ogc_fid` (unique feature ID)**
+- **CRITICAL: Building Type/Use Filtering Column is `bezgfk` (NOT `building` or `bezbat`)**
+
+**Column Reference (German Cadastral/GFK System):**
+  - `geometry`: MultiPolygon geometry in EPSG:4326 (building footprints)
+  - `nam`: Building/object name (German: Name/Bezeichnung)
+
+  **PRIMARY BUILDING USE TYPE (USE THIS FOR FILTERING BY BUILDING TYPE):**
+  - `gfk`: Building use code (GFK = Gebäudeformgruppe, numeric)
+  - `bezgfk`: Building use/function description in GERMAN TEXT ← **USE THIS FOR QUERIES LIKE "residential", "apartment", "house"**
+
+  **BUILDING CONSTRUCTION METHOD (secondary classification):**
+  - `baw`: Building construction method code (numeric)
+  - `bezbaw`: Building form/design description (Reihenhaus, Doppelhaushälfte, Freistehendes Einzelgebäude, Gruppenhaus, etc.)
+
+  **BUILDING STRUCTURE (architectural elements):**
+  - `bat`: Building structure component type code (numeric)
+  - `bezbat`: Building structure description (Arkade, Hochhaus, etc.)
+
+  **OTHER ATTRIBUTES:**
+  - `hoh`: Height/elevation information
+  - `aog`, `aug`: Area-related codes
+  - `bezzus`: Building status (Geplant, In ungenutztem Zustand, etc.)
+  - `bezdes`: Data source/methodology
+
+**Residential Building Types (German → English mapping for `bezgfk` column):**
+These are the actual German values you'll find in the database:
+  - "Wohnhaus" = Residential house
+  - "Wohngebäude" = Residential building
+  - "Wohnheim" = Dormitory/residential home
+  - Anything with "Wohnen" = Contains residential component
+  - "Doppelhaushälfte" = Semi-detached house (also in bezbaw)
+  - "Reihenhaus" = Row house/terraced house (also in bezbaw)
+  - "Freistehendes Einzelgebäude" = Detached single building (also in bezbaw)
+
+**Query Examples:**
+  - "All buildings in Berlin" → SELECT * FROM vector.osm_buildings
+  - "Residential buildings in Mitte" → SELECT * FROM vector.osm_buildings WHERE (bezgfk ILIKE 'Wohnhaus' OR bezgfk ILIKE 'Wohngebäude' OR bezgfk ILIKE '%Wohnen%') AND ST_Within(geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
+  - "Detached houses nearby" → SELECT * FROM vector.osm_buildings WHERE (bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Freistehendes Einzelgebäude') AND ST_DWithin(...)
+  - "Large building footprints (>500m²)" → SELECT * FROM vector.osm_buildings WHERE ST_Area(ST_Transform(geometry, 3857)) > 500
+
+- **IMPORTANT NOTES:**
+  1. **NEVER use non-existent column `building`** - use `bezgfk` for German building use type filtering
+  2. Use `geometry` for all spatial operations (not `ogc_fid`)
+  3. Geometry is MULTIPOLYGON type (actual building footprints), use ST_Centroid(geometry) for center points
+  4. Use ST_Area(ST_Transform(geometry, 3857)) to get area in square meters
+  5. For distance queries, use: ST_DWithin(ST_Transform(b.geometry, 3857), ST_Transform(ref.geometry, 3857), meters)
+  6. Use `ogc_fid` as unique identifier (primary key)
+  7. **German Text Matching**: Use ILIKE with wildcards for substring matching (e.g., `WHERE bezgfk ILIKE '%Wohnen%'`)
+  8. **Construction Method vs Use Type**:
+     - Use `bezbaw` if you need to filter by form/construction (Reihenhaus, Doppelhaushälfte)
+     - Use `bezgfk` if you need to filter by use/function (Wohnhaus, Wohngebäude, Schule, Bürogebäude)
+     - Combine both for specific queries (e.g., "detached residential houses")
 
 **Berlin Districts Table - Schema:**
 - Table: `vector.berlin_districts`
@@ -438,6 +530,11 @@ If user asks "show all districts", generate:
 - "Find districts with highest concentration of banks"
 - "Show libraries within walking distance (800m) of schools"
 - "Which areas have dense medical facilities (hospitals, clinics, doctors)?"
+- "Count buildings by district in Berlin"
+- "Show all large buildings (>1000m²) in central Berlin"
+- "Buildings near hospitals for clinic proximity analysis"
+- "Building footprints in specific district with area calculation"
+- "Highest concentration of buildings by neighborhood"
 
 **LAYER NAME GENERATION - CRITICAL:**
 ALWAYS generate a meaningful, concise layer name for the result that describes what the query returns.
@@ -471,11 +568,11 @@ Layer naming rules:
 
 "Vegan restaurants near Karlshorst" → SELECT r.* FROM vector.osm_restaurants r WHERE EXISTS (SELECT 1 FROM vector.osm_transport_stops t WHERE t.name ILIKE '%karlshorst%' AND ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(t.geometry, 3857), 1000)) AND (r.cuisine ILIKE '%vegan%' OR r."diet:vegan" = 'yes')
 
-"Toilets near me" (user_location: {lat: 52.52, lon: 13.405}) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_toilets WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 500) ORDER BY distance_m LIMIT 20
+"Toilets near me" (user_location: {lat: 52.52, lon: 13.405}) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_toilets WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 500) ORDER BY distance_m (NO LIMIT - return all toilets near user)
 
-"Where's the nearest hospital?" (user_location provided) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_hospitals WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 2000) ORDER BY distance_m LIMIT 10
+"Where's the nearest hospital?" (user_location provided) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_hospitals WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 2000) ORDER BY distance_m LIMIT 1 (singular "nearest" = return only closest)
 
-"Restaurants within 1km of me" (user_location: {lat: 52.52, lon: 13.405}) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_restaurants WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 1000) ORDER BY distance_m LIMIT 20
+"Restaurants within 1km of me" (user_location: {lat: 52.52, lon: 13.405}) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_restaurants WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 1000) ORDER BY distance_m (NO LIMIT - return all restaurants within distance)
 
 "Parking near Potsdam" → {"reasoning": "Potsdam is outside Berlin coverage area", ...}
 
@@ -487,20 +584,18 @@ Pattern: "For each X in district Y, how many Z within distance?"
 → Use ST_DWithin for distance filtering with ST_Transform to 3857
 → Use LEFT JOIN with spatial conditions to avoid losing X features with 0 count
 
-Example: "For each school in Mitte district, how many residential buildings are within 1km? Rank schools by coverage." →
+Example: "For each hospital in Mitte district, how many parks are within 1km? Rank hospitals by park coverage." →
 ```sql
 SELECT
-  s.osm_id,
-  s.name,
-  s.geometry,
-  COUNT(b.osm_id) as nearby_buildings,
-  ST_Distance(ST_Transform(s.geometry, 3857), ST_Transform(ST_Centroid(ST_Union(b.geometry)), 3857)) / 1000 as avg_distance_km
-FROM vector.osm_schools s
-WHERE ST_Within(s.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
-LEFT JOIN vector.osm_buildings b ON ST_DWithin(ST_Transform(s.geometry, 3857), ST_Transform(b.geometry, 3857), 1000)
-GROUP BY s.osm_id, s.name, s.geometry
-ORDER BY nearby_buildings DESC
-LIMIT 20
+  h.osm_id,
+  h.name,
+  h.geometry,
+  COUNT(DISTINCT p.osm_id) as nearby_parks
+FROM vector.osm_hospitals h
+WHERE ST_Within(h.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
+LEFT JOIN vector.osm_parks p ON ST_DWithin(ST_Transform(h.geometry, 3857), ST_Transform(p.geometry, 3857), 1000)
+GROUP BY h.osm_id, h.name, h.geometry
+ORDER BY nearby_parks DESC
 ```
 
 Example: "For each hospital in Berlin, how many parks are within 500m?" →
@@ -630,15 +725,25 @@ ORDER BY d.name ASC
 **⚠️ CRITICAL - LIMIT clause rules:**
 ONLY add LIMIT if user EXPLICITLY asks for a number. Otherwise, return ALL results.
 
+**PROXIMITY QUERIES (near/nearby/within distance):**
+- "find all X nearby" / "find all X near me" → NO LIMIT (return all results)
+- "find X nearby" / "show X near me" → NO LIMIT (return all results)
+- "closest X" / "nearest X" (SINGULAR, asking for ONE) → `LIMIT 1`
+- "find 10 restaurants near me" (explicit number) → `LIMIT 10`
+
+**AGGREGATION/COMPARISON QUERIES:**
 - "which area has the highest X" (SINGULAR) → `LIMIT 1` (return only top result)
 - "which areas have the highest X" (PLURAL) → NO LIMIT (return all, sorted DESC)
 - "which areas are WITHOUT X" / "which areas have NO X" → NO LIMIT (return all with 0 count, sorted ASC)
 - "rank/list X by Y" → NO LIMIT (return all for full ranking)
 - "top X areas" / "first X areas" → `LIMIT {X}` (only if number explicitly stated)
 - "show me 10 hospitals" → `LIMIT 10` (only if number explicitly stated)
-- "compare X and Y" → No LIMIT (return all for comparison)
+- "compare X and Y" → NO LIMIT (return all for comparison)
 
 Examples:
+- ✅ "find all buildings nearby" → NO LIMIT (user said "all")
+- ✅ "find residential buildings in mitte" → NO LIMIT (no number specified)
+- ✅ "nearest hospital to me" → `LIMIT 1` (asking for singular "nearest")
 - ✅ "Which district has the most doctors?" → `ORDER BY doctor_count DESC LIMIT 1`
 - ✅ "Which districts have the most doctors?" → `ORDER BY doctor_count DESC` (NO LIMIT - all results)
 - ✅ "Which areas have NO allotment gardens?" → `ORDER BY allotment_count ASC` (NO LIMIT - all results)

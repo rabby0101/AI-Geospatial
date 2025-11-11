@@ -12,6 +12,7 @@
   "osm_allotment_gardens": "Polygon features representing allotment gardens, including their names, access rules, and operators.",
   "osm_atm": "Automated teller machines and cash points",
   "osm_banks": "Banks and financial institutions",
+  "osm_buildings": "Official Berlin buildings dataset from cadastral/municipal sources. Contains 760,088 building footprints with MultiPolygon geometries. Key columns: bezgfk (building use/function in German: Wohnhaus, Schule, etc.), bezbaw (building form: Reihenhaus, Doppelhaushälfte, etc.), nam (building name), use (array of landuse categories: RESIDENTIAL, COMMERCIAL, INDUSTRIAL, EDUCATION, HEALTHCARE, RELIGIOUS, CULTURAL, SPORTS, HOSPITALITY, TRANSPORTATION, UTILITIES, AGRICULTURE, FUNERARY, PUBLIC_SAFETY, ADMINISTRATION, PARKING, OTHER). Query examples: 'RESIDENTIAL' = ANY(use) for residential buildings, WHERE 'RESIDENTIAL' = ANY(use) AND 'COMMERCIAL' = ANY(use) for mixed-use. For German queries, use bezgfk ILIKE '%Wohnen%'. Use geometry for spatial operations.",
   "osm_clinics": "Outpatient medical clinics and health centers",
   "osm_dentists": "Dental clinics and dentist offices",
   "osm_districts": "Geographic boundaries and names of districts from OpenStreetMap.",
@@ -40,6 +41,14 @@
   "osm_water_bodies": "Water bodies including lakes, rivers, and ponds",
   "parkplaetze": "Parking space locations with capacity, restrictions, fees, and operating hours.",
   "table_metadata": "Catalog of geospatial datasets with their names, descriptions, and schemas.",
+  "vector.osm_landuse": {
+    "name": "Berlin Land Use Areas (ALKIS INSPIRE)",
+    "description": "Existing Land Use (ELU) data from German ALKIS cadastral system for Berlin. Contains polygon boundaries of land use zones with HILUCS classifications (hierarchical INSPIRE land cover/use classification system).",
+    "source": "GDI-DE (German Spatial Data Infrastructure) / ALKIS",
+    "date": "2025-04-06",
+    "geometry_type": "Polygon",
+    "crs": "EPSG:4326"
+  },
   "vegetation_ndvi": "Normalized Difference Vegetation Index (NDVI) data from Sentinel-2 for vegetation monitoring",
   "wasserschutzgebiete": "Water protection zones for waterworks, including legal ordinance details and boundaries."
 }

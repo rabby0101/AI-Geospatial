@@ -4601,7 +4601,7 @@
             return Math.round(Math.max(minSize, Math.min(maxSize, scaledSize)));
         }
 
-        // Create colored circle marker without icons (as per user request)
+        // Create colored circle marker with Lucide icons
         function createMarkerWithIcon(latlng, feature, iconColor, selectedIcon = null, zoomLevel = null) {
             // Determine size based on zoom level
             const size = zoomLevel ? getMarkerSize(zoomLevel) : 40;
@@ -4612,8 +4612,11 @@
             markerContainer.style.width = size + 'px';
             markerContainer.style.height = size + 'px';
             markerContainer.style.position = 'relative';
+            markerContainer.style.display = 'flex';
+            markerContainer.style.alignItems = 'center';
+            markerContainer.style.justifyContent = 'center';
 
-            // Create colored circle div with glassmorphic frosted effect (no icon inside)
+            // Create colored circle div with glassmorphic frosted effect
             const bgCircle = document.createElement('div');
             bgCircle.style.position = 'absolute';
             bgCircle.style.width = '100%';
@@ -4628,6 +4631,29 @@
             bgCircle.style.transition = 'transform 0.2s ease';
 
             markerContainer.appendChild(bgCircle);
+
+            // Get appropriate Lucide icon based on feature properties
+            const iconKey = getIconForFeature(feature.properties);
+            const lucideIconName = ICON_LIBRARY[iconKey] || ICON_LIBRARY['location'];
+
+            if (lucideIconName) {
+                // Calculate icon size as 50% of marker size
+                const iconSize = Math.max(12, size * 0.5);
+
+                // Create Lucide icon element
+                const iconElement = document.createElement('i');
+                iconElement.setAttribute('data-lucide', lucideIconName);
+                iconElement.style.position = 'relative';
+                iconElement.style.zIndex = '2';
+                iconElement.style.width = iconSize + 'px';
+                iconElement.style.height = iconSize + 'px';
+                iconElement.style.color = iconColor;
+                iconElement.style.display = 'flex';
+                iconElement.style.alignItems = 'center';
+                iconElement.style.justifyContent = 'center';
+
+                markerContainer.appendChild(iconElement);
+            }
 
             const customIcon = L.divIcon({
                 html: markerContainer.outerHTML,
@@ -4711,11 +4737,10 @@
                             iconElement.style.marginLeft = -(newSize / 2) + 'px';
                             iconElement.style.marginTop = -newSize + 'px';
 
-                            // Update inner icon size proportionally
-                            const innerIcon = iconElement.querySelector('iconify-icon');
+                            // Update inner Lucide icon size proportionally
+                            const innerIcon = iconElement.querySelector('i[data-lucide]');
                             if (innerIcon) {
                                 const iconSize = newSize * 0.5;
-                                innerIcon.style.fontSize = iconSize + 'px';
                                 innerIcon.style.width = iconSize + 'px';
                                 innerIcon.style.height = iconSize + 'px';
                             }
@@ -4839,6 +4864,13 @@
 
                     this.markerLayer.addLayer(marker);
                 });
+
+                // Initialize Lucide icons after all markers have been added to the DOM
+                setTimeout(() => {
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                }, 0);
             }
 
             getClusterCircleSize(count) {
@@ -4954,6 +4986,13 @@
 
                     this.clusterLayer.addLayer(clusterMarker);
                 });
+
+                // Initialize Lucide icons after all markers and clusters have been added to the DOM
+                setTimeout(() => {
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                }, 0);
             }
 
             getLayers() {

@@ -30,17 +30,11 @@ When user asks to "show <location>" or "display <location>" WITHOUT specifying a
 ```sql
 SELECT * FROM vector.landmarks WHERE name = '<location>'
 ```
-→ Do NOT search osm_restaurants or other amenities unless explicitly mentioned
 
 **Examples:**
-- ❌ WRONG: "show wedding" → searches restaurants/theatres
 - ✅ CORRECT: "show wedding" → SELECT * FROM vector.landmarks WHERE name = 'Wedding'
 - ✅ CORRECT: "show restaurants in wedding" → searches osm_restaurants
 
-**User Location Recognition Priority:**
-1. If user says "show <word>" without explicit object → check landmarks table FIRST
-2. If "<word>" exists in landmarks → return landmark geometry
-3. Only fallback to keyword search if NOT found in landmarks
 
 
 
@@ -50,16 +44,16 @@ SELECT * FROM vector.landmarks WHERE name = '<location>'
 - Don't add LIMIT unless user explicitly asks for a number
 - Don't add complex calculations (density, area, etc.) unless specifically asked
 - Always include geometry column for spatial visualization
-- Test that your SQL returns results quickly (< 10 seconds)
 
 Distance defaults:
-- "near me" / "nearby" → 500m radius
-- "closest" / "nearest" → 2km radius, ORDER BY distance, LIMIT 10
-- "within walking distance" → 800m radius
-- "near <location>" (landmark/station) → 15km radius (landmarks like train stations are specific points)
-- Custom: "within 5km of me" → use specified distance
+- "near me" / "nearby" → 500m radius (return ALL results, NO LIMIT)
+- "closest" / "nearest" (SINGULAR) → 5km radius, ORDER BY distance, LIMIT 1 (return only closest ONE)
+- "find all X near me" → 500m radius, NO LIMIT (return all results, user said "all")
+- "within walking distance" → 800m radius (return ALL results, NO LIMIT)
+- "near <location>" (landmark/station) → 15km radius (landmarks like train stations are specific points, return ALL results)
+- Custom: "within 5km of me" → use specified distance (return ALL results unless number specified)
 
-SQL Template for proximity:
+SQL Template for proximity queries (NO LIMIT unless user specifies a number):
 SELECT *,
        ST_Distance(
          ST_Transform(geometry, 3857),
@@ -72,9 +66,9 @@ WHERE ST_DWithin(
   {{radius_meters}}
 )
 ORDER BY distance_m
-LIMIT 20
+(NO LIMIT - return all results unless explicitly asking for singular "nearest" which uses LIMIT 1)
 
-**Available Tables (schema: vector) - 43+ Total Datasets:**
+**Available Tables (schema: vector) - 44+ Total Datasets:**
 
 **Original Amenities (10):**
 - osm_hospitals, osm_toilets, osm_pharmacies, osm_fire_stations, osm_police_stations
@@ -94,6 +88,9 @@ LIMIT 20
 
 **Land Use (2):**
 - osm_forests, osm_water_bodies
+
+**Buildings (1):**
+- **osm_buildings** (680,095 OpenStreetMap building footprints from Berlin)
 
 **Administrative (5):**
 - osm_districts (LineString boundaries - for reference only)
@@ -222,6 +219,44 @@ If user requests amenities from these tables, they are NOT available in the data
 - CRITICAL: Use `objektname` for name filtering, NOT `name` (column doesn't exist)
 - IMPORTANT: When filtering by landoderbezirk, use ILIKE with wildcards and ::text cast: WHERE landoderbezirk::text ILIKE '%district%'
 
+**Buildings Table - Official Berlin Cadastral Buildings:**
+- Table: `vector.osm_buildings` (760,088 official Berlin building footprints from cadastral/municipal sources)
+- Data Source: Official Berlin ALKIS cadastral system (more comprehensive and accurate than OpenStreetMap)
+- Key Columns: `ogc_fid` (unique identifier), `geometry` (MultiPolygon), `bezgfk` (German building use/function), `bezbaw` (building form), `nam` (building name), `use` (TEXT[] array of landuse categories)
+- **CRITICAL: Building Type Column is `bezgfk` (NOT `building`)**
+  - `bezgfk` = Building USE/FUNCTION in German (Wohnhaus, Wohngebäude, Schule, Bürogebäude, etc.)
+  - Contains German text descriptions - use ILIKE with wildcards for matching
+  - Residential building types: "Wohnhaus", "Wohngebäude", "Wohnheim", or anything with "Wohnen" in the text
+
+- **NEW: `use` Array Column - Landuse Categories (RECOMMENDED)**
+  - Available categories: RESIDENTIAL, COMMERCIAL, INDUSTRIAL, EDUCATION, HEALTHCARE, RELIGIOUS, CULTURAL, SPORTS, HOSPITALITY, TRANSPORTATION, UTILITIES, AGRICULTURE, FUNERARY, PUBLIC_SAFETY, ADMINISTRATION, PARKING, OTHER
+  - Query with: `'CATEGORY' = ANY(use)` syntax
+  - Examples:
+    - Single use: `WHERE 'RESIDENTIAL' = ANY(use)`
+    - Mixed-use (buildings with multiple uses): `WHERE 'RESIDENTIAL' = ANY(use) AND 'COMMERCIAL' = ANY(use)`
+    - Any commercial component: `WHERE 'COMMERCIAL' = ANY(use)`
+  - **ADVANTAGES**: No German language knowledge needed, handles mixed-use automatically, faster with GIN index
+
+- **ALTERNATIVE: `bezgfk` Column (German text, requires language knowledge)**
+  - Filter by: `WHERE bezgfk ILIKE '%Wohnen%'` for residential
+  - Detached residential: `WHERE bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Freistehendes%'`
+  - Row houses: `WHERE bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Reihenhaus'`
+
+- Common Queries (USING `use` ARRAY - RECOMMENDED):
+  - "Find all residential buildings in Mitte" → `SELECT * FROM vector.osm_buildings WHERE 'RESIDENTIAL' = ANY(use) AND ST_Within(geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))`
+  - "Find residential buildings nearby" → `WHERE 'RESIDENTIAL' = ANY(use) AND ST_DWithin(...)`
+  - "Find mixed residential-commercial buildings" → `WHERE 'RESIDENTIAL' = ANY(use) AND 'COMMERCIAL' = ANY(use)`
+  - "Buildings with commercial component" → `WHERE 'COMMERCIAL' = ANY(use)`
+  - "Find all educational and healthcare buildings" → `WHERE ('EDUCATION' = ANY(use) OR 'HEALTHCARE' = ANY(use))`
+
+- ⚠️ CRITICAL NOTES:
+  1. **PREFER `use` array column** for most queries - no German language needed, handles mixed-use automatically
+  2. **NEVER use non-existent column `building`** - use `use` array OR `bezgfk` column
+  3. Building geometry is MULTIPOLYGON type (actual building footprints), use ST_Centroid(geometry) for center points
+  4. Use `ogc_fid` as unique identifier (primary key), NOT `osm_id`
+  5. Array syntax: `'CATEGORY' = ANY(use)` (case-sensitive, must be uppercase category name)
+  6. For distance/proximity: `ST_DWithin(ST_Transform(b.geometry, 3857), ST_Transform(ref.geometry, 3857), meters)`
+
 **UNIFIED LOCATION SYSTEM - Use landmarks table for ALL location queries:**
 All location-based queries use the centralized `vector.landmarks` table (12,853 locations).
 This eliminates hardcoding and supports dynamic location lookup for any location type.
@@ -297,6 +332,38 @@ SELECT s.* FROM vector.osm_schools s
 WHERE ST_DWithin(ST_Transform(s.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<stop_name>')), 3857), 1000)
 ORDER BY ST_Distance(ST_Transform(s.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<stop_name>')), 3857))
 LIMIT 20
+```
+
+✅ "Residential buildings in Mitte" (Buildings example) →
+```sql
+SELECT b.* FROM vector.osm_buildings b
+WHERE 'RESIDENTIAL' = ANY(b.use)
+AND ST_Within(b.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
+```
+Alternative using German bezgfk:
+```sql
+SELECT b.* FROM vector.osm_buildings b
+WHERE b.bezgfk ILIKE '%Wohnen%'
+AND ST_Within(b.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
+```
+
+✅ "Residential buildings near hospitals" (Buildings + proximity) →
+```sql
+SELECT DISTINCT b.* FROM vector.osm_buildings b
+WHERE 'RESIDENTIAL' = ANY(b.use)
+AND EXISTS (
+  SELECT 1 FROM vector.osm_hospitals h
+  WHERE ST_DWithin(ST_Transform(b.geometry, 3857), ST_Transform(h.geometry, 3857), 1000)
+)
+LIMIT 100
+```
+
+✅ "Mixed-use buildings (residential + commercial)" →
+```sql
+SELECT b.* FROM vector.osm_buildings b
+WHERE 'RESIDENTIAL' = ANY(b.use) AND 'COMMERCIAL' = ANY(b.use)
+ORDER BY ogc_fid
+LIMIT 50
 ```
 
 **CRITICAL - Multi-result subqueries must use ST_Union():**
@@ -481,14 +548,12 @@ SELECT
   s.osm_id,
   s.name,
   s.geometry,
-  COUNT(b.osm_id) as nearby_buildings,
-  ST_Distance(ST_Transform(s.geometry, 3857), ST_Transform(ST_Centroid(ST_Union(b.geometry)), 3857)) / 1000 as avg_distance_km
+  COUNT(DISTINCT b.osm_id) as nearby_buildings
 FROM vector.osm_schools s
 WHERE ST_Within(s.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
-LEFT JOIN vector.osm_buildings b ON ST_DWithin(ST_Transform(s.geometry, 3857), ST_Transform(b.geometry, 3857), 1000)
+LEFT JOIN vector.osm_buildings b ON ST_DWithin(ST_Transform(s.geometry, 3857), ST_Transform(b.wkb_geometry, 3857), 1000) AND (b.building ILIKE 'residential' OR b.building ILIKE 'apartment' OR b.building ILIKE 'house' OR b.building ILIKE 'detached' OR b.building ILIKE 'semidetached_house')
 GROUP BY s.osm_id, s.name, s.geometry
 ORDER BY nearby_buildings DESC
-LIMIT 20
 ```
 
 Example: "For each hospital in Berlin, how many parks are within 500m?" →
@@ -665,15 +730,25 @@ WHERE NOT EXISTS (
 **⚠️ CRITICAL - LIMIT clause rules:**
 ONLY add LIMIT if user EXPLICITLY asks for a number. Otherwise, return ALL results.
 
+**PROXIMITY QUERIES (near/nearby/within distance):**
+- "find all X nearby" / "find all X near me" → NO LIMIT (return all results)
+- "find X nearby" / "show X near me" → NO LIMIT (return all results)
+- "closest X" / "nearest X" (SINGULAR, asking for ONE) → `LIMIT 1`
+- "find 10 restaurants near me" (explicit number) → `LIMIT 10`
+
+**AGGREGATION/COMPARISON QUERIES:**
 - "which area has the highest X" (SINGULAR) → `LIMIT 1` (return only top result)
 - "which areas have the highest X" (PLURAL) → NO LIMIT (return all, sorted DESC)
 - "which areas are WITHOUT X" / "which areas have NO X" → NO LIMIT (return all with 0 count, sorted ASC)
 - "rank/list X by Y" → NO LIMIT (return all for full ranking)
 - "top X areas" / "first X areas" → `LIMIT {X}` (only if number explicitly stated)
 - "show me 10 hospitals" → `LIMIT 10` (only if number explicitly stated)
-- "compare X and Y" → No LIMIT (return all for comparison)
+- "compare X and Y" → NO LIMIT (return all for comparison)
 
 Examples:
+- ✅ "find all buildings nearby" → NO LIMIT (user said "all")
+- ✅ "find residential buildings in mitte" → NO LIMIT (no number specified)
+- ✅ "nearest hospital to me" → `LIMIT 1` (asking for singular "nearest")
 - ✅ "Which district has the most doctors?" → `ORDER BY doctor_count DESC LIMIT 1`
 - ✅ "Which districts have the most doctors?" → `ORDER BY doctor_count DESC` (NO LIMIT - all results)
 - ✅ "Which areas have NO allotment gardens?" → `ORDER BY allotment_count ASC` (NO LIMIT - all results)
