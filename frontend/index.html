@@ -2699,11 +2699,10 @@
         let userLocationCircle = null;
         let locationWatchId = null;
 
-        // Feature selection state for context-aware queries
-        let selectedFeature = null;  // {geometry, properties, type}
-        let selectedFeatureLayer = null;  // Reference to the selected layer
-        let selectedFeatureMarker = null;  // Highlight marker/border for selected feature
-        let selectedFeatureGeometry = null;  // WKT format geometry for API
+        // Feature selection state for context-aware queries (multi-select support)
+        let selectedFeatures = [];  // Array of {geometry, properties, type}
+        let selectedFeatureLayers = [];  // Array of references to selected layers
+        let selectedFeatureGeometries = [];  // Array of WKT format geometries for API
         let contextMode = false;  // Whether in context-aware query mode
 
         // ===== MULTI-STEP QUERY FUNCTIONS =====
@@ -4851,7 +4850,7 @@
 
                     // Add click handler for feature selection (context-aware queries)
                     marker.on('click', function(e) {
-                        selectFeatureForContext(feature, marker);
+                        selectFeatureForContext(feature, marker, e);
                     });
 
                     // Store marker reference for smooth zoom updates
@@ -4917,7 +4916,7 @@
 
                     // Add click handler for feature selection (context-aware queries)
                     marker.on('click', function(e) {
-                        selectFeatureForContext(markerData.feature, marker);
+                        selectFeatureForContext(markerData.feature, marker, e);
                     });
 
                     // Store marker reference for smooth zoom updates
@@ -5118,7 +5117,7 @@
 
                     // Add click handler for feature selection (context-aware queries)
                     layer.on('click', function(e) {
-                        selectFeatureForContext(feature, layer);
+                        selectFeatureForContext(feature, layer, e);
                     });
                 }
             });
@@ -5579,85 +5578,191 @@
         // ===== CONTEXT-AWARE QUERY FUNCTIONS =====
 
         // Select a feature for context-aware queries
-        async function selectFeatureForContext(feature, layer) {
-            // Clear styling from previously selected feature
-            if (selectedFeatureLayer && selectedFeatureLayer.setStyle) {
-                selectedFeatureLayer.setStyle({
-                    color: 'white',
-                    weight: 2,
-                    opacity: 0.7
-                });
-            }
+        // ===== MULTI-SELECT HELPER FUNCTIONS =====
 
-            // Store the selected feature
-            selectedFeature = feature;
-            selectedFeatureLayer = layer;
-            selectedFeatureGeometry = geometryToWKT(feature.geometry);
+        // Check if a feature is already selected
+        function isFeatureSelected(feature) {
+            return selectedFeatures.some(f =>
+                f.geometry.type === feature.geometry.type &&
+                JSON.stringify(f.geometry.coordinates) === JSON.stringify(feature.geometry.coordinates) &&
+                f.properties?.id === feature.properties?.id
+            );
+        }
 
-            // Log for debugging
-            console.log('✅ Feature selected for context:', {
-                type: feature.geometry.type,
-                properties: feature.properties
-            });
+        // Add a feature to the selection
+        function addFeatureToSelection(feature, layer) {
+            if (!isFeatureSelected(feature)) {
+                selectedFeatures.push(feature);
+                selectedFeatureLayers.push(layer);
+                selectedFeatureGeometries.push(geometryToWKT(feature.geometry));
 
-            // Show notification
-            const featureName = feature.properties?.name ||
-                               feature.properties?.amenity ||
-                               feature.geometry.type;
-            showNotification(`Selected: ${featureName}`, 'success');
-
-            // Update the pill in the search bar
-            updateSelectedFeaturePill();
-
-            // Add visual highlight to selected feature
-            if (layer.setStyle) {
-                layer.setStyle({
-                    color: '#FFD700',
-                    weight: 3,
-                    opacity: 1
-                });
-            }
-
-            // Create a temporary PostGIS layer for this selected feature
-            try {
-                const tempLayerResponse = await fetch(`${API_URL}/create-temp-layer`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        geometry: feature.geometry,
-                        session_id: window.sessionId || `session_${Date.now()}`
-                    })
-                });
-
-                if (tempLayerResponse.ok) {
-                    const result = await tempLayerResponse.json();
-                    console.log('✅ Created temporary layer:', result.table_name);
-                    // Store the temp table name for reference
-                    window.tempLayerName = result.table_name;
-                    console.log('🗄️ Temp layer available to DeepSeek as:', result.schema + '.' + result.table_name);
-                } else {
-                    console.error('Failed to create temp layer:', await tempLayerResponse.text());
-                    showNotification('Warning: Could not create temp layer for queries', 'warning');
+                // Apply golden highlight
+                if (layer.setStyle) {
+                    layer.setStyle({
+                        color: '#FFD700',
+                        weight: 3,
+                        opacity: 1
+                    });
                 }
-            } catch (error) {
-                console.error('Error creating temp layer:', error);
+
+                console.log(`✅ Added feature to selection (total: ${selectedFeatures.length})`);
             }
         }
 
-        // Update the selected feature pill in search bar
+        // Remove a feature from the selection
+        function removeFeatureFromSelection(feature) {
+            const index = selectedFeatures.findIndex(f =>
+                f.geometry.type === feature.geometry.type &&
+                JSON.stringify(f.geometry.coordinates) === JSON.stringify(feature.geometry.coordinates) &&
+                f.properties?.id === feature.properties?.id
+            );
+
+            if (index !== -1) {
+                const layer = selectedFeatureLayers[index];
+
+                // Remove highlight styling
+                if (layer && layer.setStyle) {
+                    layer.setStyle({
+                        color: 'white',
+                        weight: 2,
+                        opacity: 0.7
+                    });
+                }
+
+                selectedFeatures.splice(index, 1);
+                selectedFeatureLayers.splice(index, 1);
+                selectedFeatureGeometries.splice(index, 1);
+
+                console.log(`❌ Removed feature from selection (total: ${selectedFeatures.length})`);
+            }
+        }
+
+        // Clear all selections
+        function clearAllSelections() {
+            // Remove highlight from all selected features
+            selectedFeatureLayers.forEach(layer => {
+                if (layer && layer.setStyle) {
+                    layer.setStyle({
+                        color: 'white',
+                        weight: 2,
+                        opacity: 0.7
+                    });
+                }
+            });
+
+            selectedFeatures = [];
+            selectedFeatureLayers = [];
+            selectedFeatureGeometries = [];
+
+            console.log('🗑️ All selections cleared');
+        }
+
+        // Update all visual elements after selection changes
+        async function updateAllSelectedFeatures() {
+            updateSelectedFeaturePill();
+
+            // Recreate temp layer with all selected geometries
+            if (selectedFeatures.length > 0) {
+                try {
+                    const tempLayerResponse = await fetch(`${API_URL}/create-temp-layer`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            geometries: selectedFeatures.map(f => f.geometry),
+                            session_id: window.sessionId || `session_${Date.now()}`
+                        })
+                    });
+
+                    if (tempLayerResponse.ok) {
+                        const result = await tempLayerResponse.json();
+                        console.log('✅ Created/updated temporary layer with all selections:', result.table_name);
+                        window.tempLayerName = result.table_name;
+                        console.log('🗄️ Temp layer available to DeepSeek as:', result.schema + '.' + result.table_name);
+                    } else {
+                        console.error('Failed to create temp layer:', await tempLayerResponse.text());
+                        showNotification('Warning: Could not create temp layer for queries', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error creating temp layer:', error);
+                }
+            } else {
+                // Drop temp layer if no selections
+                try {
+                    if (window.sessionId) {
+                        const dropResponse = await fetch(`${API_URL}/drop-temp-layer`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                session_id: window.sessionId
+                            })
+                        });
+
+                        if (dropResponse.ok) {
+                            console.log('✅ Dropped temporary layer');
+                            window.tempLayerName = null;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error dropping temp layer:', error);
+                }
+            }
+        }
+
+        async function selectFeatureForContext(feature, layer, event) {
+            const featureName = feature.properties?.name ||
+                               feature.properties?.amenity ||
+                               feature.geometry.type;
+
+            // Check if Shift key is pressed for multi-select
+            if (event && event.shiftKey) {
+                // Multi-select mode: toggle feature
+                if (isFeatureSelected(feature)) {
+                    removeFeatureFromSelection(feature);
+                    showNotification(`Deselected: ${featureName}`, 'info');
+                } else {
+                    addFeatureToSelection(feature, layer);
+                    showNotification(`Added to selection (${selectedFeatures.length} items)`, 'success');
+                }
+            } else {
+                // Single-select mode: clear previous selections and select only this
+                clearAllSelections();
+                addFeatureToSelection(feature, layer);
+                showNotification(`Selected: ${featureName}`, 'success');
+            }
+
+            // Update UI and temp layer
+            await updateAllSelectedFeatures();
+
+            // Log for debugging
+            console.log('👉 Feature interaction:', {
+                shiftKey: event?.shiftKey || false,
+                totalSelected: selectedFeatures.length,
+                geometry: feature.geometry.type,
+                properties: feature.properties
+            });
+        }
+
+        // Update the selected feature pill in search bar with counter and feature list
         function updateSelectedFeaturePill() {
             const pill = document.getElementById('selectedFeaturePill');
             const pillText = document.getElementById('pillText');
 
-            if (selectedFeature && selectedFeature.properties) {
-                // Get feature name
-                const featureName = selectedFeature.properties?.name ||
-                                  selectedFeature.properties?.amenity ||
-                                  selectedFeature.geometry.type;
+            if (selectedFeatures.length > 0) {
+                // Build list of selected feature names for hover tooltip
+                const selectedNames = selectedFeatures.map(f =>
+                    f.properties?.name ||
+                    f.properties?.amenity ||
+                    f.geometry.type
+                ).join(', ');
 
-                pillText.textContent = featureName;
+                // Show counter: "N items selected"
+                pillText.textContent = `${selectedFeatures.length} item${selectedFeatures.length !== 1 ? 's' : ''} selected`;
+                pill.title = `Selected: ${selectedNames}`;  // Show list on hover
+
                 pill.style.display = 'inline-flex';
                 pill.style.animation = 'none'; // Reset animation
                 setTimeout(() => {
@@ -5665,19 +5770,14 @@
                 }, 10);
             } else {
                 pill.style.display = 'none';
+                pill.title = '';
             }
         }
 
-        // Clear the current feature selection
+        // Clear all feature selections (button callback)
         async function clearSelectedFeature() {
-            // Remove highlight from feature on map
-            if (selectedFeatureLayer && selectedFeatureLayer.setStyle) {
-                selectedFeatureLayer.setStyle({
-                    color: 'white',
-                    weight: 2,
-                    opacity: 0.7
-                });
-            }
+            // Remove highlights from all selected features
+            clearAllSelections();
 
             // Drop the temporary PostGIS layer
             try {
@@ -5703,16 +5803,11 @@
                 console.error('Error dropping temp layer:', error);
             }
 
-            // Clear state
-            selectedFeature = null;
-            selectedFeatureLayer = null;
-            selectedFeatureGeometry = null;
-
             // Hide pill
             const pill = document.getElementById('selectedFeaturePill');
             pill.style.display = 'none';
 
-            showNotification('Selection cleared', 'success');
+            showNotification('All selections cleared', 'success');
         }
 
         // Legacy alias for backwards compatibility

@@ -508,12 +508,14 @@ class DatabaseManager:
             print(f"Error updating description: {e}")
             return False
 
-    def create_temp_layer(self, geometry_json: dict, session_id: str, schema: str = "temp") -> Optional[str]:
+    def create_temp_layer(self, geometry_json, session_id: str, schema: str = "temp") -> Optional[str]:
         """
-        Create a temporary PostGIS layer from a GeoJSON geometry.
+        Create a temporary PostGIS layer from GeoJSON geometry/geometries.
+
+        Supports both single geometry (dict) and multiple geometries (list of dicts) for multi-select support.
 
         Args:
-            geometry_json: GeoJSON geometry object (with type, coordinates)
+            geometry_json: Single GeoJSON geometry dict OR list of GeoJSON geometry dicts
             session_id: Session ID for isolation (table name: temp_selected_{session_id})
             schema: Schema to create temp table in
 
@@ -538,15 +540,29 @@ class DatabaseManager:
                 conn.execute(text(f"DROP TABLE IF EXISTS {schema}.{temp_table_name} CASCADE"))
                 conn.commit()
 
-            # Create GeoDataFrame from geometry
+            # Create GeoDataFrame from geometry/geometries
             from shapely.geometry import shape
 
-            geom = shape(geometry_json)
-            gdf = gpd.GeoDataFrame(
-                {'id': [1]},
-                geometry=[geom],
-                crs='EPSG:4326'
-            )
+            # Handle both single geometry (dict) and multiple geometries (list)
+            if isinstance(geometry_json, list):
+                # Multi-select: list of geometries
+                geometries = [shape(geom) for geom in geometry_json]
+                ids = list(range(1, len(geometries) + 1))
+                gdf = gpd.GeoDataFrame(
+                    {'id': ids},
+                    geometry=geometries,
+                    crs='EPSG:4326'
+                )
+                print(f"📍 Processing {len(geometries)} selected geometries for temp layer")
+            else:
+                # Single select: single geometry (dict)
+                geom = shape(geometry_json)
+                gdf = gpd.GeoDataFrame(
+                    {'id': [1]},
+                    geometry=[geom],
+                    crs='EPSG:4326'
+                )
+                print(f"📍 Processing 1 selected geometry for temp layer")
 
             # Write to PostGIS temp table
             gdf.to_postgis(
@@ -565,7 +581,8 @@ class DatabaseManager:
                 """))
                 conn.commit()
 
-            print(f"✅ Created temporary layer: {schema}.{temp_table_name}")
+            feature_count = len(geometries) if isinstance(geometry_json, list) else 1
+            print(f"✅ Created temporary layer: {schema}.{temp_table_name} ({feature_count} features)")
             return temp_table_name
 
         except Exception as e:

@@ -321,13 +321,19 @@ async def clear_cache():
 @router.post("/create-temp-layer")
 async def create_temp_layer(request: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Create a temporary PostGIS layer from a selected feature geometry.
+    Create a temporary PostGIS layer from selected feature geometry/geometries.
 
-    This layer will be available to DeepSeek for generating spatial queries.
+    Supports both single selection (geometry) and multi-selection (geometries) for context-aware queries.
 
-    Body:
+    Body (single geometry):
         {
             "geometry": {GeoJSON geometry object},
+            "session_id": "unique_session_id"
+        }
+
+    Body (multiple geometries for multi-select):
+        {
+            "geometries": [{GeoJSON geometry object}, {GeoJSON geometry object}, ...],
             "session_id": "unique_session_id"
         }
 
@@ -335,21 +341,30 @@ async def create_temp_layer(request: Dict[str, Any]) -> Dict[str, Any]:
         {
             "success": true,
             "table_name": "temp_selected_[session_id]",
-            "message": "Temporary layer created"
+            "schema": "temp",
+            "message": "Temporary layer created with N features"
         }
     """
     try:
-        geometry = request.get("geometry")
         session_id = request.get("session_id")
 
-        if not geometry or not session_id:
+        if not session_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="geometry and session_id are required"
+                detail="session_id is required"
             )
 
-        # Create temp layer in database
-        temp_table_name = db_manager.create_temp_layer(geometry, session_id, schema="temp")
+        # Support both single geometry (backward compatible) and multiple geometries (multi-select)
+        geometry_or_geometries = request.get("geometries") or request.get("geometry")
+
+        if not geometry_or_geometries:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="geometry or geometries is required"
+            )
+
+        # Create temp layer in database (handles both single and multi)
+        temp_table_name = db_manager.create_temp_layer(geometry_or_geometries, session_id, schema="temp")
 
         if not temp_table_name:
             raise HTTPException(
@@ -357,13 +372,19 @@ async def create_temp_layer(request: Dict[str, Any]) -> Dict[str, Any]:
                 detail="Failed to create temporary layer"
             )
 
+        # Determine feature count for response message
+        feature_count = len(geometry_or_geometries) if isinstance(geometry_or_geometries, list) else 1
+
         return {
             "success": True,
             "table_name": temp_table_name,
             "schema": "temp",
-            "message": f"Temporary layer created: temp.{temp_table_name}"
+            "feature_count": feature_count,
+            "message": f"Temporary layer created with {feature_count} feature{'s' if feature_count != 1 else ''}: temp.{temp_table_name}"
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
