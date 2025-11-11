@@ -9,10 +9,51 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-    <!-- Font Awesome Icons -->
+    <!-- Font Awesome Icons (fallback only) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
+        /* Color Palette Variables */
+        :root {
+            /* Primary Colors */
+            --color-palladian: #EEE9DF;
+            --color-oatmeal: #C9C1B1;
+            --color-blue-fantastic: #2C3B4D;
+            --color-burning-flame: #FFB162;
+            --color-truffle-trouble: #A35139;
+            --color-abyssal-blue: #1B2632;
+
+            /* Semantic Colors - Primary Accents */
+            --accent-primary: var(--color-burning-flame);
+            --accent-secondary: var(--color-truffle-trouble);
+            --accent-blue: var(--color-blue-fantastic);
+
+            /* Semantic Colors - Backgrounds */
+            --bg-dark: var(--color-abyssal-blue);
+            --bg-darker: #0f0d1a;
+            --bg-darkest: #1a1825;
+            --bg-panel: rgba(26, 24, 37, 0.95);
+            --bg-panel-light: rgba(26, 24, 37, 0.5);
+
+            /* Semantic Colors - Text */
+            --text-primary: #f5f5f5;
+            --text-secondary: #C4C3E3;
+            --text-muted: #999;
+
+            /* Accent Color Opacity Variants */
+            --accent-primary-rgb: 255, 177, 98;
+            --accent-secondary-rgb: 163, 81, 57;
+            --accent-blue-rgb: 44, 59, 77;
+
+            /* Legacy Colors (for compatibility) */
+            --color-success: #28a745;
+            --color-error: #dc3545;
+            --color-warning: #ffc107;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -24,15 +65,15 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background: linear-gradient(135deg, #0f0d1a 0%, #1a1825 50%, #251f35 100%);
+            background: linear-gradient(135deg, var(--color-abyssal-blue) 0%, #1f2d3d 50%, var(--color-blue-fantastic) 100%);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
-            color: #f5f5f5;
+            color: var(--text-primary);
         }
 
         /* Top Search Bar */
         .search-header {
-            background: rgba(26, 24, 37, 0.7);
-            backdrop-filter: blur(25px) saturate(180%);
+            background: var(--bg-panel);
             border-bottom: 1.5px solid rgba(196, 195, 227, 0.2);
             padding: 1rem 1.5rem;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -53,8 +94,9 @@
         .logo {
             font-size: 1.5rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #504E76 0%, #F1642E 100%);
+            background: linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             white-space: nowrap;
         }
@@ -75,9 +117,10 @@
             border-radius: 50px;
             font-size: 0.95rem;
             font-family: inherit;
+            -webkit-backdrop-filter: blur(15px);
             backdrop-filter: blur(15px);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            color: #f5f5f5;
+            color: var(--text-primary);
             height: 40px;
         }
 
@@ -88,8 +131,8 @@
         #searchInput:focus {
             outline: none;
             background: rgba(37, 32, 53, 0.9);
-            border-color: rgba(241, 100, 46, 0.6);
-            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.2);
+            border-color: rgba(var(--accent-primary-rgb), 0.6);
+            box-shadow: 0 8px 24px rgba(var(--accent-primary-rgb), 0.2);
         }
 
         .search-icon {
@@ -104,7 +147,7 @@
 
         #searchBtn {
             padding: 0.6rem 1.5rem;
-            background: rgba(241, 100, 46, 0.85);
+            background: rgba(var(--accent-primary-rgb), 0.85);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 50px;
@@ -112,9 +155,10 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-backdrop-filter: blur(15px);
             backdrop-filter: blur(15px);
             box-shadow:
-                0 8px 16px rgba(241, 100, 46, 0.25),
+                0 8px 16px rgba(var(--accent-primary-rgb), 0.25),
                 inset 0 1px 2px rgba(255, 255, 255, 0.4);
             position: relative;
             overflow: hidden;
@@ -137,8 +181,8 @@
 
         #searchBtn:hover:not(:disabled) {
             transform: translateY(-2px);
-            background: rgba(80, 78, 118, 0.95);
-            box-shadow: 0 12px 24px rgba(80, 78, 118, 0.3);
+            background: rgba(var(--accent-secondary-rgb), 0.95);
+            box-shadow: 0 12px 24px rgba(var(--accent-secondary-rgb), 0.3);
         }
 
         #searchBtn:active:not(:disabled) {
@@ -156,8 +200,8 @@
             align-items: center;
             gap: 0.6rem;
             padding: 0.5rem 1rem;
-            background: rgba(80, 78, 118, 0.5);
-            border: 1px solid rgba(241, 100, 46, 0.5);
+            background: rgba(var(--accent-secondary-rgb), 0.5);
+            border: 1px solid rgba(var(--accent-primary-rgb), 0.5);
             border-radius: 20px;
             margin-left: 0.5rem;
             animation: slideInPill 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -193,7 +237,7 @@
         .pill-close {
             background: none;
             border: none;
-            color: rgba(241, 100, 46, 0.7);
+            color: rgba(var(--accent-primary-rgb), 0.7);
             cursor: pointer;
             font-size: 1.1rem;
             padding: 0;
@@ -208,7 +252,7 @@
         }
 
         .pill-close:hover {
-            color: #F1642E;
+            color: var(--accent-primary);
             transform: scale(1.15);
         }
 
@@ -236,7 +280,7 @@
             backdrop-filter: blur(15px);
             border-bottom: 1.5px solid rgba(196, 195, 227, 0.15);
             font-weight: 600;
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-size: 0.95rem;
             letter-spacing: 0.5px;
         }
@@ -257,21 +301,20 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             backdrop-filter: blur(15px);
-            color: #f5f5f5;
+            color: var(--text-primary);
             overflow: visible;
         }
 
         .layer-item:hover {
-            background: rgba(37, 32, 53, 0.7);
-            border-color: rgba(241, 100, 46, 0.4);
-            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.15);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            box-shadow: 0 8px 24px rgba(var(--accent-primary-rgb), 0.15);
             transform: translateY(-2px);
+            filter: brightness(1.2);
         }
 
         .layer-item.active {
-            background: rgba(241, 100, 46, 0.15);
-            border-color: rgba(241, 100, 46, 0.4);
-            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.2);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            box-shadow: 0 8px 24px rgba(var(--accent-primary-rgb), 0.2);
         }
 
         .layer-header {
@@ -282,7 +325,7 @@
 
         .layer-name {
             font-weight: 600;
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-size: 0.9rem;
             flex: 1;
             min-width: 0;
@@ -315,7 +358,7 @@
 
         .layer-toggle.active {
             background: rgba(80, 78, 118, 0.6);
-            border-color: rgba(80, 78, 118, 0.4);
+            border-color: rgba(var(--accent-secondary-rgb), 0.4);
             box-shadow: 0 4px 12px rgba(80, 78, 118, 0.15);
         }
 
@@ -403,7 +446,7 @@
             width: 44px;
             height: 44px;
             background: rgba(37, 32, 53, 0.75);
-            border: 1.5px solid rgba(241, 100, 46, 0.4);
+            border: 1.5px solid rgba(var(--accent-primary-rgb), 0.4);
             border-radius: 12px;
             cursor: pointer;
             display: flex;
@@ -411,10 +454,10 @@
             justify-content: center;
             box-shadow:
                 0 8px 24px rgba(0, 0, 0, 0.3),
-                inset 0 1px 2px rgba(241, 100, 46, 0.2);
+                inset 0 1px 2px rgba(var(--accent-primary-rgb), 0.2);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             backdrop-filter: blur(10px);
-            color: #F1642E;
+            color: var(--accent-primary);
             position: relative;
             overflow: hidden;
         }
@@ -452,7 +495,7 @@
                 box-shadow:
                     0 8px 24px rgba(0, 0, 0, 0.12),
                     inset 0 1px 2px rgba(255, 255, 255, 0.4),
-                    0 0 0 0 rgba(80, 78, 118, 0.3);
+                    0 0 0 0 rgba(var(--accent-secondary-rgb), 0.3);
             }
             50% {
                 transform: scale(1.02);
@@ -493,11 +536,11 @@
             width: 100%;
             height: 100%;
             border: 2.5px solid transparent;
-            border-top-color: #F1642E;
-            border-right-color: #F1642E;
+            border-top-color: var(--accent-primary);
+            border-right-color: var(--accent-primary);
             border-radius: 50%;
             animation: spinProgress 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-            box-shadow: 0 0 8px rgba(241, 100, 46, 0.3);
+            box-shadow: 0 0 8px rgba(var(--accent-primary-rgb), 0.3);
         }
 
         .loading-spinner::after {
@@ -506,8 +549,8 @@
             width: 100%;
             height: 100%;
             border: 2.5px solid transparent;
-            border-bottom-color: rgba(241, 100, 46, 0.2);
-            border-left-color: rgba(241, 100, 46, 0.2);
+            border-bottom-color: rgba(var(--accent-primary-rgb), 0.2);
+            border-left-color: rgba(var(--accent-primary-rgb), 0.2);
             border-radius: 50%;
             animation: spinProgress 2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
         }
@@ -571,12 +614,12 @@
         }
 
         .leaflet-popup-content::-webkit-scrollbar-thumb {
-            background: rgba(241, 100, 46, 0.4);
+            background: rgba(var(--accent-primary-rgb), 0.4);
             border-radius: 3px;
         }
 
         .leaflet-popup-content::-webkit-scrollbar-thumb:hover {
-            background: rgba(241, 100, 46, 0.7);
+            background: rgba(var(--accent-primary-rgb), 0.7);
         }
 
         /* MarkerCluster Styling */
@@ -588,15 +631,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, rgba(80, 78, 118, 0.8) 0%, rgba(241, 100, 46, 0.8) 100%);
-            border: 2px solid rgba(241, 100, 46, 0.6);
-            box-shadow: 0 4px 15px rgba(241, 100, 46, 0.3);
+            background: linear-gradient(135deg, rgba(var(--accent-secondary-rgb), 0.8) 0%, rgba(var(--accent-primary-rgb), 0.8) 100%);
+            border: 2px solid rgba(var(--accent-primary-rgb), 0.6);
+            box-shadow: 0 4px 15px rgba(var(--accent-primary-rgb), 0.3);
             transition: all 0.3s ease;
         }
 
         .marker-cluster:hover {
-            background: linear-gradient(135deg, rgba(80, 78, 118, 1) 0%, rgba(241, 100, 46, 1) 100%);
-            box-shadow: 0 6px 20px rgba(241, 100, 46, 0.5);
+            background: linear-gradient(135deg, rgba(var(--accent-secondary-rgb), 1) 0%, rgba(241, 100, 46, 1) 100%);
+            box-shadow: 0 6px 20px rgba(var(--accent-primary-rgb), 0.5);
             transform: scale(1.1);
         }
 
@@ -616,7 +659,7 @@
 
         /* Medium clusters (6-20 points) */
         .marker-cluster.marker-cluster-medium {
-            background: linear-gradient(135deg, rgba(241, 100, 46, 0.75) 0%, rgba(230, 126, 34, 0.75) 100%);
+            background: linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.75) 0%, rgba(230, 126, 34, 0.75) 100%);
             border-color: rgba(230, 126, 34, 0.9);
             box-shadow: 0 3px 10px rgba(230, 126, 34, 0.4);
         }
@@ -656,7 +699,7 @@
             backdrop-filter: blur(40px) saturate(180%);
             -webkit-backdrop-filter: blur(40px) saturate(180%);
             border-radius: 20px;
-            border: 1.5px solid rgba(241, 100, 46, 0.3);
+            border: 1.5px solid rgba(var(--accent-primary-rgb), 0.3);
             overflow: hidden;
             box-shadow:
                 0 25px 50px rgba(0, 0, 0, 0.5),
@@ -683,11 +726,11 @@
             gap: 1rem;
             padding: 1.5rem;
             background: linear-gradient(135deg,
-                rgba(241, 100, 46, 0.08) 0%,
+                rgba(var(--accent-primary-rgb), 0.08) 0%,
                 rgba(80, 78, 118, 0.06) 100%);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border-bottom: 1.5px solid rgba(241, 100, 46, 0.2);
+            border-bottom: 1.5px solid rgba(var(--accent-primary-rgb), 0.2);
             position: relative;
             z-index: 1;
         }
@@ -704,7 +747,7 @@
             font-size: 1.8rem;
             font-weight: 700;
             flex-shrink: 0;
-            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 24px rgba(var(--accent-primary-rgb), 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.3);
             backdrop-filter: blur(10px);
         }
 
@@ -716,7 +759,7 @@
         .popup-title {
             font-weight: 700;
             font-size: 1.05rem;
-            color: #f5f5f5;
+            color: var(--text-primary);
             margin: 0;
             word-break: break-word;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -755,12 +798,12 @@
         }
 
         .popup-body::-webkit-scrollbar-thumb {
-            background: rgba(241, 100, 46, 0.4);
+            background: rgba(var(--accent-primary-rgb), 0.4);
             border-radius: 3px;
         }
 
         .popup-body::-webkit-scrollbar-thumb:hover {
-            background: rgba(241, 100, 46, 0.7);
+            background: rgba(var(--accent-primary-rgb), 0.7);
         }
 
         .popup-badges {
@@ -776,10 +819,10 @@
             align-items: center;
             gap: 0.4rem;
             padding: 0.5rem 0.9rem;
-            background: rgba(241, 100, 46, 0.15);
+            background: rgba(var(--accent-primary-rgb), 0.15);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1.2px solid rgba(241, 100, 46, 0.35);
+            border: 1.2px solid rgba(var(--accent-primary-rgb), 0.35);
             border-radius: 10px;
             font-size: 0.75rem;
             color: rgba(241, 245, 250, 0.95);
@@ -817,7 +860,7 @@
         }
 
         .popup-description::-webkit-scrollbar-thumb {
-            background: rgba(241, 100, 46, 0.3);
+            background: rgba(var(--accent-primary-rgb), 0.3);
             border-radius: 2px;
         }
 
@@ -840,12 +883,12 @@
         }
 
         .popup-attributes::-webkit-scrollbar-thumb {
-            background: rgba(241, 100, 46, 0.3);
+            background: rgba(var(--accent-primary-rgb), 0.3);
             border-radius: 2px;
         }
 
         .popup-attributes::-webkit-scrollbar-thumb:hover {
-            background: rgba(241, 100, 46, 0.6);
+            background: rgba(var(--accent-primary-rgb), 0.6);
         }
 
         .popup-attribute {
@@ -857,7 +900,7 @@
         }
 
         .popup-attribute:hover {
-            background: rgba(241, 100, 46, 0.08);
+            background: rgba(var(--accent-primary-rgb), 0.08);
             padding-left: 0.5rem;
             border-radius: 4px;
         }
@@ -874,7 +917,7 @@
         }
 
         .popup-value {
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-size: 0.85rem;
             word-break: break-word;
             font-weight: 500;
@@ -892,7 +935,7 @@
                 rgba(30, 27, 45, 0.25));
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
-            border-top: 1.5px solid rgba(241, 100, 46, 0.2);
+            border-top: 1.5px solid rgba(var(--accent-primary-rgb), 0.2);
             display: flex;
             gap: 0.75rem;
             justify-content: center;
@@ -904,12 +947,12 @@
         .popup-button {
             padding: 0.65rem 1.3rem;
             background: linear-gradient(135deg,
-                rgba(241, 100, 46, 0.85),
-                rgba(241, 100, 46, 0.75));
+                rgba(var(--accent-primary-rgb), 0.85),
+                rgba(var(--accent-primary-rgb), 0.75));
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             color: white;
-            border: 1.3px solid rgba(241, 100, 46, 0.65);
+            border: 1.3px solid rgba(var(--accent-primary-rgb), 0.65);
             border-radius: 10px;
             font-size: 0.8rem;
             font-weight: 600;
@@ -917,7 +960,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
             display: inline-block;
-            box-shadow: 0 0 20px rgba(241, 100, 46, 0.2),
+            box-shadow: 0 0 20px rgba(var(--accent-primary-rgb), 0.2),
                         inset 0 1px 2px rgba(255, 255, 255, 0.2);
         }
 
@@ -926,10 +969,10 @@
                 rgba(241, 100, 46, 0.95),
                 rgba(241, 100, 46, 0.88));
             box-shadow:
-                0 12px 24px rgba(241, 100, 46, 0.4),
+                0 12px 24px rgba(var(--accent-primary-rgb), 0.4),
                 inset 0 1px 2px rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
-            border-color: rgba(241, 100, 46, 0.85);
+            border-color: rgba(var(--accent-primary-rgb), 0.85);
         }
 
         .leaflet-popup-content-wrapper {
@@ -970,9 +1013,9 @@
             backdrop-filter: blur(25px) saturate(180%);
             padding: 1rem 1.5rem;
             border-radius: 12px;
-            border: 1.5px solid rgba(241, 100, 46, 0.3);
+            border: 1.5px solid rgba(var(--accent-primary-rgb), 0.3);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            color: #f5f5f5;
+            color: var(--text-primary);
             z-index: 1500;
             display: none;
             animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1029,7 +1072,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             white-space: nowrap;
             backdrop-filter: blur(15px);
-            color: #f5f5f5;
+            color: var(--text-primary);
             height: 40px;
             box-shadow:
                 0 8px 16px rgba(0, 0, 0, 0.2),
@@ -1038,8 +1081,8 @@
 
         .location-btn:hover:not(:disabled) {
             background: rgba(37, 32, 53, 0.85);
-            border-color: rgba(241, 100, 46, 0.4);
-            box-shadow: 0 12px 24px rgba(241, 100, 46, 0.15);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            box-shadow: 0 12px 24px rgba(var(--accent-primary-rgb), 0.15);
             transform: translateY(-2px);
         }
 
@@ -1049,10 +1092,10 @@
         }
 
         .location-btn.active {
-            background: rgba(241, 100, 46, 0.7);
+            background: rgba(var(--accent-primary-rgb), 0.7);
             color: white;
-            border-color: rgba(241, 100, 46, 0.4);
-            box-shadow: 0 8px 24px rgba(241, 100, 46, 0.25);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            box-shadow: 0 8px 24px rgba(var(--accent-primary-rgb), 0.25);
         }
 
         .location-status {
@@ -1080,8 +1123,8 @@
 
         .llm-selector:hover {
             background: rgba(37, 32, 53, 0.85);
-            border-color: rgba(241, 100, 46, 0.4);
-            box-shadow: 0 12px 24px rgba(241, 100, 46, 0.15);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            box-shadow: 0 12px 24px rgba(var(--accent-primary-rgb), 0.15);
         }
 
         .llm-selector-label {
@@ -1110,22 +1153,22 @@
             cursor: pointer;
             border-radius: 20px;
             transition: all 0.2s ease;
-            background: rgba(80, 78, 118, 0.3);
+            background: rgba(var(--accent-secondary-rgb), 0.3);
             color: #b0b0b0;
             white-space: nowrap;
             border: 1px solid rgba(196, 195, 227, 0.15);
         }
 
         .llm-radio:checked + .llm-radio-label {
-            background: rgba(241, 100, 46, 0.7);
+            background: rgba(var(--accent-primary-rgb), 0.7);
             color: white;
-            border-color: rgba(241, 100, 46, 0.5);
-            box-shadow: 0 4px 12px rgba(241, 100, 46, 0.25);
+            border-color: rgba(var(--accent-primary-rgb), 0.5);
+            box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.25);
         }
 
         .llm-radio-label:hover {
-            background: rgba(80, 78, 118, 0.5);
-            border-color: rgba(241, 100, 46, 0.3);
+            background: rgba(var(--accent-secondary-rgb), 0.5);
+            border-color: rgba(var(--accent-primary-rgb), 0.3);
         }
 
         .llm-unavailable {
@@ -1134,7 +1177,7 @@
         }
 
         .llm-unavailable:hover {
-            background: rgba(80, 78, 118, 0.3);
+            background: rgba(var(--accent-secondary-rgb), 0.3);
             border-color: rgba(196, 195, 227, 0.15);
         }
 
@@ -1182,7 +1225,7 @@
 
         .operations-header {
             padding: 1rem 1.5rem;
-            background: rgba(80, 78, 118, 0.3);
+            background: rgba(var(--accent-secondary-rgb), 0.3);
             backdrop-filter: blur(15px);
             border-bottom: 2px solid rgba(196, 195, 227, 0.25);
             font-weight: 600;
@@ -1210,7 +1253,7 @@
 
         .operations-section-title {
             font-weight: 600;
-            color: #F1642E;
+            color: var(--accent-primary);
             font-size: 0.9rem;
             margin-bottom: 0.75rem;
             text-transform: uppercase;
@@ -1223,7 +1266,7 @@
             padding: 0.75rem;
             border-radius: 8px;
             font-size: 0.85rem;
-            color: #f5f5f5;
+            color: var(--text-primary);
             line-height: 1.5;
             backdrop-filter: blur(15px);
             border: 1px solid rgba(196, 195, 227, 0.2);
@@ -1237,7 +1280,7 @@
             margin-bottom: 0.5rem;
             backdrop-filter: blur(15px);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            color: #f5f5f5;
+            color: var(--text-primary);
         }
 
         .operation-item:hover {
@@ -1262,7 +1305,7 @@
 
         .operation-description {
             font-size: 0.85rem;
-            color: #f5f5f5;
+            color: var(--text-primary);
             margin-bottom: 0.5rem;
             font-weight: 500;
         }
@@ -1331,13 +1374,13 @@
         .leaflet-control-zoom-out {
             color: #F1642E !important;
             background: rgba(37, 32, 53, 0.8) !important;
-            border: 1px solid rgba(241, 100, 46, 0.3) !important;
+            border: 1px solid rgba(var(--accent-primary-rgb), 0.3) !important;
         }
 
         .leaflet-control-zoom-in:hover,
         .leaflet-control-zoom-out:hover {
             background: rgba(37, 32, 53, 0.95) !important;
-            border-color: rgba(241, 100, 46, 0.5) !important;
+            border-color: rgba(var(--accent-primary-rgb), 0.5) !important;
         }
 
         .leaflet-control-attribution {
@@ -1375,13 +1418,13 @@
             width: 28px;
             height: 28px;
             border: none;
-            background: rgba(80, 78, 118, 0.4);
+            background: rgba(var(--accent-secondary-rgb), 0.4);
             border-radius: 6px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-size: 1.2rem;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             padding: 0;
@@ -1415,7 +1458,7 @@
         .layer-dropdown-item {
             padding: 0.75rem 1rem;
             cursor: pointer;
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-size: 0.9rem;
             transition: all 0.2s ease;
             border-bottom: 1px solid rgba(196, 195, 227, 0.1);
@@ -1429,13 +1472,13 @@
         }
 
         .layer-dropdown-item:hover {
-            background: rgba(80, 78, 118, 0.3);
+            background: rgba(var(--accent-secondary-rgb), 0.3);
             padding-left: 1.25rem;
         }
 
         .layer-dropdown-item.delete:hover {
-            background: rgba(241, 100, 46, 0.2);
-            color: #F1642E;
+            background: rgba(var(--accent-primary-rgb), 0.2);
+            color: var(--accent-primary);
         }
 
         /* Export Dialog */
@@ -1466,7 +1509,7 @@
             max-width: 500px;
             width: 90%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-            color: #f5f5f5;
+            color: var(--text-primary);
             animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -1500,7 +1543,7 @@
             display: block;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-size: 0.95rem;
         }
 
@@ -1528,7 +1571,7 @@
             width: 18px;
             height: 18px;
             cursor: pointer;
-            accent-color: #F1642E;
+            accent-color: var(--accent-primary);
         }
 
         .export-format-select {
@@ -1536,7 +1579,7 @@
             background: rgba(37, 32, 53, 0.8);
             border: 1.5px solid rgba(196, 195, 227, 0.25);
             border-radius: 8px;
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-family: inherit;
             font-size: 0.95rem;
             cursor: pointer;
@@ -1544,13 +1587,13 @@
         }
 
         .export-format-select:hover {
-            border-color: rgba(241, 100, 46, 0.5);
+            border-color: rgba(var(--accent-primary-rgb), 0.5);
         }
 
         .export-format-select:focus {
             outline: none;
-            border-color: rgba(241, 100, 46, 0.7);
-            box-shadow: 0 0 12px rgba(241, 100, 46, 0.2);
+            border-color: rgba(var(--accent-primary-rgb), 0.7);
+            box-shadow: 0 0 12px rgba(var(--accent-primary-rgb), 0.2);
         }
 
         .export-dialog-actions {
@@ -1572,17 +1615,17 @@
         .export-btn-primary {
             background: linear-gradient(135deg, #504E76 0%, #F1642E 100%);
             color: white;
-            box-shadow: 0 8px 20px rgba(241, 100, 46, 0.3);
+            box-shadow: 0 8px 20px rgba(var(--accent-primary-rgb), 0.3);
         }
 
         .export-btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 28px rgba(241, 100, 46, 0.4);
+            box-shadow: 0 12px 28px rgba(var(--accent-primary-rgb), 0.4);
         }
 
         .export-btn-secondary {
-            background: rgba(80, 78, 118, 0.4);
-            color: #f5f5f5;
+            background: rgba(var(--accent-secondary-rgb), 0.4);
+            color: var(--text-primary);
             border: 1.5px solid rgba(196, 195, 227, 0.3);
         }
 
@@ -1612,7 +1655,7 @@
 
         .style-dialog {
             background: rgba(26, 24, 37, 0.95);
-            backdrop-filter: blur(25px);
+            backdrop-filter: blur(15px);
             border: 1.5px solid rgba(196, 195, 227, 0.3);
             border-radius: 16px;
             padding: 2rem;
@@ -1622,6 +1665,8 @@
             overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
             animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: opacity;
+            transform: translate3d(0, 0, 0);
         }
 
         @keyframes slideUp {
@@ -1647,7 +1692,7 @@
         .style-dialog-header h2 {
             font-size: 1.3rem;
             font-weight: 700;
-            color: #f5f5f5;
+            color: var(--text-primary);
             margin: 0;
         }
 
@@ -1663,7 +1708,7 @@
         }
 
         .style-dialog-header .close-btn:hover {
-            color: #F1642E;
+            color: var(--accent-primary);
         }
 
         .style-tabs {
@@ -1682,16 +1727,16 @@
             cursor: pointer;
             font-weight: 600;
             font-size: 0.95rem;
-            transition: all 0.2s ease;
+            transition: color 0.2s ease, border-color 0.2s ease;
         }
 
         .style-tab.active {
-            color: #F1642E;
-            border-bottom-color: #F1642E;
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
         }
 
         .style-tab:hover {
-            color: #f5f5f5;
+            color: var(--text-primary);
         }
 
         .style-tab-content {
@@ -1710,7 +1755,7 @@
             display: block;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-size: 0.95rem;
         }
 
@@ -1724,14 +1769,14 @@
         }
 
         .style-option input[type="color"]:hover {
-            border-color: rgba(241, 100, 46, 0.5);
+            border-color: rgba(var(--accent-primary-rgb), 0.5);
         }
 
         .style-slider {
             width: 100%;
             height: 6px;
             border-radius: 3px;
-            background: rgba(80, 78, 118, 0.3);
+            background: rgba(var(--accent-secondary-rgb), 0.3);
             outline: none;
             -webkit-appearance: none;
             appearance: none;
@@ -1744,19 +1789,19 @@
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: #F1642E;
+            background: var(--accent-primary);
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(241, 100, 46, 0.4);
+            box-shadow: 0 2px 8px rgba(var(--accent-primary-rgb), 0.4);
         }
 
         .style-slider::-moz-range-thumb {
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: #F1642E;
+            background: var(--accent-primary);
             cursor: pointer;
             border: none;
-            box-shadow: 0 2px 8px rgba(241, 100, 46, 0.4);
+            box-shadow: 0 2px 8px rgba(var(--accent-primary-rgb), 0.4);
         }
 
         .slider-value {
@@ -1772,7 +1817,7 @@
             background: rgba(37, 32, 53, 0.8);
             border: 1.5px solid rgba(196, 195, 227, 0.25);
             border-radius: 8px;
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-family: inherit;
             font-size: 0.95rem;
             cursor: pointer;
@@ -1780,18 +1825,18 @@
         }
 
         .style-select:hover {
-            border-color: rgba(241, 100, 46, 0.5);
+            border-color: rgba(var(--accent-primary-rgb), 0.5);
         }
 
         .style-select:focus {
             outline: none;
-            border-color: rgba(241, 100, 46, 0.7);
-            box-shadow: 0 0 12px rgba(241, 100, 46, 0.2);
+            border-color: rgba(var(--accent-primary-rgb), 0.7);
+            box-shadow: 0 0 12px rgba(var(--accent-primary-rgb), 0.2);
         }
 
         .style-select option {
             background: #251f35;
-            color: #f5f5f5;
+            color: var(--text-primary);
         }
 
         .style-range-inputs {
@@ -1807,7 +1852,7 @@
             background: rgba(37, 32, 53, 0.8);
             border: 1.5px solid rgba(196, 195, 227, 0.25);
             border-radius: 6px;
-            color: #f5f5f5;
+            color: var(--text-primary);
             font-family: inherit;
             font-size: 0.9rem;
             transition: all 0.2s ease;
@@ -1815,14 +1860,14 @@
 
         .style-number-input:focus {
             outline: none;
-            border-color: rgba(241, 100, 46, 0.5);
+            border-color: rgba(var(--accent-primary-rgb), 0.5);
         }
 
         .style-button-small {
             padding: 0.5rem 1rem;
-            background: rgba(80, 78, 118, 0.4);
+            background: rgba(var(--accent-secondary-rgb), 0.4);
             border: 1.5px solid rgba(196, 195, 227, 0.3);
-            color: #f5f5f5;
+            color: var(--text-primary);
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
@@ -1877,8 +1922,8 @@
         }
 
         .btn-cancel {
-            background: rgba(80, 78, 118, 0.4);
-            color: #f5f5f5;
+            background: rgba(var(--accent-secondary-rgb), 0.4);
+            color: var(--text-primary);
             border: 1.5px solid rgba(196, 195, 227, 0.3);
         }
 
@@ -1890,82 +1935,14 @@
         .btn-apply {
             background: linear-gradient(135deg, #504E76 0%, #F1642E 100%);
             color: white;
-            box-shadow: 0 8px 20px rgba(241, 100, 46, 0.3);
+            box-shadow: 0 8px 20px rgba(var(--accent-primary-rgb), 0.3);
         }
 
         .btn-apply:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 28px rgba(241, 100, 46, 0.4);
+            box-shadow: 0 12px 28px rgba(var(--accent-primary-rgb), 0.4);
         }
 
-        .icon-picker {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 0.5rem;
-        }
-
-        .icon-btn {
-            padding: 0.75rem;
-            background: rgba(37, 32, 53, 0.6);
-            border: 2px solid rgba(196, 195, 227, 0.2);
-            border-radius: 8px;
-            color: #f5f5f5;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 50px;
-        }
-
-        .icon-btn:hover {
-            background: rgba(80, 78, 118, 0.6);
-            border-color: rgba(241, 100, 46, 0.5);
-            transform: scale(1.05);
-        }
-
-        .icon-btn.selected {
-            background: linear-gradient(135deg, #504E76 0%, #F1642E 100%);
-            border-color: #F1642E;
-            box-shadow: 0 0 12px rgba(241, 100, 46, 0.4);
-        }
-
-        .icon-btn.hidden {
-            display: none;
-        }
-
-        .icon-search-input {
-            width: 100%;
-            padding: 0.6rem 0.8rem;
-            margin-bottom: 0.8rem;
-            background: rgba(37, 32, 53, 0.8);
-            border: 2px solid rgba(196, 195, 227, 0.3);
-            border-radius: 8px;
-            color: #f5f5f5;
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.2s ease;
-        }
-
-        .icon-search-input:focus {
-            border-color: rgba(241, 100, 46, 0.6);
-            background: rgba(37, 32, 53, 1);
-            box-shadow: 0 0 8px rgba(241, 100, 46, 0.2);
-        }
-
-        .icon-search-input::placeholder {
-            color: rgba(196, 195, 227, 0.5);
-        }
-
-        .icon-picker-info {
-            text-align: center;
-            font-size: 0.85rem;
-            color: rgba(196, 195, 227, 0.6);
-            margin-top: 0.8rem;
-            padding-top: 0.8rem;
-            border-top: 1px solid rgba(196, 195, 227, 0.1);
-        }
 
         /* Query Mode Selector */
         .query-mode-selector {
@@ -2006,7 +1983,7 @@
             max-height: 450px;
             overflow-y: auto;
             background: rgba(15, 13, 26, 0.85);
-            border: 1.5px solid rgba(241, 100, 46, 0.3);
+            border: 1.5px solid rgba(var(--accent-primary-rgb), 0.3);
             border-radius: 12px;
             padding: 15px;
             z-index: 999;
@@ -2022,7 +1999,7 @@
         .timeline-title {
             font-size: 0.85rem;
             font-weight: 700;
-            color: #F1642E;
+            color: var(--accent-primary);
             margin-bottom: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -2043,13 +2020,13 @@
         }
 
         .timeline-card:hover {
-            background: rgba(80, 78, 118, 0.3);
-            border-left-color: rgba(241, 100, 46, 0.8);
+            background: rgba(var(--accent-secondary-rgb), 0.3);
+            border-left-color: rgba(var(--accent-primary-rgb), 0.8);
         }
 
         .timeline-card-number {
             font-weight: bold;
-            color: #F1642E;
+            color: var(--accent-primary);
             min-width: 24px;
             font-size: 0.9rem;
         }
@@ -2069,7 +2046,7 @@
 
         .timeline-card-count {
             font-size: 0.7rem;
-            color: rgba(241, 100, 46, 0.7);
+            color: rgba(var(--accent-primary-rgb), 0.7);
         }
 
         .timeline-card-controls {
@@ -2082,21 +2059,21 @@
         .timeline-toggle-btn {
             width: 20px;
             height: 20px;
-            border: 1px solid rgba(241, 100, 46, 0.4);
-            background: rgba(241, 100, 46, 0.1);
+            border: 1px solid rgba(var(--accent-primary-rgb), 0.4);
+            background: rgba(var(--accent-primary-rgb), 0.1);
             border-radius: 4px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 0.7rem;
-            color: #F1642E;
+            color: var(--accent-primary);
             transition: all 0.2s ease;
         }
 
         .timeline-toggle-btn:hover {
-            background: rgba(241, 100, 46, 0.2);
-            border-color: rgba(241, 100, 46, 0.6);
+            background: rgba(var(--accent-primary-rgb), 0.2);
+            border-color: rgba(var(--accent-primary-rgb), 0.6);
         }
 
         .timeline-toggle-btn.hidden {
@@ -2119,14 +2096,14 @@
         }
 
         .timeline-remove-btn:hover {
-            background: rgba(241, 100, 46, 0.2);
-            border-color: rgba(241, 100, 46, 0.6);
-            color: #F1642E;
+            background: rgba(var(--accent-primary-rgb), 0.2);
+            border-color: rgba(var(--accent-primary-rgb), 0.6);
+            color: var(--accent-primary);
         }
 
         .timeline-arrow {
             text-align: center;
-            color: rgba(241, 100, 46, 0.4);
+            color: rgba(var(--accent-primary-rgb), 0.4);
             margin: 8px 0;
             font-size: 16px;
             display: none;
@@ -2140,10 +2117,10 @@
             width: 100%;
             padding: 8px;
             margin-top: 10px;
-            background: rgba(241, 100, 46, 0.2);
-            border: 1px solid rgba(241, 100, 46, 0.4);
+            background: rgba(var(--accent-primary-rgb), 0.2);
+            border: 1px solid rgba(var(--accent-primary-rgb), 0.4);
             border-radius: 6px;
-            color: #F1642E;
+            color: var(--accent-primary);
             font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
@@ -2151,8 +2128,8 @@
         }
 
         .timeline-clear-btn:hover {
-            background: rgba(241, 100, 46, 0.35);
-            border-color: rgba(241, 100, 46, 0.7);
+            background: rgba(var(--accent-primary-rgb), 0.35);
+            border-color: rgba(var(--accent-primary-rgb), 0.7);
         }
 
         /* Scrollbar styling for timeline */
@@ -2165,12 +2142,105 @@
         }
 
         #queryTimeline::-webkit-scrollbar-thumb {
-            background: rgba(241, 100, 46, 0.3);
+            background: rgba(var(--accent-primary-rgb), 0.3);
             border-radius: 3px;
         }
 
         #queryTimeline::-webkit-scrollbar-thumb:hover {
-            background: rgba(241, 100, 46, 0.6);
+            background: rgba(var(--accent-primary-rgb), 0.6);
+        }
+
+        /* Basemap Selector Control */
+        .leaflet-control.basemap-control {
+            background: rgba(37, 32, 53, 0.9);
+            border: 1px solid rgba(196, 195, 227, 0.25);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px);
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .basemap-btn {
+            width: 100%;
+            padding: 5px 8px;
+            background: rgba(var(--accent-secondary-rgb), 0.3);
+            border: 1px solid rgba(196, 195, 227, 0.15);
+            border-radius: 5px;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .basemap-btn:hover {
+            background: rgba(var(--accent-secondary-rgb), 0.5);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            box-shadow: 0 2px 8px rgba(var(--accent-primary-rgb), 0.1);
+        }
+
+        .basemap-btn.active {
+            background: rgba(var(--accent-primary-rgb), 0.6);
+            border-color: rgba(var(--accent-primary-rgb), 0.8);
+            box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.3);
+            color: white;
+        }
+
+        /* North Arrow Control */
+        .leaflet-control.north-arrow {
+            background: rgba(37, 32, 53, 0.85);
+            border: 1px solid rgba(196, 195, 227, 0.25);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px);
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .leaflet-control.north-arrow:hover {
+            background: rgba(var(--accent-secondary-rgb), 0.8);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.15);
+        }
+
+        .north-arrow-svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Scale Control - Override Leaflet defaults */
+        .leaflet-control-scale {
+            background: rgba(37, 32, 53, 0.85) !important;
+            border: 1.5px solid rgba(196, 195, 227, 0.3) !important;
+            border-radius: 6px !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px);
+            padding: 6px 10px !important;
+        }
+
+        .leaflet-control-scale-line {
+            background: rgba(var(--accent-primary-rgb), 0.6) !important;
+            border: 1.5px solid rgba(var(--accent-primary-rgb), 0.8) !important;
+            border-top: none !important;
+            color: #f5f5f5 !important;
+            font-size: 0.85rem !important;
+        }
+
+        .leaflet-control-scale-line:not(:last-child) {
+            border-bottom: 1.5px solid rgba(var(--accent-primary-rgb), 0.8) !important;
+            margin-bottom: 4px !important;
         }
 
     </style>
@@ -2179,17 +2249,17 @@
     <!-- Top Search Bar -->
     <div class="search-header">
         <div class="search-container">
-            <div class="logo">🌍 GeoAssist</div>
+            <div class="logo"><i data-lucide="globe" style="width: 24px; height: 24px; display: inline; margin-right: 8px; vertical-align: middle;"></i>GeoAssist</div>
 
             <!-- Selected Feature Pill -->
             <div class="selected-feature-pill" id="selectedFeaturePill" style="display: none;">
-                <span class="pill-icon">🎯</span>
+                <span class="pill-icon"><i data-lucide="target" style="width: 18px; height: 18px;"></i></span>
                 <span class="pill-text" id="pillText"></span>
                 <button class="pill-close" onclick="clearSelectedFeature()" title="Clear selection">✕</button>
             </div>
 
             <div class="search-wrapper">
-                <span class="search-icon">🔍</span>
+                <span class="search-icon"><i data-lucide="search" style="width: 18px; height: 18px;"></i></span>
                 <input type="text" id="searchInput" placeholder="Ask a question... (e.g., hospitals in Mitte OR terrain elevation in Berlin)">
                 <div class="loading-indicator" id="loadingIndicator">
                     <div class="loading-spinner"></div>
@@ -2197,8 +2267,8 @@
                 </div>
                 <button id="searchBtn" onclick="executeSearch()">Search</button>
             </div>
-            <a href="/database-inspector" class="location-btn" style="text-decoration: none; background: rgba(241, 100, 46, 0.2); border: 1px solid rgba(241, 100, 46, 0.4); white-space: nowrap;">
-                <span style="font-size: 16px;">📊</span>
+            <a href="/database-inspector" class="location-btn" style="text-decoration: none; background: rgba(var(--accent-primary-rgb), 0.2); border: 1px solid rgba(var(--accent-primary-rgb), 0.4); white-space: nowrap;">
+                <span style="font-size: 16px;"><i data-lucide="bar-chart-3" style="width: 18px; height: 18px;"></i></span>
                 <span>Database</span>
             </a>
         </div>
@@ -2213,7 +2283,7 @@
             </div>
             <div class="layers-list" id="layersList">
                 <div class="empty-state">
-                    <div class="empty-state-icon">🗺️</div>
+                    <div class="empty-state-icon"><i data-lucide="map" style="width: 48px; height: 48px;"></i></div>
                     <div class="empty-state-text">No layers yet<br>Search to add results as layers</div>
                 </div>
             </div>
@@ -2225,7 +2295,7 @@
             <div id="map">
                 <!-- Query Timeline (Multi-Step Mode) -->
                 <div id="queryTimeline">
-                    <div class="timeline-title">📊 Query Chain</div>
+                    <div class="timeline-title"><i data-lucide="bar-chart-3" style="width: 18px; height: 18px; margin-right: 6px; display: inline;"></i>Query Chain</div>
                     <div id="timelineContent"></div>
                     <button class="timeline-clear-btn" onclick="clearAllQueries()">Clear All</button>
                 </div>
@@ -2248,7 +2318,7 @@
     <!-- Export Dialog -->
     <div class="export-dialog-overlay" id="exportDialogOverlay">
         <div class="export-dialog">
-            <div class="export-dialog-header">📥 Export Layer as GeoJSON</div>
+            <div class="export-dialog-header"><i data-lucide="download" style="width: 20px; height: 20px; margin-right: 8px; display: inline;"></i>Export Layer as GeoJSON</div>
             
             <div class="export-dialog-content">
                 <div class="export-option">
@@ -2294,12 +2364,12 @@
         <div class="style-dialog">
             <div class="style-dialog-header">
                 <h2>Style: <span id="styleLayerName">Layer</span></h2>
-                <span class="close-btn" onclick="closeStyleDialog()">×</span>
+                <span class="close-btn" onclick="closeStyleDialog()"><i data-lucide="x" style="width: 20px; height: 20px;"></i></span>
             </div>
 
             <div class="style-tabs">
-                <button class="style-tab active" data-tab="basic" onclick="switchStyleTab(this)">🎨 Basic Colors</button>
-                <button class="style-tab" data-tab="gradient" onclick="switchStyleTab(this)">📊 Gradient by Property</button>
+                <button class="style-tab active" data-tab="basic" onclick="switchStyleTab(this)"><i data-lucide="palette" style="width: 16px; height: 16px; margin-right: 4px; display: inline;"></i>Basic Colors</button>
+                <button class="style-tab" data-tab="gradient" onclick="switchStyleTab(this)"><i data-lucide="bar-chart-3" style="width: 16px; height: 16px; margin-right: 4px; display: inline;"></i>Gradient by Property</button>
             </div>
 
             <!-- Basic Styling Tab -->
@@ -2327,20 +2397,16 @@
                 </div>
 
                 <div class="style-option">
-                    <label>Icon Color</label>
-                    <input type="color" id="iconColor" class="style-color-input">
+                    <label>Icon (optional)</label>
+                    <div style="display: flex; gap: 0.8rem; align-items: flex-start;">
+                        <input type="text" id="iconNameInput" class="style-color-input" style="flex: 1; padding: 0.6rem 0.8rem; font-size: 0.9rem;" placeholder="e.g., hospital, school, park" oninput="updateIconPreview()">
+                        <div id="iconPreview" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(var(--accent-secondary-rgb), 0.4); border: 1px solid rgba(196, 195, 227, 0.3); border-radius: 8px; flex-shrink: 0; color: var(--accent-primary); font-size: 20px;"></div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: rgba(196, 195, 227, 0.5); margin-top: 0.4rem;">
+                        Lucide icons: hospital, pharmacy, school, university, restaurant, cafe, bank, atm, park, trees, police, ambulance, church, museum, theater, gym, shopping-cart, hotel, and 1000+ more at <a href="https://lucide.dev" target="_blank" style="color: var(--accent-primary); text-decoration: none;">lucide.dev</a>
+                    </div>
                 </div>
 
-                <div class="style-option">
-                    <label>Select Icon</label>
-                    <input type="text" id="iconSearch" class="icon-search-input" placeholder="Search icons (hospital, bank, park, etc.)">
-                    <div class="icon-picker" id="iconPicker">
-                        <!-- Icons will be dynamically generated by JavaScript -->
-                    </div>
-                    <div class="icon-picker-info">
-                        Icons available: <span id="iconCount">0</span>
-                    </div>
-                </div>
             </div>
 
             <!-- Gradient Styling Tab -->
@@ -2355,11 +2421,11 @@
                 <div class="style-option">
                     <label>Color Scheme</label>
                     <select id="colorScheme" class="style-select" onchange="updateGradientPreview()">
-                        <option value="viridis">🎨 Viridis</option>
-                        <option value="plasma">🔴 Plasma</option>
+                        <option value="viridis"><i data-lucide="palette" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Viridis</option>
+                        <option value="plasma"><i data-lucide="circle" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Plasma</option>
                         <option value="inferno">🔥 Inferno</option>
                         <option value="cool-warm">🌊 Cool to Warm</option>
-                        <option value="red-green">🔴 Red to Green</option>
+                        <option value="red-green"><i data-lucide="circle" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Red to Green</option>
                         <option value="blue-red">🔵 Blue to Red</option>
                     </select>
                 </div>
@@ -2371,7 +2437,7 @@
                         <span>to</span>
                         <input type="number" id="rangeMax" placeholder="Max" class="style-number-input" onchange="updateGradientPreview()">
                     </div>
-                    <button id="autoRangeBtn" class="style-button-small" onclick="autoDetectRange()">📊 Auto Detect</button>
+                    <button id="autoRangeBtn" class="style-button-small" onclick="autoDetectRange()"><i data-lucide="bar-chart-3" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Auto Detect</button>
                 </div>
 
                 <div style="margin-top: 1rem;">
@@ -2443,11 +2509,126 @@
             maxBoundsViscosity: 0.5   // Smooth boundary behavior
         });
 
-        // Add Dark CartoDB Voyager tiles
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap contributors, © CARTO',
-            maxZoom: 19,
-            subdomains: 'abcd'
+        // Define basemap layers
+        const basemaps = {
+            'Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors, © CARTO',
+                maxZoom: 19,
+                subdomains: 'abcd'
+            }),
+            'Light': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors, © CARTO',
+                maxZoom: 19,
+                subdomains: 'abcd'
+            }),
+            'Positron': L.tileLayer('https://{s}.basemaps.cartocdn.com/positron/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors, © CARTO',
+                maxZoom: 19,
+                subdomains: 'abcd'
+            }),
+            'OSM': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+                subdomains: 'abc'
+            })
+        };
+
+        // Add default basemap (Dark)
+        let currentBasemap = basemaps['Dark'];
+        currentBasemap.addTo(map);
+
+        // Create custom basemap selector control
+        L.Control.BasemapControl = L.Control.extend({
+            onAdd: function(map) {
+                const container = L.DomUtil.create('div', 'leaflet-control basemap-control');
+
+                Object.keys(basemaps).forEach(name => {
+                    const btn = L.DomUtil.create('button', 'basemap-btn', container);
+                    btn.textContent = name;
+                    btn.setAttribute('type', 'button');
+
+                    if (name === 'Dark') {
+                        btn.classList.add('active');
+                    }
+
+                    btn.addEventListener('click', function(e) {
+                        L.DomEvent.stopPropagation(e);
+
+                        // Remove current basemap
+                        map.removeLayer(currentBasemap);
+
+                        // Add new basemap
+                        currentBasemap = basemaps[name];
+                        currentBasemap.addTo(map);
+
+                        // Update button states
+                        container.querySelectorAll('.basemap-btn').forEach(b => {
+                            b.classList.remove('active');
+                        });
+                        btn.classList.add('active');
+                    });
+                });
+
+                return container;
+            }
+        });
+
+        // Add basemap control to map (bottom-right corner, compact)
+        new L.Control.BasemapControl({ position: 'bottomright' }).addTo(map);
+
+        // Initialize Lucide icons when popups are opened
+        map.on('popupopen', function(e) {
+            setTimeout(() => {
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }, 50);
+        });
+
+        // Create custom north arrow control
+        L.Control.NorthArrow = L.Control.extend({
+            onAdd: function(map) {
+                const container = L.DomUtil.create('div', 'leaflet-control north-arrow');
+                container.setAttribute('title', 'North direction');
+
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 30 30');
+                svg.setAttribute('class', 'north-arrow-svg');
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', '#F1642E');
+                svg.setAttribute('stroke-width', '2');
+                svg.setAttribute('stroke-linecap', 'round');
+                svg.setAttribute('stroke-linejoin', 'round');
+
+                // Create north arrow shape (triangle pointing up)
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M 15 2 L 22 20 L 15 17 L 8 20 Z');
+                path.setAttribute('fill', '#F1642E');
+
+                svg.appendChild(path);
+                container.appendChild(svg);
+
+                container.addEventListener('click', function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    // Reset map rotation/bearing if applicable
+                    if (map.bearingControl) {
+                        map.setBearing(0);
+                    }
+                });
+
+                return container;
+            }
+        });
+
+        // Add north arrow control to map (top-left, above zoom control)
+        new L.Control.NorthArrow({ position: 'topleft' }).addTo(map);
+
+        // Add scale control to map (bottom-left)
+        L.control.scale({
+            position: 'bottomleft',
+            metric: true,
+            imperial: true,
+            updateWhenIdle: true
         }).addTo(map);
 
         // Smart popup zoom handler - automatically zoom in when popup is too large for viewport
@@ -2583,7 +2764,7 @@
                 cardContent.className = 'timeline-card-content';
                 cardContent.innerHTML = `
                     <div class="timeline-card-text">${query.text}</div>
-                    <div class="timeline-card-count">📍 ${query.featureCount} features</div>
+                    <div class="timeline-card-count"><i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>${query.featureCount} features</div>
                 `;
 
                 const cardControls = document.createElement('div');
@@ -2591,7 +2772,7 @@
                 cardControls.innerHTML = `
                     <button class="timeline-toggle-btn ${!query.visible ? 'hidden' : ''}"
                         onclick="toggleQueryLayer(${query.id})"
-                        title="Toggle layer visibility">👁️</button>
+                        title="Toggle layer visibility"><i data-lucide="eye" style="width: 16px; height: 16px;"></i></button>
                     <button class="timeline-remove-btn"
                         onclick="removeQuery(${query.id})"
                         title="Remove query">✕</button>
@@ -2893,9 +3074,9 @@
         function addLayer(name, geojsonData, query, operations = null, reasoning = null, datasetsUsed = null, metadata = null, executionTime = null, layerId = null, parentLayers = null) {
             const numericId = ++layerIdCounter;
 
-            // Generate color for this layer
-            const colors = ['#FF6B6B', '#F1642E', '#FFB347', '#A3B565',
-                           '#5DADE2', '#85C1E2', '#52BE80', '#F8B88B'];
+            // Generate color for this layer (new palette)
+            const colors = ['#FFB162', '#A35139', '#2C3B4D', '#1B2632',
+                           '#C9A462', '#7A6B5D', '#FFD89B', '#E8A87C'];
             const layerColor = colors[numericId % colors.length];
 
             // Default style configuration
@@ -3006,18 +3187,24 @@
                             properties.amenity || properties.highway || properties.type || 'Feature Details';
             let featureType = properties.amenity || properties.shop || properties.tourism || properties.type || 'location';
 
-            // Get Font Awesome icon for header
+            // Get icon using multi-source icon system
+            const iconKey = getIconForFeature(properties);
+            const iconHtml = renderIcon(iconKey);
+
+            // Fallback to Font Awesome if renderIcon returns empty
             let headerIcon = 'fa-location-dot';
-            if (featureType.includes('atm') || properties.amenity === 'atm') headerIcon = 'fa-money-bill';
-            else if (featureType.includes('hospital') || properties.amenity === 'hospital') headerIcon = 'fa-hospital';
-            else if (featureType.includes('school') || properties.amenity === 'school') headerIcon = 'fa-school';
-            else if (featureType.includes('restaurant') || featureType.includes('cafe')) headerIcon = 'fa-utensils';
-            else if (featureType.includes('shop') || properties.shop) headerIcon = 'fa-shopping-bag';
-            else if (featureType.includes('park') || properties.amenity === 'park') headerIcon = 'fa-tree';
-            else if (featureType.includes('water') || properties.type === 'water') headerIcon = 'fa-water';
-            else if (featureType.includes('forest')) headerIcon = 'fa-tree';
-            else if (featureType.includes('bank') || properties.amenity === 'bank') headerIcon = 'fa-bank';
-            else if (featureType.includes('pharmacy') || properties.amenity === 'pharmacy') headerIcon = 'fa-pills';
+            if (!iconHtml) {
+                if (featureType.includes('atm') || properties.amenity === 'atm') headerIcon = 'fa-money-bill';
+                else if (featureType.includes('hospital') || properties.amenity === 'hospital') headerIcon = 'fa-hospital';
+                else if (featureType.includes('school') || properties.amenity === 'school') headerIcon = 'fa-school';
+                else if (featureType.includes('restaurant') || featureType.includes('cafe')) headerIcon = 'fa-utensils';
+                else if (featureType.includes('shop') || properties.shop) headerIcon = 'fa-shopping-bag';
+                else if (featureType.includes('park') || properties.amenity === 'park') headerIcon = 'fa-tree';
+                else if (featureType.includes('water') || properties.type === 'water') headerIcon = 'fa-water';
+                else if (featureType.includes('forest')) headerIcon = 'fa-tree';
+                else if (featureType.includes('bank') || properties.amenity === 'bank') headerIcon = 'fa-bank';
+                else if (featureType.includes('pharmacy') || properties.amenity === 'pharmacy') headerIcon = 'fa-pills';
+            }
 
             // Get secondary icon for brand/operator section
             let secondaryIcon = 'fa-building';
@@ -3026,11 +3213,17 @@
             else if (properties.oteil || properties.bezirk) secondaryIcon = 'fa-map-location-dot';
 
             // Build popup HTML with dark frosted glass design
-            let popupContent = '<div style="background: rgba(30, 30, 35, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); overflow: hidden; width: 380px; display: flex; flex-direction: column;">';
+            let popupContent = '<div style="background: rgba(30, 30, 35, 0.92); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); overflow: hidden; width: 380px; display: flex; flex-direction: column;">';
 
             // Header with icon and type
             popupContent += '<div style="display: flex; align-items: center; gap: 14px; padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); flex-shrink: 0;">';
-            popupContent += `<i style="font-size: 24px; color: #F1642E; width: 24px; text-align: center; flex-shrink: 0;" class="fas ${headerIcon}"></i>`;
+            if (iconHtml) {
+                // Use multi-source icon
+                popupContent += `<div style="font-size: 20px; color: var(--accent-primary); width: 24px; text-align: center; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">${iconHtml}</div>`;
+            } else {
+                // Fallback to Font Awesome
+                popupContent += `<i style="font-size: 24px; color: var(--accent-primary); width: 24px; text-align: center; flex-shrink: 0;" class="fas ${headerIcon}"></i>`;
+            }
             popupContent += `<h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px;">${featureType.replace(/_/g, ' ')}</h3>`;
             popupContent += '</div>';
 
@@ -3038,7 +3231,12 @@
             let brandInfo = properties.brand || properties.operator || properties.oteil || properties.bezirk || '';
             if (brandInfo) {
                 popupContent += '<div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03); flex-shrink: 0;">';
-                popupContent += `<i style="font-size: 14px; color: #b0b0b0; width: 16px; text-align: center; flex-shrink: 0;" class="fas ${secondaryIcon}"></i>`;
+                // Use Lucide icon for secondary (with Font Awesome fallback)
+                let lucideSecondaryIcon = 'building-2';
+                if (properties.brand) lucideSecondaryIcon = 'tag';
+                else if (properties.operator) lucideSecondaryIcon = 'building-2';
+                else if (properties.oteil || properties.bezirk) lucideSecondaryIcon = 'map-pin';
+                popupContent += `<i data-lucide="${lucideSecondaryIcon}" style="font-size: 14px; color: #b0b0b0; width: 16px; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;"></i>`;
                 popupContent += `<h4 style="margin: 0; font-size: 16px; font-weight: 600; color: #e0e0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.2px;">${brandInfo}</h4>`;
                 popupContent += '</div>';
             }
@@ -3112,6 +3310,19 @@
             return popupContent;
         }
 
+        // Convert hex color to RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '241, 100, 46';
+        }
+
+        // Apply layer color background
+        function applyLayerColor(element, fillColor) {
+            const rgb = hexToRgb(fillColor || '#F1642E');
+            const gradientStyle = `linear-gradient(135deg, rgba(${rgb}, 0.30), rgba(${rgb}, 0.15))`;
+            element.style.background = gradientStyle;
+        }
+
         // Update layers panel
         function updateLayersPanel() {
             const layersList = document.getElementById('layersList');
@@ -3119,7 +3330,7 @@
             if (layers.length === 0) {
                 layersList.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">🗺️</div>
+                        <div class="empty-state-icon"><i data-lucide="map" style="width: 48px; height: 48px;"></i></div>
                         <div class="empty-state-text">No layers yet<br>Search to add results as layers</div>
                     </div>
                 `;
@@ -3132,6 +3343,9 @@
             [...layers].reverse().forEach(layerInfo => {
                 const layerItem = document.createElement('div');
                 layerItem.className = 'layer-item' + (layerInfo.visible ? ' active' : '');
+                // Apply color-tinted background based on layer's fill color
+                const colorToUse = layerInfo.style?.fillColor || layerInfo.color;
+                applyLayerColor(layerItem, colorToUse);
 
                 const timeAgo = getTimeAgo(layerInfo.timestamp);
 
@@ -3142,18 +3356,18 @@
                             <div class="layer-toggle ${layerInfo.visible ? 'active' : ''}"
                                  onclick="toggleLayer(${layerInfo.id})"></div>
                             <div class="layer-menu-wrapper">
-                                <button class="layer-menu-btn" onclick="toggleLayerMenu(event, ${layerInfo.id})" title="More options">⋮</button>
+                                <button class="layer-menu-btn" onclick="toggleLayerMenu(event, ${layerInfo.id})" title="More options"><i data-lucide="more-vertical" style="width: 18px; height: 18px;"></i></button>
                                 <div class="layer-dropdown-menu" id="menu${layerInfo.id}">
-                                    <div class="layer-dropdown-item" onclick="openStyleDialog(event, ${layerInfo.id})">🎨 Style</div>
-                                    <div class="layer-dropdown-item" onclick="openExportDialog(${layerInfo.id}, event)">📥 Export as GeoJSON</div>
+                                    <div class="layer-dropdown-item" onclick="openStyleDialog(event, ${layerInfo.id})"><i data-lucide="palette" style="width: 16px; height: 16px; margin-right: 6px; display: inline;"></i>Style</div>
+                                    <div class="layer-dropdown-item" onclick="openExportDialog(${layerInfo.id}, event)"><i data-lucide="download" style="width: 16px; height: 16px; margin-right: 6px; display: inline;"></i>Export as GeoJSON</div>
                                 </div>
                             </div>
-                            <span class="layer-remove" onclick="removeLayer(${layerInfo.id})">×</span>
+                            <span class="layer-remove" onclick="removeLayer(${layerInfo.id})"><i data-lucide="x" style="width: 16px; height: 16px;"></i></span>
                         </div>
                     </div>
                     <div class="layer-info">
                         <div class="layer-count">
-                            <span>📍 ${layerInfo.featureCount} features</span>
+                            <span><i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>${layerInfo.featureCount} features</span>
                         </div>
                         <div class="layer-time">${timeAgo}</div>
                     </div>
@@ -3223,7 +3437,7 @@
                                 </div>
                                 <div class="layer-info">
                                     <div class="layer-count">
-                                        <span style="font-size: 12px;">📍 ${tempLayer.feature_count} features</span>
+                                        <span style="font-size: 12px;"><i data-lucide="map-pin" style="width: 12px; height: 12px; margin-right: 4px; display: inline;"></i>${tempLayer.feature_count} features</span>
                                     </div>
                                 </div>
                             `;
@@ -3268,7 +3482,7 @@
                 // Check if this has MCDA scoring (composite_score field)
                 if (props.composite_score !== undefined) {
                     content += '<div class="operations-section">';
-                    content += '<div class="operations-section-title">🎯 Multi-Criteria Scoring Results</div>';
+                    content += '<div class="operations-section-title"><i data-lucide="target" style="width: 18px; height: 18px; margin-right: 6px; display: inline;"></i>Multi-Criteria Scoring Results</div>';
 
                     // Find score range across all features
                     let scores = [];
@@ -3306,7 +3520,7 @@
                         // Show first feature's detailed breakdown as example
                         const exampleProps = firstFeature.properties || {};
                         if (exampleProps.score_breakdown && typeof exampleProps.score_breakdown === 'object') {
-                            content += '<div style="background: rgba(241, 100, 46, 0.08); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">';
+                            content += '<div style="background: rgba(var(--accent-primary-rgb), 0.08); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">';
                             content += '<div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #f5f5f5;">Score Breakdown (Example: ' + exampleProps.name + ')</div>';
 
                             const breakdown = exampleProps.score_breakdown;
@@ -3350,7 +3564,7 @@
                                 const criteria = Array.isArray(exampleProps.included_criteria) ? exampleProps.included_criteria : [];
                                 content += `
                                     <div style="margin-bottom: 0.5rem;">
-                                        <div style="font-weight: 600; color: #4CAF50; margin-bottom: 0.3rem; font-size: 0.85rem;">✓ Included Criteria</div>
+                                        <div style="font-weight: 600; color: #4CAF50; margin-bottom: 0.3rem; font-size: 0.85rem;"><i data-lucide="check" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Included Criteria</div>
                                         <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
                                             ${criteria.map(c => `<span style="background: rgba(76, 175, 80, 0.2); border: 1px solid rgba(76, 175, 80, 0.4); padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">${c.replace(/osm_/g, '').replace(/_/g, ' ')}</span>`).join('')}
                                         </div>
@@ -3387,14 +3601,14 @@
                 // Check if this is a density-based scoring query
                 if (props.amenities_per_km2 !== undefined || props.density_per_sq_km !== undefined) {
                     content += '<div class="operations-section">';
-                    content += '<div class="operations-section-title">📊 Legend & Metrics</div>';
+                    content += '<div class="operations-section-title"><i data-lucide="bar-chart-3" style="width: 18px; height: 18px; margin-right: 6px; display: inline;"></i>Legend & Metrics</div>';
 
                     // Display current layer styling
                     if (layerInfo.style) {
                         const style = layerInfo.style;
                         content += `
                             <div class="legend-section" style="margin-bottom: 1rem;">
-                                <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">🎨 Layer Styling:</div>
+                                <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;"><i data-lucide="palette" style="width: 16px; height: 16px; margin-right: 6px; display: inline;"></i>Layer Styling:</div>
                                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                                     <div style="display: inline-flex; align-items: center; gap: 0.5rem;">
                                         <div style="width: 24px; height: 24px; background-color: ${style.fillColor}; border: 2px solid ${style.borderColor}; border-radius: 4px;"></div>
@@ -3436,9 +3650,9 @@
                     if (uniqueMetrics.length > 0) {
                         content += `
                             <div class="legend-section">
-                                <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">📍 Metrics Included:</div>
+                                <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;"><i data-lucide="map-pin" style="width: 16px; height: 16px; margin-right: 6px; display: inline;"></i>Metrics Included:</div>
                                 <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                    ${uniqueMetrics.map(m => `<span style="background: rgba(241, 100, 46, 0.2); border: 1px solid rgba(241, 100, 46, 0.4); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">${m}</span>`).join('')}
+                                    ${uniqueMetrics.map(m => `<span style="background: rgba(var(--accent-primary-rgb), 0.2); border: 1px solid rgba(var(--accent-primary-rgb), 0.4); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">${m}</span>`).join('')}
                                 </div>
                             </div>
                         `;
@@ -3543,7 +3757,7 @@
                     // Display LLM provider first if available
                     if (layerInfo.metadata && layerInfo.metadata.llm_provider) {
                         content += `
-                            <div class="metadata-item" style="background: rgba(241, 100, 46, 0.1); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(241, 100, 46, 0.3); margin-bottom: 0.5rem;">
+                            <div class="metadata-item" style="background: rgba(var(--accent-primary-rgb), 0.1); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(var(--accent-primary-rgb), 0.3); margin-bottom: 0.5rem;">
                                 <span class="metadata-label">🧠 Model</span>
                                 <span class="metadata-value">${layerInfo.metadata.llm_provider}</span>
                             </div>
@@ -3817,9 +4031,14 @@
             document.getElementById('borderColor').value = style.borderColor || '#ffffff';
             document.getElementById('fillOpacity').value = style.fillOpacity || 0.3;
             document.getElementById('borderWidth').value = style.borderWidth || 2;
-            document.getElementById('iconColor').value = style.iconColor || '#FF6B6B';
             document.getElementById('fillOpacityValue').textContent = (style.fillOpacity || 0.3).toFixed(1);
             document.getElementById('borderWidthValue').textContent = style.borderWidth || 2;
+
+            // Set icon name input and preview
+            if (document.getElementById('iconNameInput')) {
+                document.getElementById('iconNameInput').value = style.selectedIcon || '';
+                updateIconPreview();
+            }
 
             // Populate numerical properties
             const numericProps = detectNumericProperties(layerInfo.geojsonData);
@@ -3849,9 +4068,6 @@
 
             // Add event listeners for sliders
             addSliderListeners();
-
-            // Initialize icon picker
-            initializeIconPicker(style.selectedIcon);
         }
 
         // Close style dialog
@@ -4022,8 +4238,7 @@
                 borderColor: document.getElementById('borderColor').value,
                 fillOpacity: parseFloat(document.getElementById('fillOpacity').value),
                 borderWidth: parseInt(document.getElementById('borderWidth').value),
-                iconColor: document.getElementById('iconColor').value,
-                selectedIcon: document.querySelector('.icon-btn.selected')?.dataset.icon || null,
+                selectedIcon: document.getElementById('iconNameInput').value.toLowerCase().trim() || null,
                 isGradient: isGradientMode,
                 gradientProperty: isGradientMode ? document.getElementById('propertySelect').value : null,
                 gradientScheme: isGradientMode ? document.getElementById('colorScheme').value : 'viridis',
@@ -4065,6 +4280,8 @@
                 displayLayerOperations(currentStyleLayerId);
                 // Update map legend with new style
                 createMapLegend(layerInfo);
+                // Update sidebar to reflect color change
+                updateLayersPanel();
             }
 
             // Close dialog if not live preview
@@ -4074,181 +4291,350 @@
             }
         }
 
-        // Comprehensive SVG Icon Library mapped to Font Awesome icons
+        // Lucide Icon Library (1000+ professional SVG icons)
         const ICON_LIBRARY = {
             // Healthcare & Medical
-            'hospital': 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 11h-2v4h-2v-4H8v-2h2V8h2v4h2v2z',
-            'pharmacy': 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.5-5h-1v-4h-1V7h1V6h1v1h1v2h-1z',
-            'clinic': 'M9 3h2v8h8v2h-8v8h-2v-8H1v-2h8V3z',
-            'ambulance': 'M22 12h-4V8h-2v4h-4v2h4v4h2v-4h4v-2z',
-            'first-aid': 'M12 2c5.5 0 10 4.5 10 10s-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2m0 2c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8m0 5h-2v2H9v2h2v2h2v-2h2v-2h-2V9h-2z',
+            'hospital': 'hospital',
+            'pharmacy': 'pill',
+            'clinic': 'stethoscope',
+            'ambulance': 'ambulance',
+            'first-aid': 'heart',
+            'dentist': 'tooth',
+            'veterinary': 'dog',
 
             // Education
-            'school': 'M5 13.18v2.96c0 .54.45.98.99.98.55 0 1.01-.44 1.01-.98v-2.96c0-.54-.45-.98-.99-.98-.55 0-1.01.44-1.01.98zm4 2.96v-2.96c0-.54-.45-.98-.99-.98-.55 0-1.01.44-1.01.98v2.96c0 .54.45.98.99.98.55 0 1.01-.44 1.01-.98zm4-2.96v2.96c0 .54.45.98.99.98.55 0 1.01-.44 1.01-.98v-2.96c0-.54-.45-.98-.99-.98-.55 0-1.01.44-1.01.98zm4 2.96v-2.96c0-.54-.45-.98-.99-.98-.55 0-1.01.44-1.01.98v2.96c0 .54.45.98.99.98.55 0 1.01-.44 1.01-.98zM12 6c1.66 0 2.99-1.34 2.99-3S13.66 0 12 0C10.34 0 9 1.34 9 3s1.34 3 3 3z',
-            'university': 'M12 1l-6 3v2h1v4h2v-4h2v4h2v-4h1V4l6-3h-8z',
-            'library': 'M3 4v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2zm8 10H7v-2h4v2zm6-6H7V6h10v2z',
-            'book': 'M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z',
+            'school': 'building',
+            'university': 'graduation-cap',
+            'library': 'book-open',
+            'book': 'book',
+            'bookstore': 'books',
 
             // Food & Beverage
-            'restaurant': 'M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H19V2c-2.76 0-5 2.24-5 4z',
-            'cafe': 'M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z',
-            'pizza': 'M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z',
-            'beer': 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 11h-2v4h-2v-4H8v-2h2V8h2v4h2v2z',
-            'utensils': 'M7 13c.83 0 1.5.67 1.5 1.5V18h-3v-3.5C5.5 13.67 6.17 13 7 13zm0-8C7 4.12 5.88 3 4.5 3S2 4.12 2 5.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z',
-            'apple': 'M20.57 14.86L22 12.43 20.57 12a6 6 0 0 0-5.87-4A6 6 0 0 0 9 6.07V3.5c0-.83-.67-1.5-1.5-1.5S6 2.67 6 3.5v2.57A6 6 0 0 0 1.57 12 6 6 0 0 0 3 14.86 5.991 5.991 0 0 1 6 13h12c.83 0 1.5.67 1.5 1.5v1.36h2v-1.5z',
+            'restaurant': 'utensils',
+            'cafe': 'coffee',
+            'pizza': 'pizza',
+            'bar': 'wine',
+            'pub': 'wine',
+            'bakery': 'croissant',
+            'fast_food': 'burger',
+            'utensils': 'utensils',
+            'apple': 'apple',
 
             // Finance & Banking
-            'bank': 'M11.5.5h1v7h-1z M20.5 8h-17v9h17zm-14.5 3h1v3h-1z M10.5 11h1v3h-1z M14.5 11h1v3h-1z M1 8h22L12 0 1 8z',
-            'money': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-13c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z',
-            'wallet': 'M21 18v1c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v1h2c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2h-2zm0-2h2V9h-2v7zM9 13c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z',
-            'credit-card': 'M20 8H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H4v-6h16v6zm0-8H4v-2h16v2z',
-            'chart': 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z',
+            'bank': 'building-2',
+            'atm': 'credit-card',
+            'money': 'coins',
+            'wallet': 'wallet',
+            'credit-card': 'credit-card',
+            'chart': 'bar-chart-3',
+            'money-exchange': 'arrow-right-left',
 
             // Transportation & Parking
-            'parking': 'M13 13h-2v-2h2v2zm4-8H7c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 12H7V7h10v10zm-6-3.5h2V9h-2v2.5z',
-            'bus': 'M18 1.01L8 1c-3.3 0-6 2.7-6 6v10c0 1.1.9 2 2 2h1v2h2v-2h12v2h2v-2h1c1.1 0 2-.9 2-2V7c0-3.3-2.7-6-6-6zm0 15H6V7h12v9zm-5-8h-2V8h2v2zm4 0h-2V8h2v2z',
-            'car': 'M18.92 5.01C18.72 4.4 18.16 4 17.5 4h-11c-.66 0-1.22.4-1.42 1.01L3 11v8c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-1h12v1c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-8l-2.08-5.99zM6.5 15c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm11 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM5 11l1.5-4.5h11L19 11H5z',
-            'taxi': 'M18.92 5.01C18.72 4.4 18.16 4 17.5 4h-11c-.66 0-1.22.4-1.42 1.01L3 11v8c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-1h12v1c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-8l-2.08-5.99z',
-            'train': 'M12 2c-4.97 0-9 .9-9 2v6h2c1.1 0 2 .9 2 2 0 1.1-.9 2-2 2H3v2h2c1.1 0 2 .9 2 2 0 1.1-.9 2-2 2H3v2h18v-2h-2c-1.1 0-2-.9-2-2 0-1.1.9-2 2-2h2v-2h-2c-1.1 0-2-.9-2-2 0-1.1.9-2 2-2h2V4c0-1.1-4.03-2-9-2z',
-            'bike': 'M18.29 15.5c-1.26.73-2.74 1.5-3.29 1.5s-2.03-.77-3.29-1.5c-1.26-.73-2.74-1.5-3.29-1.5s-2.03.77-3.29 1.5c-.55.32-1.03.59-1.42.81V5c0-.55.45-1 1-1s1 .45 1 1v3c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V5c0-.55.45-1 1-1s1 .45 1 1v13.31c-.39-.22-.87-.49-1.42-.81z',
+            'parking': 'parking-square',
+            'bus_station': 'bus',
+            'bus': 'bus',
+            'taxi': 'taxi',
+            'car': 'car',
+            'car_rental': 'car',
+            'train': 'train',
+            'train_station': 'train',
+            'bike': 'bike',
+            'airport': 'plane',
 
             // Recreation & Leisure
-            'park': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-12.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm0 9c1.66 0 3-1.34 3-3h-6c0 1.66 1.34 3 3 3z',
-            'tree': 'M19 12h-2c0-2.76-2.24-5-5-5s-5 2.24-5 5H5c-1.1 0-2 .9-2 2s.9 2 2 2h1c0 1.66 1.34 3 3 3v2h2v-2c1.66 0 3-1.34 3-3h1c1.1 0 2-.9 2-2s-.9-2-2-2z',
-            'soccer': 'M12 2c5.5 0 10 4.5 10 10s-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2m3 13c-.78 0-1.5.67-1.5 1.5S14.22 18 15 18s1.5-.67 1.5-1.5S15.78 15 15 15m-6 0c-.78 0-1.5.67-1.5 1.5S8.22 18 9 18s1.5-.67 1.5-1.5S9.78 15 9 15m3-6c.78 0 1.5-.67 1.5-1.5S12.78 6 12 6s-1.5.67-1.5 1.5S11.22 9 12 9z',
-            'swim': 'M8 19H6c-1.1 0-2-.9-2-2v-3H2V9h18V6h-2v3h-2V6h-2v3H8V9h10v5h-2v3c0 1.1-.9 2-2 2h-2v-2h-2v2z',
-            'gym': 'M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2m-3.6 13.9L7 13.38v-2.14c0-.55-.45-1-1-1H3.65c-.55 0-1 .45-1 1v2.14L.51 19.38C.1 20.33.57 21.5 1.6 21.5h19.8c1.02 0 1.5-1.17 1.08-2.12l-3.85-6.48h.3c.55 0 1-.45 1-1v-5.06c0-.55-.45-1-1-1H8.5c-.55 0-1 .45-1 1v5.06c0 .55.45 1 1 1z',
+            'park': 'trees',
+            'playground': 'play',
+            'tree': 'tree',
+            'soccer': 'soccer',
+            'swimming_pool': 'waves',
+            'swim': 'waves',
+            'gym': 'dumbbell',
+            'sports_centre': 'activity',
 
             // Services & Safety
-            'police': 'M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4zM14 13h-4v-2h4v2z',
-            'fire': 'M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.29-1.45-3.29-3.2.02-2.2 1.9-4.08 4.3-4.08 2.4 0 4.3 1.88 4.3 4.08 0 1.75-1.51 3.2-3.31 3.2z',
-            'cctv': 'M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z',
-            'lifeguard': 'M12 2c5.5 0 10 4.5 10 10s-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2m0 2c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8m0 2c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2m5 10c-1 2-3 3-5 3s-4-1-5-3h10z',
+            'police': 'shield-alert',
+            'fire_station': 'flame',
+            'emergency': 'alert-triangle',
+            'cctv': 'camera',
+            'lifeguard': 'life-buoy',
 
             // Accommodation
-            'hotel': 'M7 13c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm13-8h-8v8h-2v8h2v-8h8V5zm-1 2v4h-6V7h6z',
-            'bed': 'M19 7h-8v6h8V7zM3 7c-1.1 0-2 .9-2 2v10h2V9h13v10h2V9c0-1.1-.9-2-2-2H3z',
-            'door': 'M19 1H5c-1.1 0-2 .9-2 2v4h2V4h12v16H5v-3H3v4c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2z',
-            'key': 'M12.65 10C13.37 10 14 9.37 14 8.65c0-.72-.37-1.35-1.35-1.35h-.3V5.3H12.35V7.3h.3c.72 0 1.35.63 1.35 1.35 0 .72-.63 1.35-1.35 1.35h-1V10h1v4.7h-2V10h.65z',
+            'hotel': 'building',
+            'bed': 'bed',
+            'door': 'door-open',
+            'key': 'key',
+            'lodging': 'building',
 
             // Retail & Shopping
-            'shopping': 'M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z',
-            'store': 'M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z',
-            'storefront': 'M16 6l2.29 2.29-4.88 4.88L9 10.24 4.59 14.65 3 13.06 9 7.06l4.42 4.42 4.58-4.58L21 9v-3z',
-            'gift': 'M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z',
-            'box': 'M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H4V5h16v14zm-8-8l-4-4v6h8v-6l-4 4z',
+            'supermarket': 'shopping-cart',
+            'shopping': 'shopping-bag',
+            'store': 'store',
+            'storefront': 'store',
+            'gift': 'gift',
+            'box': 'package',
+            'post_office': 'mail',
+            'market': 'shopping-cart',
 
-            // Technology
-            'wifi': 'M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z',
-            'bluetooth': 'M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z',
-            'phone': 'M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z',
-            'computer': 'M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14l4 4V5c0-1.1-.9-2-2-2zm-2 12h-12V5h12v10z',
-            'server': 'M20 13H4c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-6c0-1.1-.9-2-2-2zm0-10H4c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z',
-            'cloud': 'M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 5.23 11.08 5 12 5c3.04 0 5.5 2.46 5.5 5.5v.5H19c2.05 0 3.71 1.66 3.71 3.71 0 1.59-1.15 2.92-2.66 3.2c.03-.2.05-.41.05-.62 0-2.64-2.05-4.78-4.65-4.78z',
+            // Technology & Communications
+            'wifi': 'wifi',
+            'bluetooth': 'bluetooth',
+            'phone': 'phone',
+            'computer': 'monitor',
+            'server': 'server',
+            'cloud': 'cloud',
 
-            // Other
-            'star': 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2l-2.81 6.63L2 9.24l5.46 4.73L5.82 21z',
-            'heart': 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
-            'location': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-13c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z',
-            'info': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',
-            'warning': 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
-            'error': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'
+            // Natural Features
+            'water': 'droplets',
+            'forest': 'trees',
+            'nature_reserve': 'leaf',
+
+            // Attractions & Tourism
+            'museum': 'landmark',
+            'theatre': 'drama',
+            'cinema': 'clapperboard',
+            'art_gallery': 'palette',
+            'monument': 'landmark',
+
+            // Default / Generic
+            'location': 'map-pin',
+            'info': 'info',
+            'warning': 'alert-triangle',
+            'error': 'alert-circle',
+            'star': 'star'
         };
 
-        // Get appropriate icon for feature based on properties
+        // Render Lucide icon as HTML (lightweight, simple)
+        function renderIcon(iconKey) {
+            const lucideIconName = ICON_LIBRARY[iconKey] || ICON_LIBRARY['location'];
+            if (!lucideIconName) return '';
+            // Use data-lucide attribute for Lucide rendering
+            return `<i data-lucide="${lucideIconName}" style="font-size: 20px; vertical-align: middle;"></i>`;
+        }
+
+        // Render Lucide icon with custom options
+        function lucideIcon(iconName, size = '24px', className = '', color = 'currentColor') {
+            return `<i data-lucide="${iconName}" style="width: ${size}; height: ${size}; display: inline-block; vertical-align: middle; color: ${color};" class="${className}"></i>`;
+        }
+
+        // Initialize Lucide icons when DOM is ready
+        function initializeLucideIcons() {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons({
+                    attrs: {
+                        'stroke-width': 2,
+                        class: ['lucide-icon']
+                    }
+                });
+            }
+        }
+
+        // Update icon preview in style dialog
+        function updateIconPreview() {
+            const iconNameInput = document.getElementById('iconNameInput');
+            const iconPreview = document.getElementById('iconPreview');
+
+            if (!iconNameInput || !iconPreview) return;
+
+            const iconName = iconNameInput.value.toLowerCase().trim();
+
+            if (!iconName) {
+                iconPreview.innerHTML = '';
+                return;
+            }
+
+            // Check if icon name exists in library
+            if (ICON_LIBRARY[iconName]) {
+                const iconHtml = renderIcon(iconName);
+                iconPreview.innerHTML = iconHtml;
+                iconPreview.style.color = '';
+                // Initialize Lucide icons after inserting the element
+                setTimeout(() => {
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                }, 0);
+            } else {
+                // Show error state
+                iconPreview.innerHTML = '❌';
+                iconPreview.style.color = '#FF6B6B';
+            }
+        }
+
+        // Get appropriate icon for feature based on OSM properties (50+ amenity types supported)
         function getIconForFeature(properties) {
             if (!properties) return 'location';
 
-            const amenity = properties.amenity || '';
-            const shop = properties.shop || '';
-            const tourism = properties.tourism || '';
-            const leisure = properties.leisure || '';
+            const amenity = (properties.amenity || '').toLowerCase();
+            const shop = (properties.shop || '').toLowerCase();
+            const tourism = (properties.tourism || '').toLowerCase();
+            const leisure = (properties.leisure || '').toLowerCase();
+            const office = (properties.office || '').toLowerCase();
             const name = (properties.name || '').toLowerCase();
-            const type = (properties.type || '').toLowerCase();
+            const building = (properties.building || '').toLowerCase();
 
-            // Healthcare
-            if (amenity === 'hospital' || amenity === 'clinic') return 'hospital';
+            // Healthcare & Medical (8+ types)
+            if (amenity === 'hospital') return 'hospital';
+            if (amenity === 'clinic' || amenity === 'urgent_care') return 'clinic';
             if (amenity === 'pharmacy') return 'pharmacy';
-            if (amenity === 'doctors' || amenity === 'dentist' || amenity === 'veterinary') return 'hospital';
+            if (amenity === 'dentist' || amenity === 'orthodontist') return 'dentist';
+            if (amenity === 'veterinary' || amenity === 'animal_shelter') return 'veterinary';
+            if (amenity === 'doctors' || amenity === 'physician') return 'hospital';
+            if (amenity === 'psychiatrist' || amenity === 'psychologist') return 'hospital';
+            if (amenity === 'childcare' || amenity === 'nursing_home') return 'hospital';
 
-            // Education
-            if (amenity === 'school' || amenity === 'university' || amenity === 'college' || amenity === 'library') return 'school';
+            // Education (7+ types)
+            if (amenity === 'school' || building === 'school') return 'school';
+            if (amenity === 'university' || building === 'university') return 'university';
+            if (amenity === 'library') return 'library';
+            if (amenity === 'kindergarten') return 'school';
+            if (amenity === 'college' || amenity === 'training_center') return 'university';
+            if (amenity === 'music_school' || amenity === 'driving_school') return 'school';
+            if (shop === 'books' || shop === 'bookstore') return 'bookstore';
 
-            // Food & Drink
+            // Food & Beverage (10+ types)
             if (amenity === 'restaurant' || shop === 'restaurant') return 'restaurant';
-            if (amenity === 'cafe' || shop === 'cafe' || amenity === 'bar' || amenity === 'pub') return 'cafe';
-            if (shop === 'bakery' || amenity === 'fast_food') return 'shopping';
+            if (amenity === 'cafe' || shop === 'cafe') return 'cafe';
+            if (amenity === 'bar' || amenity === 'pub' || shop === 'bar') return 'bar';
+            if (amenity === 'fast_food') return 'fast_food';
+            if (amenity === 'ice_cream') return 'cafe';
+            if (amenity === 'pizza') return 'pizza';
+            if (shop === 'bakery' || shop === 'pastry' || amenity === 'bakery') return 'bakery';
+            if (amenity === 'biergarten') return 'bar';
+            if (shop === 'beverages' || shop === 'wine') return 'bar';
+            if (amenity === 'food_court' || amenity === 'bbq') return 'restaurant';
 
-            // Shopping
-            if (shop === 'supermarket' || amenity === 'supermarket') return 'shopping';
-            if (amenity === 'bank' || amenity === 'atm') return 'bank';
+            // Shopping & Commerce (12+ types)
+            if (shop === 'supermarket' || amenity === 'supermarket') return 'supermarket';
+            if (shop === 'convenience' || amenity === 'convenience') return 'shopping';
+            if (shop === 'department_store') return 'shopping';
+            if (shop === 'mall' || building === 'mall') return 'shopping';
+            if (shop === 'market' || amenity === 'market') return 'market';
+            if (amenity === 'bank' || office === 'bank') return 'bank';
+            if (amenity === 'atm') return 'atm';
+            if (amenity === 'post_office' || shop === 'post_office') return 'post_office';
+            if (amenity === 'money_changer' || amenity === 'currency_exchange') return 'money-exchange';
+            if (shop === 'gift' || shop === 'souvenir') return 'gift';
             if (shop) return 'shopping';
+            if (tourism === 'museum' || tourism === 'aquarium' || tourism === 'zoo') return 'museum';
 
-            // Transportation
+            // Transportation (10+ types)
             if (amenity === 'parking' || name.includes('parking')) return 'parking';
-            if (amenity === 'bus_station') return 'bus';
-            if (amenity === 'taxi' || amenity === 'car_rental') return 'car';
+            if (amenity === 'bus_station' || amenity === 'bus_stop') return 'bus';
+            if (amenity === 'taxi' || amenity === 'taxi_rank') return 'taxi';
+            if (amenity === 'car_rental' || amenity === 'car_sharing') return 'car';
+            if (amenity === 'airport') return 'airport';
+            if (amenity === 'train_station' || amenity === 'railway_station') return 'train_station';
+            if (amenity === 'subway_entrance' || leisure === 'subway') return 'train';
+            if (amenity === 'fuel' || shop === 'fuel' || amenity === 'gas_station') return 'car';
+            if (amenity === 'bicycle_parking' || amenity === 'bicycle_rental') return 'bike';
+            if (amenity === 'charging_station' || amenity === 'ev_charging') return 'car';
 
-            // Recreation
+            // Recreation & Sports (11+ types)
             if (leisure === 'park' || amenity === 'park') return 'park';
-            if (tourism === 'museum' || tourism === 'theatre' || amenity === 'cinema') return 'shopping';
-            if (leisure === 'swimming_pool' || amenity === 'gym' || leisure === 'sports_centre') return 'park';
+            if (leisure === 'playground') return 'playground';
+            if (leisure === 'swimming_pool' || amenity === 'swimming' || amenity === 'water_park') return 'swimming_pool';
+            if (amenity === 'gym' || leisure === 'fitness_center') return 'gym';
+            if (leisure === 'sports_centre' || leisure === 'stadium') return 'sports_centre';
+            if (leisure === 'tennis' || leisure === 'basketball_court') return 'soccer';
+            if (leisure === 'golf_course') return 'soccer';
+            if (tourism === 'theme_park') return 'park';
+            if (tourism === 'attraction' || tourism === 'viewpoint') return 'star';
+            if (amenity === 'cinema' || tourism === 'cinema') return 'cinema';
+            if (tourism === 'theatre' || tourism === 'theatre') return 'theatre';
 
-            // Services
+            // Accommodation (4+ types)
+            if (amenity === 'hotel' || tourism === 'hotel' || building === 'hotel') return 'hotel';
+            if (amenity === 'hostel' || tourism === 'hostel') return 'bed';
+            if (amenity === 'guest_house' || tourism === 'guest_house') return 'bed';
+            if (amenity === 'apartment' || tourism === 'apartment') return 'door';
+
+            // Services & Safety (8+ types)
             if (amenity === 'police') return 'police';
-            if (amenity === 'fire_station') return 'fire';
-            if (amenity === 'hotel') return 'hotel';
-            if (amenity === 'post_office') return 'shopping';
+            if (amenity === 'fire_station' || amenity === 'fire_brigade') return 'fire_station';
+            if (amenity === 'ambulance_station') return 'ambulance';
+            if (amenity === 'emergency') return 'emergency';
+            if (amenity === 'lifeguard') return 'lifeguard';
+            if (amenity === 'cctv') return 'cctv';
+            if (amenity === 'public_toilet') return 'door';
+            if (office === 'government') return 'building';
 
-            // Default
+            // Natural & Environment (5+ types)
+            if (leisure === 'nature_reserve' || tourism === 'nature_reserve') return 'nature_reserve';
+            if (name.includes('forest') || leisure === 'forest') return 'forest';
+            if (name.includes('water') || leisure === 'water_park') return 'water';
+            if (leisure === 'park' && name.includes('national')) return 'nature_reserve';
+            if (leisure === 'treelined') return 'tree';
+
+            // Communications & Technology (4+ types)
+            if (amenity === 'telephone') return 'phone';
+            if (office === 'it' || office === 'telecommunications') return 'computer';
+            if (amenity === 'wifi') return 'wifi';
+            if (office === 'lawyer' || office === 'accountant') return 'building';
+
+            // Other Landmarks
+            if (tourism === 'monument' || tourism === 'memorial') return 'monument';
+            if (tourism === 'information' || amenity === 'information') return 'info';
+            if (amenity === 'waste_disposal' || amenity === 'recycling') return 'box';
+            if (name.includes('church') || name.includes('temple') || name.includes('mosque')) return 'building';
+
+            // Default fallback
             return 'location';
         }
 
-        // Calculate marker size based on zoom level
+        // Smooth, continuous marker size scaling based on zoom level
+        // Scales smoothly from 3px (zoom 1, world view) to 32px (zoom 16+, street level)
+        // Every zoom level 1-16+ gets its own smooth size progression
+        // Smaller overall size keeps icons from overlapping on map
         function getMarkerSize(zoomLevel) {
-            // Aggressive scaling: icons shrink dramatically when zoomed out
-            // Zoom 10: 4px (barely visible when city-level zoomed out)
-            // Zoom 11: 6px (tiny dots at regional view)
-            // Zoom 12: 12px (small icons at city/district view)
-            // Zoom 13: 18px (medium-small at neighborhood view)
-            // Zoom 14: 28px (medium at street-level view)
-            // Zoom 15+: 40px (full size at detailed street view)
-            if (zoomLevel <= 10) return 4;
-            if (zoomLevel === 11) return 6;
-            if (zoomLevel === 12) return 12;
-            if (zoomLevel === 13) return 18;
-            if (zoomLevel === 14) return 28;
-            return 40;
+            const minZoom = 1;      // World view - zoom all the way out
+            const maxZoom = 16;     // Street level - zoom all the way in
+            const minSize = 3;      // Minimum size at world zoom (tiny dots)
+            const maxSize = 32;     // Maximum size at street zoom (proportional to features)
+
+            // Smooth linear interpolation across full zoom range (1-16+)
+            // No clamping - allows scaling beyond zoom 16 if needed
+            const zoomRange = maxZoom - minZoom;
+            const sizeRange = maxSize - minSize;
+            const scaledSize = minSize + ((zoomLevel - minZoom) / zoomRange) * sizeRange;
+
+            // Clamp final size to min/max bounds
+            return Math.round(Math.max(minSize, Math.min(maxSize, scaledSize)));
         }
 
-        // Create SVG marker with icon and color, with zoom-responsive sizing
+        // Create colored circle marker without icons (as per user request)
         function createMarkerWithIcon(latlng, feature, iconColor, selectedIcon = null, zoomLevel = null) {
-            const iconName = selectedIcon || getIconForFeature(feature.properties);
-            const iconPath = ICON_LIBRARY[iconName] || ICON_LIBRARY['location'];
-
             // Determine size based on zoom level
             const size = zoomLevel ? getMarkerSize(zoomLevel) : 40;
 
-            // Create SVG marker with icon
-            const svg = `
-                <svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Marker background circle -->
-                    <circle cx="12" cy="12" r="10.5" fill="${iconColor}" opacity="0.15" stroke="${iconColor}" stroke-width="1.5"/>
-                    <!-- Icon background circle -->
-                    <circle cx="12" cy="12" r="8" fill="${iconColor}" opacity="0.9"/>
-                    <!-- Icon SVG path -->
-                    <g transform="translate(12, 12) scale(0.5) translate(-12, -12)">
-                        <path d="${iconPath}" fill="white"/>
-                    </g>
-                </svg>
-            `;
+            // Create container div for the marker
+            const markerContainer = document.createElement('div');
+            markerContainer.className = 'marker-wrapper';
+            markerContainer.style.width = size + 'px';
+            markerContainer.style.height = size + 'px';
+            markerContainer.style.position = 'relative';
+
+            // Create colored circle div with glassmorphic frosted effect (no icon inside)
+            const bgCircle = document.createElement('div');
+            bgCircle.style.position = 'absolute';
+            bgCircle.style.width = '100%';
+            bgCircle.style.height = '100%';
+            bgCircle.style.borderRadius = '50%';
+            // Glassmorphic effect: semi-transparent background with frosted blur
+            bgCircle.style.backgroundColor = `rgba(255, 255, 255, 0.15)`;
+            bgCircle.style.backdropFilter = 'blur(12px)';
+            bgCircle.style.webkitBackdropFilter = 'blur(12px)'; // Safari support
+            bgCircle.style.border = `1.5px solid ${iconColor}`;
+            bgCircle.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.1), 0 0 12px ${iconColor}`;
+            bgCircle.style.transition = 'transform 0.2s ease';
+
+            markerContainer.appendChild(bgCircle);
 
             const customIcon = L.divIcon({
-                html: svg,
+                html: markerContainer.outerHTML,
                 iconSize: [size, size],
                 iconAnchor: [size/2, size],
                 popupAnchor: [0, -size],
-                className: 'feature-vector-icon'
+                className: 'feature-marker-icon'
             });
 
             return L.marker(latlng, { icon: customIcon });
@@ -4262,12 +4648,16 @@
                 this.pointFeatures = [];
                 this.clusters = new Map();
                 this.markers = new Map();
+                this.markerObjects = new Map(); // Store marker objects for real-time size updates
                 this.clusterLayer = L.featureGroup();
                 this.markerLayer = L.featureGroup();
                 this.currentZoom = map.getZoom();
                 this.clusterRadius = this.getClusterRadius(this.currentZoom);
 
-                // Update on zoom change
+                // Smooth zoom: update marker sizes in real-time as user zooms
+                map.on('zoom', () => this.updateMarkerSizesSmooth());
+
+                // Discrete zoom: recalculate clusters when threshold is crossed
                 map.on('zoomend', () => this.handleZoomChange());
 
                 // Add layers to map
@@ -4298,6 +4688,40 @@
                 }
 
                 this.currentZoom = newZoom;
+            }
+
+            // Update all marker sizes smoothly during zoom (fires on 'zoom' event)
+            updateMarkerSizesSmooth() {
+                const currentZoom = this.map.getZoom();
+
+                // Update each stored marker's size in real-time
+                this.markerObjects.forEach((markerData) => {
+                    const newSize = getMarkerSize(currentZoom);
+                    const oldSize = markerData.size;
+
+                    // Only update if size has changed significantly (avoid excessive updates)
+                    if (Math.abs(newSize - oldSize) > 0.5) {
+                        markerData.size = newSize;
+
+                        // Get the marker's icon element and update its size
+                        const iconElement = markerData.marker._icon;
+                        if (iconElement) {
+                            iconElement.style.width = newSize + 'px';
+                            iconElement.style.height = newSize + 'px';
+                            iconElement.style.marginLeft = -(newSize / 2) + 'px';
+                            iconElement.style.marginTop = -newSize + 'px';
+
+                            // Update inner icon size proportionally
+                            const innerIcon = iconElement.querySelector('iconify-icon');
+                            if (innerIcon) {
+                                const iconSize = newSize * 0.5;
+                                innerIcon.style.fontSize = iconSize + 'px';
+                                innerIcon.style.width = iconSize + 'px';
+                                innerIcon.style.height = iconSize + 'px';
+                            }
+                        }
+                    }
+                });
             }
 
             updateClusters() {
@@ -4370,6 +4794,8 @@
             }
 
             renderAllMarkers() {
+                this.markerObjects.clear(); // Clear previous marker references
+
                 this.pointFeatures.forEach((feature, idx) => {
                     const latlng = feature.geometry.coordinates;
                     const point = L.latLng(latlng[1], latlng[0]);
@@ -4403,6 +4829,14 @@
                         selectFeatureForContext(feature, marker);
                     });
 
+                    // Store marker reference for smooth zoom updates
+                    this.markerObjects.set(idx, {
+                        marker: marker,
+                        size: getMarkerSize(this.currentZoom),
+                        feature: feature,
+                        iconColor: iconColor
+                    });
+
                     this.markerLayer.addLayer(marker);
                 });
             }
@@ -4424,7 +4858,11 @@
             }
 
             renderClusters() {
+                // Clear marker references when re-clustering
+                this.markerObjects.clear();
+
                 // Render individual markers
+                let markerIndex = 0;
                 this.markers.forEach(markerData => {
                     const marker = createMarkerWithIcon(
                         markerData.point,
@@ -4448,6 +4886,14 @@
                     // Add click handler for feature selection (context-aware queries)
                     marker.on('click', function(e) {
                         selectFeatureForContext(markerData.feature, marker);
+                    });
+
+                    // Store marker reference for smooth zoom updates
+                    this.markerObjects.set(markerIndex++, {
+                        marker: marker,
+                        size: getMarkerSize(this.currentZoom),
+                        feature: markerData.feature,
+                        iconColor: this.styleConfig.iconColor || this.styleConfig.fillColor
                     });
 
                     this.markerLayer.addLayer(marker);
@@ -4718,14 +5164,14 @@
                         if (isCompositeScore) {
                             minLabel = '0.0';
                             maxLabel = '1.0';
-                            legendTitle = '🎯 Suitability Score';
+                            legendTitle = 'Suitability Score';
                             legendUnit = '(0=Poor, 1=Excellent)';
                         } else if (style.gradientProperty === 'amenities_per_km2' || style.gradientProperty === 'density_per_sq_km') {
-                            legendTitle = '📍 Density (amenities/km²)';
+                            legendTitle = 'Density (amenities/km²)';
                         }
 
                         html = `
-                            <div style="background: rgba(26, 24, 37, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(241, 100, 46, 0.3); border-radius: 6px; padding: 10px 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+                            <div style="background: rgba(26, 24, 37, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(var(--accent-primary-rgb), 0.3); border-radius: 6px; padding: 10px 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
                                 ${legendTitle ? `<div style="font-size: 0.75rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); margin-bottom: 6px;">${legendTitle}</div>` : ''}
                                 <div style="width: 140px; height: 20px; background: ${gradientBarStyle}; border-radius: 2px; border: 1px solid rgba(255, 255, 255, 0.2); margin-bottom: 4px;"></div>
                                 <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: rgba(255, 255, 255, 0.7); margin-bottom: ${legendUnit ? '4px' : '0'};">
@@ -4837,122 +5283,6 @@
             }
         }
 
-        // Generate all icon buttons in the picker
-        function generateIconPicker() {
-            const iconPicker = document.getElementById('iconPicker');
-            if (!iconPicker) return;
-
-            // Clear existing buttons
-            iconPicker.innerHTML = '';
-
-            // Create buttons for all icons in ICON_LIBRARY
-            const iconNames = Object.keys(ICON_LIBRARY).sort();
-            console.log(`✅ Creating icon picker with ${iconNames.length} icons`);
-
-            iconNames.forEach(iconName => {
-                const btn = document.createElement('button');
-                btn.className = 'icon-btn';
-                btn.dataset.icon = iconName;
-                btn.title = iconName.replace('-', ' ').charAt(0).toUpperCase() + iconName.replace('-', ' ').slice(1);
-
-                // Create Font Awesome icon element
-                const icon = document.createElement('i');
-                icon.className = 'fas fa-' + iconName;
-                btn.appendChild(icon);
-
-                iconPicker.appendChild(btn);
-            });
-
-            // Update icon count
-            document.getElementById('iconCount').textContent = iconNames.length;
-
-            // Attach click listeners to the newly created buttons
-            attachIconPickerListeners();
-        }
-
-        // Attach click listeners to icon picker buttons
-        function attachIconPickerListeners() {
-            const iconPicker = document.getElementById('iconPicker');
-            if (!iconPicker) return;
-
-            // Remove all existing listeners by cloning
-            const newIconPicker = iconPicker.cloneNode(true);
-            iconPicker.parentNode.replaceChild(newIconPicker, iconPicker);
-
-            // Add delegated listener
-            newIconPicker.addEventListener('click', (e) => {
-                const btn = e.target.closest('.icon-btn');
-                if (btn) {
-                    e.preventDefault();
-
-                    // Remove selected class from all buttons
-                    document.querySelectorAll('.icon-btn').forEach(b => {
-                        b.classList.remove('selected');
-                    });
-
-                    // Add selected class to clicked button
-                    btn.classList.add('selected');
-                    const selectedIcon = btn.dataset.icon;
-                    console.log('✅ Icon selected:', selectedIcon);
-                }
-            });
-        }
-
-        // Initialize icon picker with search functionality
-        function initializeIconPicker(selectedIcon) {
-            // Generate all icon buttons first
-            generateIconPicker();
-
-            // Mark previously selected icon
-            if (selectedIcon) {
-                const selectedBtn = document.querySelector(`.icon-btn[data-icon="${selectedIcon}"]`);
-                if (selectedBtn) {
-                    selectedBtn.classList.add('selected');
-                    console.log('✅ Icon picker initialized with selected icon:', selectedIcon);
-                }
-            } else {
-                console.log('✅ Icon picker initialized with no selection');
-            }
-
-            // Add search functionality
-            const searchInput = document.getElementById('iconSearch');
-            if (searchInput) {
-                // Clear previous search input
-                searchInput.value = '';
-
-                // Remove old listener by cloning
-                const newSearchInput = searchInput.cloneNode(true);
-                searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-
-                // Add new search listener
-                newSearchInput.addEventListener('input', (e) => {
-                    const query = e.target.value.toLowerCase();
-                    const iconBtns = document.querySelectorAll('.icon-btn');
-                    let visibleCount = 0;
-
-                    iconBtns.forEach(btn => {
-                        const iconName = btn.dataset.icon.toLowerCase();
-                        const title = btn.title.toLowerCase();
-
-                        // Show button if it matches search query
-                        if (query === '' || iconName.includes(query) || title.includes(query)) {
-                            btn.classList.remove('hidden');
-                            visibleCount++;
-                        } else {
-                            btn.classList.add('hidden');
-                        }
-                    });
-
-                    // Update count
-                    document.getElementById('iconCount').textContent = visibleCount + ' / ' + Object.keys(ICON_LIBRARY).length;
-
-                    if (visibleCount === 0) {
-                        console.log('🔍 No icons match:', query);
-                    }
-                });
-            }
-        }
-
         // Close style dialog when clicking outside
         document.getElementById('styleDialogOverlay')?.addEventListener('click', function(e) {
             if (e.target === this) {
@@ -5011,7 +5341,7 @@
                     locationBtn.disabled = false;
                     locationBtn.classList.add('active');
                     locationText.textContent = 'Location On';
-                    locationIcon.textContent = '📍';
+                    locationIcon.innerHTML = '<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i>';
 
                     // Add marker to map
                     if (userLocationMarker) {
@@ -5072,7 +5402,7 @@
                     // Error handling
                     locationBtn.disabled = false;
                     locationText.textContent = 'My Location';
-                    locationIcon.textContent = '📍';
+                    locationIcon.innerHTML = '<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i>';
 
                     let errorMessage = 'Unable to get your location';
                     switch(error.code) {
@@ -5126,6 +5456,18 @@
         function isDEMQuery(question) {
             const lowerQuestion = question.toLowerCase();
 
+            // Exclude spatial building queries - these should query osm_berlin_buildings
+            const buildingTypeIndicators = ['residential', 'commercial', 'industrial', 'apartment', 'house', 'home', 'office', 'warehouse'];
+            const spatialIndicators = ['near', 'nearby', 'around', 'close to', 'within', 'in ', 'at ', 'by'];
+
+            const isBuildingTypeQuery = buildingTypeIndicators.some(indicator => lowerQuestion.includes(indicator));
+            const hasSpatialIndicator = spatialIndicators.some(indicator => lowerQuestion.includes(indicator));
+
+            // If asking about building types/features with spatial context, it's a vector query
+            if (isBuildingTypeQuery && (hasSpatialIndicator || lowerQuestion.includes('building'))) {
+                return false;
+            }
+
             // Exclude waterbodies/water bodies queries - these are spatial queries, not DEM
             if (lowerQuestion.includes('waterbodies') || lowerQuestion.includes('water bodies') || lowerQuestion.includes('water body')) {
                 return false;
@@ -5133,11 +5475,12 @@
 
             const demKeywords = [
                 'elevation', 'terrain', 'slope', 'steep', 'flat', 'dem',
-                'develop', 'suitable', 'building', 'construction', 'build',
+                'suitable', 'develop',  // Only for development suitability analysis
                 'flood', 'relief', 'hillshade', 'aspect',
                 'altitude', 'height', 'rise', 'descent', 'topography',
                 'steepness', 'gradient', 'contour',
                 'erosion', 'watershed', 'stream', 'drainage'
+                // Note: Removed 'building', 'construction', 'build' - handled above with context
                 // Note: Removed 'water' to avoid matching 'waterbodies' (a spatial query)
             ];
 
@@ -5431,6 +5774,8 @@
         // Check provider health on page load
         window.addEventListener('load', () => {
             checkProvidersHealth();
+            // Initialize Lucide icons on page load
+            initializeLucideIcons();
         });
 
         // Execute search
@@ -5695,7 +6040,7 @@
                     // Bind popup with location info
                     userLocationMarker.bindPopup(`
                         <div style="text-align: center;">
-                            <strong>📍 Your Location</strong><br>
+                            <strong><i data-lucide="map-pin" style="width: 16px; height: 16px; margin-right: 6px; display: inline;"></i>Your Location</strong><br>
                             <small>
                                 Latitude: ${lat.toFixed(6)}<br>
                                 Longitude: ${lng.toFixed(6)}<br>
