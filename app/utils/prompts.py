@@ -31,6 +31,8 @@ def get_system_prompt_minimal() -> str:
 2. **Multi-row subqueries must use ST_Union()**
    - ❌ WRONG: (SELECT geometry FROM berlin_districts WHERE bezirk = 'Mitte')
    - ✅ CORRECT: (SELECT ST_Union(geometry) FROM berlin_districts WHERE bezirk = 'Mitte')
+   - ⚠️ SPECIAL CASE: User-selected features in `temp.temp_selected_*` tables ALWAYS need ST_Union()
+     because they may contain multiple rows when multiple features are selected
 
 3. **Distance calculations use EPSG:3857**
    - ST_DWithin(ST_Transform(geom1, 3857), ST_Transform(geom2, 3857), meters)
@@ -179,6 +181,59 @@ In multi-turn conversations, previous query results are saved as TEMPORARY LAYER
 3. Temporary layers have the same structure as the original data (geometry, properties, etc.)
 4. When unsure about a layer reference, use the conversation history to infer what "them" or "those" refers to
 5. **CRITICAL:** Always look for temp_layers schema tables when generating SQL for multi-step queries
+
+**⚠️ MULTI-SELECT CONTEXT-AWARE QUERIES - CRITICAL RULE:**
+
+When users select multiple features on the map (via Shift+click), a temporary layer is created:
+- **Table name pattern:** `temp.temp_selected_*` (session-based)
+- **Key difference:** May contain MULTIPLE rows (one per selected feature)
+- **Table structure:** `id`, `geometry` columns (always includes multiple geometries)
+
+**CRITICAL: Always use ST_Union() for multi-select temp tables:**
+
+❌ WRONG:
+```sql
+SELECT * FROM osm_bus_stops t
+WHERE ST_DWithin(t.geometry, (SELECT geometry FROM temp.temp_selected_session_xyz), 500)
+```
+→ Error: "more than one row returned by a subquery"
+
+✅ CORRECT:
+```sql
+SELECT * FROM osm_bus_stops t
+WHERE ST_DWithin(t.geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz), 500)
+```
+
+**Examples of Multi-Select Queries:**
+
+1. "Find nearby bus stops" (with 2 hospitals selected):
+```sql
+SELECT * FROM vector.osm_transport_stops
+WHERE bus = 'yes' AND ST_DWithin(
+  geometry,
+  (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz),
+  500
+)
+```
+
+2. "What restaurants are within the selected areas?" (with 3 polygons selected):
+```sql
+SELECT DISTINCT r.* FROM vector.osm_restaurants r
+WHERE ST_Within(r.geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz))
+```
+
+3. "Count amenities by type in selected areas":
+```sql
+SELECT amenity, COUNT(*) FROM vector.osm_amenities
+WHERE ST_Within(geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz))
+GROUP BY amenity
+```
+
+**Important Notes:**
+- Temp tables from user selections ALWAYS need ST_Union() in subqueries
+- This is different from regular temp tables which might return single rows
+- The union creates a single geometry from ALL selected features
+- Queries then work with this combined geometry for proximity/containment checks
 
 **⚠️ LOCATION-ONLY QUERIES - CRITICAL RULE:**
 When user asks to "show <location>" or "display <location>" WITHOUT specifying any amenity/object:

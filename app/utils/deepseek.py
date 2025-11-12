@@ -35,12 +35,62 @@ SELECT * FROM vector.landmarks WHERE name = '<location>'
 - ✅ CORRECT: "show wedding" → SELECT * FROM vector.landmarks WHERE name = 'Wedding'
 - ✅ CORRECT: "show restaurants in wedding" → searches osm_restaurants
 
+**⚠️ MULTI-SELECT CONTEXT-AWARE QUERIES - CRITICAL RULE:**
 
+When users select multiple features on the map (via Shift+click), a temporary table is created:
+- **Table name pattern:** `temp.temp_selected_*` (session-based)
+- **Key difference:** May contain MULTIPLE rows (one per selected feature)
+- **Table structure:** `id`, `geometry` columns
 
+**CRITICAL: Always use ST_Union() for multi-select temp tables:**
+
+❌ WRONG:
+```sql
+SELECT * FROM osm_bus_stops t
+WHERE ST_DWithin(t.geometry, (SELECT geometry FROM temp.temp_selected_session_xyz), 500)
+```
+→ Error: "more than one row returned by a subquery"
+
+✅ CORRECT:
+```sql
+SELECT * FROM osm_bus_stops t
+WHERE ST_DWithin(t.geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz), 500)
+```
+
+**Multi-Select Query Examples:**
+
+1. "Find nearby bus stops" (with 2-3 hospitals selected):
+```sql
+SELECT * FROM vector.osm_transport_stops
+WHERE bus = 'yes' AND ST_DWithin(
+  geometry,
+  (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz),
+  500
+)
+```
+
+2. "What restaurants are within the selected areas?" (with polygons selected):
+```sql
+SELECT r.* FROM vector.osm_restaurants r
+WHERE ST_Within(r.geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz))
+```
+
+3. "Count amenities by type in selected areas":
+```sql
+SELECT amenity, COUNT(*) FROM vector.osm_amenities
+WHERE ST_Within(geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz))
+GROUP BY amenity
+```
+
+**Important Notes:**
+- Temp tables from user selections ALWAYS need ST_Union() in subqueries
+- The union creates a single geometry from ALL selected features
+- Queries then work with this combined geometry for proximity/containment checks
 
 **⚠️ GOLDEN RULE: Keep SQL queries SIMPLE and EFFICIENT**
 - Use simple JOINs and GROUP BY instead of complex CTEs or nested subqueries
-- Avoid ST_Union unless you're merging multiple results into one geometry
+- ALWAYS use ST_Union() for multi-select temp tables (temp.temp_selected_*) to avoid SQL errors
+- Use ST_Union() when merging multiple geometries into one
 - Don't add LIMIT unless user explicitly asks for a number
 - Don't add complex calculations (density, area, etc.) unless specifically asked
 - Always include geometry column for spatial visualization

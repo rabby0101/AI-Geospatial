@@ -5718,7 +5718,8 @@
                                feature.geometry.type;
 
             // Check if Shift key is pressed for multi-select
-            if (event && event.shiftKey) {
+            // Note: Leaflet 1.9.4 wraps native browser events, so shiftKey is under originalEvent
+            if (event && (event.shiftKey || event.originalEvent?.shiftKey)) {
                 // Multi-select mode: toggle feature
                 if (isFeatureSelected(feature)) {
                     removeFeatureFromSelection(feature);
@@ -5739,7 +5740,7 @@
 
             // Log for debugging
             console.log('👉 Feature interaction:', {
-                shiftKey: event?.shiftKey || false,
+                shiftKey: event?.shiftKey || event?.originalEvent?.shiftKey || false,
                 totalSelected: selectedFeatures.length,
                 geometry: feature.geometry.type,
                 properties: feature.properties
