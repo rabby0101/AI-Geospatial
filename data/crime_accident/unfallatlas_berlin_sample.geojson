@@ -1,0 +1,105 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.402,
+          52.525
+        ]
+      },
+      "properties": {
+        "year": 2023,
+        "month": 11,
+        "day": "Monday",
+        "hour": 14,
+        "accident_type": "car",
+        "severity": "injury",
+        "street": "Unter den Linden",
+        "district": "Mitte"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.388,
+          52.52
+        ]
+      },
+      "properties": {
+        "year": 2023,
+        "month": 10,
+        "day": "Wednesday",
+        "hour": 18,
+        "accident_type": "bicycle",
+        "severity": "injury",
+        "street": "Alexanderstra\u00dfe",
+        "district": "Mitte"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.41,
+          52.53
+        ]
+      },
+      "properties": {
+        "year": 2023,
+        "month": 9,
+        "day": "Friday",
+        "hour": 16,
+        "accident_type": "motorcycle",
+        "severity": "injury",
+        "street": "Karl-Liebknecht-Stra\u00dfe",
+        "district": "Mitte"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.395,
+          52.515
+        ]
+      },
+      "properties": {
+        "year": 2023,
+        "month": 8,
+        "day": "Saturday",
+        "hour": 20,
+        "accident_type": "car",
+        "severity": "injury",
+        "street": "Friedrichstra\u00dfe",
+        "district": "Mitte"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.405,
+          52.535
+        ]
+      },
+      "properties": {
+        "year": 2023,
+        "month": 7,
+        "day": "Tuesday",
+        "hour": 12,
+        "accident_type": "pedestrian",
+        "severity": "injury",
+        "street": "Oranienburger Stra\u00dfe",
+        "district": "Mitte"
+      }
+    }
+  ]
+}

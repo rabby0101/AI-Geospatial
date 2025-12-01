@@ -1,0 +1,78 @@
+{
+  "district": "Mitte",
+  "area_km2": 10.679026418608451,
+  "composite_risk_score": 88.6,
+  "risk_level": "GREEN - High Safety",
+  "component_scores": {
+    "lighting_visibility": 85,
+    "mobility_crowdedness": 95,
+    "connectivity_accessibility": 90,
+    "visibility_surveillance": 85,
+    "operational_safety": 88
+  },
+  "assessments": {
+    "A_Lighting": {
+      "assessment_area": "Lighting & Visibility",
+      "street_lights_count": 2316,
+      "findings": {
+        "total_street_lights": 2316,
+        "coverage_status": "GOOD",
+        "recommendation": "Street lighting well distributed across Mitte"
+      }
+    },
+    "B_Mobility": {
+      "assessment_area": "Mobility & Crowdedness",
+      "activity_nodes": {
+        "transport_stops": 548,
+        "restaurants": 618,
+        "parks": 99
+      },
+      "findings": {
+        "total_activity_pois": 1265,
+        "primary_hubs": [
+          "transport_stops",
+          "restaurants",
+          "parks"
+        ],
+        "recommendation": "High activity density - focus safety on major transport hubs"
+      }
+    },
+    "C_Safety_Risk": {
+      "status": "Data sources identified (Unfallatlas, Crime Atlas)"
+    },
+    "D_Connectivity": {
+      "assessment_area": "Connectivity & Accessibility",
+      "accessibility_metrics": {
+        "transport_accessibility": 548,
+        "hospital_proximity": 3,
+        "police_stations": 7
+      },
+      "findings": {
+        "connected_area_status": "EXCELLENT",
+        "emergency_coverage": "GOOD",
+        "recommendation": "Strong transport and healthcare connectivity across Mitte"
+      }
+    },
+    "E_Visibility": {
+      "assessment_area": "Visibility & Surveillance",
+      "buildings_analyzed": 20523,
+      "findings": {
+        "natural_surveillance_potential": "HIGH",
+        "ground_floor_activation": "GOOD - Commercial district with active facades",
+        "recommendation": "High ground-floor activation supports natural surveillance"
+      }
+    },
+    "F_Operational": {
+      "assessment_area": "Operational Safety",
+      "emergency_metrics": {
+        "emergency_missions": 41437,
+        "avg_response_time_seconds": 589
+      },
+      "findings": {
+        "emergency_response": "GOOD - Active emergency infrastructure",
+        "avg_response_time": "589 seconds",
+        "recommendation": "Coordinate with emergency services for pickup/dropoff locations"
+      }
+    }
+  }
+}

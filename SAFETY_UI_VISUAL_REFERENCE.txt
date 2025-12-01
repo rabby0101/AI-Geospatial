@@ -1,0 +1,280 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                   SAFETY ANALYSIS UI - VISUAL REFERENCE                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+LAYOUT OVERVIEW
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          SEARCH BAR & HEADER                                │
+│  [GeoAssist Logo]  [Search Input] [Search Button]  [Location]  [LLM]       │
+├─────────────────┬────────────────────────────────────────┬──────────────────┤
+│                 │                                        │                  │
+│  LAYERS PANEL   │                                        │  OPERATIONS      │
+│  (320px)        │          LEAFLET MAP                   │  PANEL (350px)   │
+│                 │          (CENTER)                      │                  │
+│ ┌─────────────┐ │                                        │ ┌──────────────┐ │
+│ │🛡️ Safety   │ │   ╔════════════════════════════════╗  │ │ Reasoning:   │ │
+│ │Analysis    │ │   ║  Orange outline (Mitte)        ║  │ │ Multi-step   │ │
+│ │GREEN ✓     │ │   ║                                 ║  │ │ spatial      │ │
+│ │88.6/100    │ │   ║  Gold dots (Street lights)     ║  │ │ analysis     │ │
+│ │            │ │   ║                                 ║  │ │              │ │
+│ │ Score: ███ │ │   ║  Red circles (Restaurants)      ║  │ │ Operations:  │ │
+│ │ 88/100     │ │   ║                                 ║  │ │ 1. Load      │ │
+│ │            │ │   ║  Cyan circles (Transport)       ║  │ │ 2. Analyze   │ │
+│ │ [✓] Lights │ │   ║                                 ║  │ │ 3. Visualize │ │
+│ │ [✓] Activity│ │   ║  Blue circles (Police)          ║  │ │              │ │
+│ │ [✓] Emergency│ │   ║                                 ║  │ │ Datasets:    │ │
+│ │ [   ] Build │ │   ║  Red+ circles (Hospitals)       ║  │ │ • OSM        │ │
+│ │            │ │   ║                                 ║  │ │ • Fire Dept  │ │
+│ │ Components: │ │   ║  Orange circles (Fire)          ║  │ │ • Police     │ │
+│ │ • Light: 85│ │   ║                                 ║  │ │              │ │
+│ │ • Mob:   95│ │   ║  Purple patches (Buildings)     ║  │ │ Exec Time:   │ │
+│ │ • Conn:  90│ │   ║                                 ║  │ │ 245ms        │ │
+│ │ • Vis:   85│ │   ║  Red X circles (Accidents)       ║  │ └──────────────┘ │
+│ │ • Ops:   88│ │   ╚════════════════════════════════╝  │                  │
+│ │            │ │                                        │                  │
+│ │ Crime      │ │   [Locate Me]  [Zoom Controls]        │                  │
+│ │ 2024:      │ │   [+] [-] [⊡] [⊕]                     │                  │
+│ │            │ │                                        │                  │
+│ │ Bike Theft │ │                                        │                  │
+│ │ 892 cases  │ │                                        │                  │
+│ │ 8,348/100k │ │                                        │                  │
+│ │            │ │                                        │                  │
+│ │ Mugging    │ │                                        │                  │
+│ │ 145 cases  │ │                                        │                  │
+│ │ 1,356/100k │ │                                        │                  │
+│ │            │ │                                        │                  │
+│ │ ... (+5)   │ │                                        │                  │
+│ │            │ │                                        │                  │
+│ └─────────────┘ │                                        │                  │
+│                 │                                        │                  │
+└─────────────────┴────────────────────────────────────────┴──────────────────┘
+
+
+DETAIL VIEW: SAFETY PANEL (TOP OF LAYERS)
+═══════════════════════════════════════════════════════════════════════════════
+
+┌───────────────────────────────────────────┐
+│  🛡️ Safety Analysis (Mitte)               │  ← Header with district name
+│  [GREEN - High Safety]                    │  ← Risk level badge
+├───────────────────────────────────────────┤
+│  Composite Risk Score: 88.6/100           │
+│  ████████████████████████░░░░             │  ← Progress bar visualization
+│  88.6%                                    │
+├───────────────────────────────────────────┤
+│  Layer Toggles:                           │
+│  [✓] 💡 Street Lighting (2,316)           │  ← Enabled by default
+│  [✓] 🚗 Activity Nodes (1,265)            │  ← Enabled by default
+│  [✓] 🚑 Emergency Services (14)           │  ← Enabled by default
+│  [  ] 🏢 Buildings                        │  ← Disabled by default
+├───────────────────────────────────────────┤
+│  Component Scores:                        │
+│  • Lighting & Visibility         85       │
+│  • Mobility & Crowdedness        95       │
+│  • Connectivity & Accessibility  90       │
+│  • Visibility & Surveillance     85       │
+│  • Operational Safety            88       │
+├───────────────────────────────────────────┤
+│  📌 Crime Statistics (2024)               │
+│  Total: 2,384 Cases                       │
+│                                           │
+│  Fahrraddiebstahl (Bike Theft)            │
+│  892 cases | 8,348/100k | ↔ stable       │
+│                                           │
+│  Raub (Mugging)                           │
+│  145 cases | 1,356/100k | ↑ up           │
+│                                           │
+│  Sachbeschädigung (Property Damage)       │
+│  567 cases | 5,306/100k | ↔ stable       │
+│                                           │
+│  Einbruch (Burglary)                      │
+│  312 cases | 2,919/100k | ↑ up           │
+│                                           │
+│  Rauschgiftdelikte (Drug Crimes)          │
+│  234 cases | 2,189/100k | ↓ down         │
+│                                           │
+│  Gewaltkriminalität (Violent Crime)       │
+│  156 cases | 1,459/100k | ↑ up           │
+│                                           │
+│  Kfz-Diebstahl (Car Theft)                │
+│  78 cases | 730/100k | ↔ stable          │
+└───────────────────────────────────────────┘
+
+
+MAP LEGEND
+═══════════════════════════════════════════════════════════════════════════════
+
+🔷 Orange Outline with Fill (semi-transparent)
+   → Mitte District Boundary
+   → Main analysis area
+
+💡 Gold Circles (small)
+   → Street Light Locations
+   → 1,000 sampled from 2,316 total
+   → Indicates lighting coverage
+
+🔴 Red Circles (medium)
+   → Restaurants & Cafes
+   → Activity nodes for crowdedness
+
+🟢 Cyan Circles (medium)
+   → Public Transport Stops
+   → Bus, Tram, Subway stations
+
+🟡 Light Green Circles (medium)
+   → Parks & Green Spaces
+   → Recreational areas
+
+🟥 Bright Red Circles (large, white outline)
+   → Hospitals
+   → Emergency medical facilities
+   → Larger to show priority
+
+🔵 Blue Circles (medium)
+   → Police Stations
+   → Law enforcement presence
+
+🟠 Orange Circles (medium)
+   → Fire Stations
+   → Emergency response points
+
+🟣 Purple Polygons (outlined)
+   → Building Footprints
+   → Ground-floor activation analysis
+   → Hidden by default
+
+🔴❌ Red Circles with X
+   → Traffic Accident Hotspots
+   → Shows location of incidents
+   → Click for details
+
+
+POPUP EXAMPLES (Click Features)
+═══════════════════════════════════════════════════════════════════════════════
+
+Street Light Popup:
+┌──────────────────┐
+│ Street Light     │
+└──────────────────┘
+
+Restaurant Popup:
+┌──────────────────────────────────┐
+│ Restaurant Name (e.g., Zur Post) │
+│ Type: restaurant                 │
+└──────────────────────────────────┘
+
+Hospital Popup:
+┌──────────────────────────────────────┐
+│ Charité Hospital                     │
+│ Type: hospital                       │
+└──────────────────────────────────────┘
+
+Transport Stop Popup:
+┌──────────────────────────────────┐
+│ Alexanderplatz Station           │
+│ Type: transport_stop             │
+└──────────────────────────────────┘
+
+Accident Popup:
+┌──────────────────────────────┐
+│ 🚗 CAR ACCIDENT              │
+│ Location: Unter den Linden   │
+│ Severity: injury             │
+│ Year: 2023                   │
+│ Month: 11                    │
+└──────────────────────────────┘
+
+
+INTERACTIVE CONTROLS
+═══════════════════════════════════════════════════════════════════════════════
+
+Left Panel Actions:
+─────────────────
+  [✓] Click checkbox to toggle layer visibility
+  [🎨] Click color circle to change layer color
+  [✕] Click X to remove layer from map
+  [📌] Double-click to zoom to layer bounds
+
+Map Actions:
+───────────
+  Click anywhere: Deselect current selection
+  Click feature: Show popup with details
+  Scroll wheel: Zoom in/out
+  Click-drag: Pan around map
+  Right-click: Show context menu (if enabled)
+
+Search Bar:
+──────────
+  Type natural language queries:
+  - "Show emergency services"
+  - "Find high-crime areas"
+  - "What's the safety score?"
+  - "Show lighting coverage"
+
+
+EXPECTED PERFORMANCE
+═══════════════════════════════════════════════════════════════════════════════
+
+Page Load:
+  Initial load time: ~2-3 seconds
+  
+Layer Loading:
+  Each layer appears: ~500ms-1s
+  All layers together: <2 seconds
+  
+Interaction:
+  Toggle visibility: Instant (<100ms)
+  Click popup: <200ms
+  Zoom animation: Smooth (60fps)
+
+Data Sizes:
+  Street lights: ~50KB
+  Activity nodes: ~40KB
+  Emergency services: ~5KB
+  Buildings: ~150KB
+  Accident data: <1KB
+
+Browser Memory:
+  Typical usage: 50-100MB
+  With all layers: ~200MB
+  
+
+TROUBLESHOOTING CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+If Safety Panel is Not Showing:
+  ✓ Server is running (check terminal)
+  ✓ Port 8000 is not blocked
+  ✓ Frontend HTML includes safety-layers.js
+  ✓ Browser console shows no errors (F12)
+  ✓ API responds: curl http://localhost:8000/api/safety/mitte/summary
+
+If Map Layers Not Appearing:
+  ✓ Checkboxes in safety panel are checked
+  ✓ Zoom level shows full Mitte (pan out if needed)
+  ✓ Browser console shows no "Failed to load" errors
+  ✓ API endpoints return data (check Network tab in F12)
+
+If Colors Look Different:
+  ✓ Hard refresh browser (Ctrl+Shift+R on Windows, Cmd+Shift+R on Mac)
+  ✓ Clear browser cache
+  ✓ Check CSS file is loaded (Network tab → safety-styles.css)
+
+If Popups Don't Appear:
+  ✓ Click directly on feature (not near it)
+  ✓ Check that feature's data is loaded
+  ✓ Try different feature type
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                    Ready to Explore Safety Analysis!
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Start server:    python -m uvicorn app.main:app --reload
+2. Open browser:    http://localhost:8000
+3. Explore map:     See all the colored layers and features
+4. Click features:  View detailed information in popups
+5. Toggle layers:   Show/hide different data types
+
+Enjoy! 🚀

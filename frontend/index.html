@@ -147,19 +147,15 @@
 
         #searchBtn {
             padding: 0.6rem 1.5rem;
-            background: rgba(var(--accent-primary-rgb), 0.85);
-            color: white;
+            background: rgba(var(--accent-blue-rgb), 0.85);
+            color: rgb(255, 255, 255);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 50px;
             font-size: 0.9rem;
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            -webkit-backdrop-filter: blur(15px);
-            backdrop-filter: blur(15px);
             box-shadow:
-                0 8px 16px rgba(var(--accent-primary-rgb), 0.25),
-                inset 0 1px 2px rgba(255, 255, 255, 0.4);
+                0 8px 16px rgba(var(--accent-blue-rgb), 0.25),
+                inset 0 1px 2px rgba(255, 255, 255, 0);
             position: relative;
             overflow: hidden;
             white-space: nowrap;
@@ -175,13 +171,12 @@
             left: 0;
             right: 0;
             height: 200%;
-            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
             pointer-events: none;
         }
 
         #searchBtn:hover:not(:disabled) {
             transform: translateY(-2px);
-            background: rgba(var(--accent-secondary-rgb), 0.95);
+            background: rgba(var(--accent-blue-rgb), 0.95);
             box-shadow: 0 12px 24px rgba(var(--accent-secondary-rgb), 0.3);
         }
 
@@ -261,17 +256,22 @@
             display: flex;
             flex: 1;
             overflow: hidden;
+            position: relative;
         }
 
         /* Left Layers Panel */
         .layers-panel {
             width: 320px;
-            background: rgba(26, 24, 37, 0.5);
+            height: calc(100vh - 80px);
+            background: rgba(26, 24, 37, 0.85);
             backdrop-filter: blur(25px) saturate(180%);
             border-right: 1.5px solid rgba(196, 195, 227, 0.2);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: absolute;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            z-index: 500;
         }
 
         .panel-header {
@@ -432,17 +432,19 @@
 
         /* Map */
         #map {
-            flex: 1;
+            width: 100%;
             height: 100%;
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         /* Locate Me Button */
         .locate-btn {
             position: absolute;
             bottom: 30px;
-            right: 20px;
-            z-index: 1000;
+            right: 400px;
+            z-index: 600;
             width: 44px;
             height: 44px;
             background: rgba(37, 32, 53, 0.75);
@@ -1211,16 +1213,21 @@
         /* Right Operations Panel */
         .operations-panel {
             width: 350px;
-            background: rgba(26, 24, 37, 0.6);
+            height: calc(100vh - 80px);
+            background: rgba(26, 24, 37, 0.85);
             backdrop-filter: blur(25px) saturate(180%);
             border-left: 2px solid rgba(196, 195, 227, 0.35);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: absolute;
+            right: 0;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            z-index: 500;
         }
 
         .operations-panel-hidden {
-            display: none;
+            display: none !important;
         }
 
         .operations-header {
@@ -1372,7 +1379,7 @@
 
         .leaflet-control-zoom-in,
         .leaflet-control-zoom-out {
-            color: #F1642E !important;
+            color: #ffffff !important;
             background: rgba(37, 32, 53, 0.8) !important;
             border: 1px solid rgba(var(--accent-primary-rgb), 0.3) !important;
         }
@@ -1384,14 +1391,13 @@
         }
 
         .leaflet-control-attribution {
-            background: rgba(37, 32, 53, 0.7) !important;
-            color: #b0b0b0 !important;
+    
             border: 1px solid rgba(196, 195, 227, 0.15) !important;
-            backdrop-filter: blur(10px) !important;
+            
         }
 
         .leaflet-control-attribution a {
-            color: #F1642E !important;
+            /
         }
 
         .leaflet-control-attribution a:hover {
@@ -2231,20 +2237,71 @@
         }
 
         .leaflet-control-scale-line {
-            background: rgba(var(--accent-primary-rgb), 0.6) !important;
-            border: 1.5px solid rgba(var(--accent-primary-rgb), 0.8) !important;
-            border-top: none !important;
-            color: #f5f5f5 !important;
+            
             font-size: 0.85rem !important;
+            color: black !important;
         }
 
         .leaflet-control-scale-line:not(:last-child) {
-            border-bottom: 1.5px solid rgba(var(--accent-primary-rgb), 0.8) !important;
             margin-bottom: 4px !important;
         }
 
+        /* Directions Panel Styling */
+        #directionsPanel {
+            position: fixed;
+            right: 0;
+            top: 120px;
+            width: 350px;
+            max-height: calc(100vh - 140px);
+            background: linear-gradient(135deg, rgba(15, 13, 26, 0.95) 0%, rgba(37, 31, 53, 0.95) 100%);
+            border: 1px solid rgba(241, 100, 46, 0.3);
+            border-left: 2px solid #F1642E;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(25px);
+            z-index: 999;
+            overflow: hidden;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        #directionsPanel > div {
+            height: 100%;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(241, 100, 46, 0.4) transparent;
+        }
+
+        #directionsPanel > div::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #directionsPanel > div::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #directionsPanel > div::-webkit-scrollbar-thumb {
+            background: rgba(241, 100, 46, 0.4);
+            border-radius: 3px;
+        }
+
+        #directionsPanel > div::-webkit-scrollbar-thumb:hover {
+            background: rgba(241, 100, 46, 0.6);
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
     </style>
-</head>
+    <link rel="stylesheet" href="/static/css/safety-styles.css">
+    </head>
 <body>
     <!-- Top Search Bar -->
     <div class="search-header">
@@ -2302,7 +2359,7 @@
             </div>
 
             <!-- Right Operations Panel -->
-            <div class="operations-panel operations-panel-hidden" id="operationsPanel">
+            <div class="operations-panel" id="operationsPanel">
                 <div class="operations-header">
                     <div id="operationsTitle">Operations</div>
                 </div>
@@ -2386,8 +2443,8 @@
 
                 <div class="style-option">
                     <label>Fill Opacity</label>
-                    <input type="range" id="fillOpacity" min="0" max="1" step="0.1" class="style-slider" value="0.3">
-                    <span class="slider-value" id="fillOpacityValue">0.3</span>
+                    <input type="range" id="fillOpacity" min="0" max="1" step="0.1" class="style-slider" value="0.8">
+                    <span class="slider-value" id="fillOpacityValue">0.8</span>
                 </div>
 
                 <div class="style-option">
@@ -3069,6 +3126,76 @@
             ).join(' ');
         }
 
+        // Show directions panel for routing
+        function showDirectionsPanel(directions, waypoints, layerName) {
+            // Create or update directions panel
+            let directionsPanel = document.getElementById('directionsPanel');
+
+            if (!directionsPanel) {
+                // Create panel if it doesn't exist
+                directionsPanel = document.createElement('div');
+                directionsPanel.id = 'directionsPanel';
+                directionsPanel.className = 'operations-panel';
+                directionsPanel.style.right = '0px';
+                directionsPanel.style.top = '120px';
+                directionsPanel.style.width = '350px';
+                directionsPanel.style.zIndex = '999';
+                directionsPanel.innerHTML = `
+                    <div style="padding: 15px; color: white; height: 100%;">
+                        <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>📍 Directions</span>
+                            <button onclick="closeDirectionsPanel()" style="background: none; border: none; color: #F1642E; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+                        </div>
+                        <div id="directionsContent" style="max-height: 500px; overflow-y: auto; font-size: 13px; line-height: 1.6;"></div>
+                    </div>
+                `;
+                document.body.appendChild(directionsPanel);
+            }
+
+            // Populate directions with waypoints summary at top
+            const directionsContent = document.getElementById('directionsContent');
+            let html = '';
+
+            // Add waypoints summary
+            if (waypoints && waypoints.length > 0) {
+                html += '<div style="margin-bottom: 15px; padding: 10px; background: rgba(241, 100, 46, 0.1); border-left: 3px solid #F1642E; border-radius: 4px;">';
+                html += '<strong>📍 Waypoints:</strong><br>';
+                waypoints.forEach((wp, idx) => {
+                    html += `<div style="margin: 5px 0; font-size: 12px;">
+                        ${wp.order}. <strong>${wp.name}</strong>
+                        ${wp.arrival_distance_m ? `<span style="float: right; color: #aaa;">+${Math.round(wp.arrival_distance_m)}m</span>` : ''}
+                    </div>`;
+                });
+                html += '</div>';
+            }
+
+            // Add step-by-step directions
+            html += '<div><strong>📋 Turn-by-Turn:</strong><ol style="padding-left: 20px; margin: 10px 0;">';
+
+            directions.forEach((step, idx) => {
+                const bgColor = idx % 2 === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0)';
+                html += `
+                    <li style="background: ${bgColor}; padding: 8px; margin: 4px 0; border-radius: 4px;">
+                        <strong>${step.instruction}</strong>
+                        ${step.street ? `<br><small>🛣️ ${step.street}</small>` : ''}
+                        ${step.distance_m > 0 ? `<br><small>📏 ${Math.round(step.distance_m)}m` : ''}
+                        ${step.duration_seconds ? ` (~${Math.round(step.duration_seconds / 60)}min)</small>` : ''}
+                    </li>
+                `;
+            });
+
+            html += '</ol></div>';
+            directionsContent.innerHTML = html;
+        }
+
+        // Close directions panel
+        function closeDirectionsPanel() {
+            const panel = document.getElementById('directionsPanel');
+            if (panel) {
+                panel.remove();
+            }
+        }
+
         // Add layer to map and panel
         function addLayer(name, geojsonData, query, operations = null, reasoning = null, datasetsUsed = null, metadata = null, executionTime = null, layerId = null, parentLayers = null) {
             const numericId = ++layerIdCounter;
@@ -3082,7 +3209,7 @@
             const defaultStyle = {
                 fillColor: layerColor,
                 borderColor: '#ffffff',
-                fillOpacity: 0.3,
+                fillOpacity: 0.8,
                 borderWidth: 2,
                 iconColor: layerColor,
                 selectedIcon: null,
@@ -4015,7 +4142,7 @@
             const style = layerInfo.style || {
                 fillColor: '#FF6B6B',
                 borderColor: '#ffffff',
-                fillOpacity: 0.3,
+                fillOpacity: 0.8,
                 borderWidth: 2,
                 iconColor: '#FF6B6B',
                 selectedIcon: null,
@@ -4028,9 +4155,9 @@
             // Set basic tab values
             document.getElementById('fillColor').value = style.fillColor || '#FF6B6B';
             document.getElementById('borderColor').value = style.borderColor || '#ffffff';
-            document.getElementById('fillOpacity').value = style.fillOpacity || 0.3;
+            document.getElementById('fillOpacity').value = style.fillOpacity || 0.8;
             document.getElementById('borderWidth').value = style.borderWidth || 2;
-            document.getElementById('fillOpacityValue').textContent = (style.fillOpacity || 0.3).toFixed(1);
+            document.getElementById('fillOpacityValue').textContent = (style.fillOpacity || 0.8).toFixed(1);
             document.getElementById('borderWidthValue').textContent = style.borderWidth || 2;
 
             // Set icon name input and preview
@@ -5592,7 +5719,17 @@
         // Add a feature to the selection
         function addFeatureToSelection(feature, layer) {
             if (!isFeatureSelected(feature)) {
-                selectedFeatures.push(feature);
+                // Ensure feature has full structure for routing
+                const selectedFeature = {
+                    geometry: feature.geometry,
+                    properties: feature.properties || {},
+                    name: feature.properties?.name ||
+                          feature.properties?.amenity ||
+                          feature.name ||
+                          `Point ${selectedFeatures.length + 1}`
+                };
+
+                selectedFeatures.push(selectedFeature);
                 selectedFeatureLayers.push(layer);
                 selectedFeatureGeometries.push(geometryToWKT(feature.geometry));
 
@@ -5928,6 +6065,99 @@
             setLoading(true, 'Processing...');
 
             try {
+                // Check for routing query
+                const routingKeywords = ['route', 'directions', 'navigate', 'routing', 'path', 'journey', 'tour', 'visit', 'loop', 'best route', 'find route'];
+                const isRoutingQuery = routingKeywords.some(keyword => query.toLowerCase().includes(keyword));
+                const hasSelectedFeatures = selectedFeatures && selectedFeatures.length >= 2;
+
+                // If routing query with 2+ selected features, call routing endpoint directly
+                if (isRoutingQuery && hasSelectedFeatures) {
+                    console.log(`🛣️  Routing query detected with ${selectedFeatures.length} selected features`);
+
+                    try {
+                        const payload = {
+                            geometries: selectedFeatures.map(f => f.geometry),
+                            feature_names: selectedFeatures.map(f => {
+                                if (f.properties && f.properties.name) return f.properties.name;
+                                if (f.name) return f.name;
+                                return `Point ${selectedFeatures.indexOf(f) + 1}`;
+                            })
+                        };
+
+                        console.log('🛣️  Routing payload:', payload);
+
+                        const response = await fetch(`${API_URL}/routing/optimal-tour`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const routingData = await response.json();
+                        console.log('🛣️  Routing response:', routingData);
+
+                        if (routingData.success) {
+                            // Create GeoJSON FeatureCollection
+                            const geojson = {
+                                type: 'FeatureCollection',
+                                features: [{
+                                    type: 'Feature',
+                                    geometry: routingData.geometry,
+                                    properties: {
+                                        total_distance_m: routingData.total_distance_m,
+                                        total_time_minutes: routingData.total_time_minutes,
+                                        waypoint_count: routingData.waypoints.length,
+                                        route_type: 'optimal_tour'
+                                    }
+                                }]
+                            };
+
+                            // Clear previous layers in single mode
+                            if (queryMode === 'single') {
+                                clearAllQueries();
+                            }
+
+                            // Add route layer
+                            const layerName = routingData.layer_name || 'optimal_route';
+                            addLayer(
+                                layerName,
+                                geojson,
+                                query,
+                                [],
+                                routingData.reasoning || 'Computed optimal route visiting all selected locations',
+                                ['routing.ways', 'routing.ways_vertices_pgr'],
+                                routingData.metadata,
+                                routingData.execution_time_ms / 1000
+                            );
+
+                            // Show directions panel with waypoints and directions
+                            if (routingData.directions && routingData.directions.length > 0) {
+                                showDirectionsPanel(routingData.directions, routingData.waypoints, layerName);
+                            }
+
+                            const distanceKm = (routingData.total_distance_m / 1000).toFixed(1);
+                            showNotification(`✅ Route computed: ${distanceKm}km (${routingData.total_time_minutes}min)`, 'success');
+
+                            // Clear selected features after routing
+                            clearAllSelections();
+                            setLoading(false);
+                            searchBtn.disabled = false;
+                            return; // Exit early - routing handled
+                        } else {
+                            showNotification(routingData.error || 'Routing failed', 'error');
+                            setLoading(false);
+                            searchBtn.disabled = false;
+                            return;
+                        }
+
+                    } catch (error) {
+                        console.error('Routing error:', error);
+                        showNotification('Error computing route: ' + error.message, 'error');
+                        setLoading(false);
+                        searchBtn.disabled = false;
+                        return;
+                    }
+                }
+
                 // Get selected LLM provider
                 const llmProvider = getSelectedLLMProvider();
                 console.log(`🧠 Using LLM: ${llmProvider.toUpperCase()}`);
@@ -6223,5 +6453,6 @@
         // Uncomment the next line to automatically locate user when page loads
         // window.addEventListener('load', () => setTimeout(locateUser, 1000));
     </script>
+    <script src="/static/js/safety-layers.js"></script>
 </body>
 </html>

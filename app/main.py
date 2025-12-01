@@ -8,8 +8,9 @@ import os
 from app.routes import query_router
 from app.routes.raster import router as raster_router
 from app.routes.dem_query import router as dem_router
-from app.routes.location_suitability import router as location_router
 from app.routes.database import router as database_router
+from app.routes.routing import router as routing_router
+from app.routes.safety import router as safety_router
 from app.utils.database import db_manager
 from app.utils.auto_discovery import auto_discovery
 
@@ -78,8 +79,9 @@ async def shutdown_event():
 app.include_router(query_router)
 app.include_router(raster_router)  # NDVI, terrain, land cover endpoints
 app.include_router(dem_router)  # DEM (Digital Elevation Model) endpoints
-app.include_router(location_router)  # Location optimization endpoints
 app.include_router(database_router)  # Database metadata and schema endpoints
+app.include_router(routing_router)  # Road routing and connectivity endpoints
+app.include_router(safety_router)  # Safety analysis endpoints
 
 
 # Serve static files (dashboards, assets)

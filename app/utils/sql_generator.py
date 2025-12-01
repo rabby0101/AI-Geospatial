@@ -8,6 +8,10 @@ from app.models.query_model import GeospatialOperation, OperationPlan
 import geopandas as gpd
 from app.utils.database import db_manager
 from app.utils.sql_validator import validate_and_fix_sql
+from shapely.ops import unary_union
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SQLQueryGenerator:
@@ -19,6 +23,7 @@ class SQLQueryGenerator:
     def execute_plan(self, plan: OperationPlan) -> gpd.GeoDataFrame:
         """
         Execute an operation plan by translating to SQL and running in PostGIS.
+        Supports intermediate result storage for multi-step operations.
 
         Args:
             plan: OperationPlan with operations
@@ -27,8 +32,18 @@ class SQLQueryGenerator:
             GeoDataFrame with results
         """
         result_gdf = None
+        # Store intermediate results for multi-step operations (e.g., union result referenced by difference)
+        stored_results = {}
 
-        for operation in plan.operations:
+        for i, operation in enumerate(plan.operations):
+            logger.info(f"Executing operation {i+1}/{len(plan.operations)}: {operation.operation}")
+
+            # Some operations may reference previous stored results
+            operation_context = {
+                'stored_results': stored_results,
+                'operation_index': i
+            }
+
             if operation.operation == "load":
                 result_gdf = self._execute_load(operation)
             elif operation.operation == "spatial_query":
@@ -39,6 +54,14 @@ class SQLQueryGenerator:
                 result_gdf = self._execute_buffer(operation, result_gdf)
             elif operation.operation == "intersection":
                 result_gdf = self._execute_intersection(operation, result_gdf)
+            elif operation.operation == "union":
+                result_gdf = self._execute_union(operation, result_gdf)
+                # Store union result for reference by subsequent operations (e.g., difference)
+                if result_gdf is not None:
+                    stored_results[f'union_{i}'] = result_gdf
+                    logger.info(f"✅ Union result stored as 'union_{i}' ({len(result_gdf)} row(s))")
+            elif operation.operation == "difference":
+                result_gdf = self._execute_difference(operation, result_gdf, operation_context)
             elif operation.operation == "filter":
                 result_gdf = self._execute_filter(operation, result_gdf)
             elif operation.operation == "aggregate":
@@ -235,9 +258,142 @@ class SQLQueryGenerator:
         result = gpd.overlay(gdf, other_gdf, how='intersection')
         return result
 
+    def _execute_union(self, operation: GeospatialOperation, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        """
+        Execute union operation - merge all geometries into single geometry or dissolve by attribute.
+        Used for creating coverage zones (e.g., buffer union for competitor analysis).
+
+        Parameters:
+            - merge_all: bool (default True) - merge all geometries into one
+            - dissolve_by: str (optional) - column to group by before union
+            - preserve_crs: bool (default True) - keep original CRS
+
+        Returns:
+            GeoDataFrame with unioned geometries (preserved in original CRS)
+        """
+        if gdf is None:
+            raise ValueError("No data to union")
+
+        merge_all = operation.parameters.get("merge_all", True)
+        dissolve_by = operation.parameters.get("dissolve_by")
+        preserve_crs = operation.parameters.get("preserve_crs", True)
+
+        # Preserve CRS
+        original_crs = gdf.crs
+        logger.info(f"Union operation: {len(gdf)} geometries in {original_crs}")
+
+        if dissolve_by and dissolve_by in gdf.columns:
+            # Union by attribute (dissolve)
+            logger.info(f"Dissolving by column: {dissolve_by}")
+            result = gdf.dissolve(by=dissolve_by, as_index=False)
+        elif merge_all:
+            # Union all geometries into single geometry
+            # Create single merged geometry
+            merged_geom = unary_union(gdf.geometry)
+            logger.info(f"Merged {len(gdf)} geometries into 1 unified geometry")
+
+            # Create new GeoDataFrame with single row
+            result = gpd.GeoDataFrame(
+                {'geometry': [merged_geom]},
+                crs=original_crs
+            )
+
+            # Preserve metadata if exists
+            if hasattr(gdf, 'metadata'):
+                result.metadata = gdf.metadata.copy()
+                result.metadata['union_count'] = len(gdf)
+            else:
+                result.metadata = {'union_count': len(gdf)}
+
+            logger.info(f"Union result: 1 geometry, CRS: {result.crs}")
+        else:
+            result = gdf
+
+        return result
+
+    def _execute_difference(self, operation: GeospatialOperation, gdf: gpd.GeoDataFrame, context: Dict[str, Any] = None) -> gpd.GeoDataFrame:
+        """
+        Execute difference operation - subtract one geometry from another.
+        Used for site selection: study_area - exclusion_zones = suitable_areas.
+
+        Parameters:
+            - subtract_dataset: str - dataset name to load and subtract from current gdf
+            - subtract_from_index: int (optional) - reference previous operation result (e.g., union result) by index
+            - min_area: float (optional) - minimum area in square meters for resulting polygons
+
+        Returns:
+            GeoDataFrame with difference geometries (suitable areas)
+        """
+        if gdf is None:
+            raise ValueError("No data to perform difference operation")
+
+        context = context or {}
+        stored_results = context.get('stored_results', {})
+
+        # Try to find the layer to subtract - could be from database or from previous operation
+        subtract_dataset = operation.parameters.get("subtract_dataset")
+        subtract_from_index = operation.parameters.get("subtract_from_index")
+
+        subtract_gdf = None
+
+        # First, check if referencing a previous operation result
+        if subtract_from_index is not None:
+            key = f'union_{subtract_from_index}'
+            if key in stored_results:
+                subtract_gdf = stored_results[key]
+                logger.info(f"Using previous operation result: {key}")
+            else:
+                # Try other keys (for flexibility)
+                for stored_key, stored_val in stored_results.items():
+                    if str(subtract_from_index) in stored_key:
+                        subtract_gdf = stored_val
+                        logger.info(f"Using stored result: {stored_key}")
+                        break
+
+        # If not found in stored results, try to load from dataset
+        if subtract_gdf is None and subtract_dataset:
+            subtract_gdf = db_manager.load_vector_from_db(subtract_dataset, schema=self.schema)
+            logger.info(f"Loaded subtract layer from database: {subtract_dataset}")
+
+        if subtract_gdf is None:
+            raise ValueError("No subtract layer found - specify either subtract_dataset or subtract_from_index")
+
+        # Ensure same CRS - convert both to 3857 for proper area calculations
+        if gdf.crs and gdf.crs.is_geographic:
+            gdf = gdf.to_crs("EPSG:3857")
+
+        if subtract_gdf.crs and subtract_gdf.crs.is_geographic:
+            subtract_gdf = subtract_gdf.to_crs("EPSG:3857")
+
+        if gdf.crs != subtract_gdf.crs:
+            subtract_gdf = subtract_gdf.to_crs(gdf.crs)
+
+        logger.info(f"Performing difference operation: {len(gdf)} geometries - {len(subtract_gdf)} geometries")
+
+        # Perform difference using overlay
+        result = gpd.overlay(gdf, subtract_gdf, how='difference')
+        logger.info(f"Difference result: {len(result)} geometries")
+
+        # Filter by minimum area if specified
+        min_area = operation.parameters.get("min_area")
+        if min_area:
+            # Already in projected CRS (3857)
+            result = result[result.geometry.area >= min_area]
+            logger.info(f"After min_area filter ({min_area} m²): {len(result)} geometries remain")
+
+        # Convert back to 4326 for GeoJSON compatibility
+        if result.crs and result.crs != "EPSG:4326":
+            result = result.to_crs("EPSG:4326")
+
+        return result
+
     def _execute_filter(self, operation: GeospatialOperation, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         """
         Filter features by attribute.
+        Supports:
+        - Standard column filtering (==, >, <, contains)
+        - Brand/name filtering (name_contains for OSM name field)
+        - Area filtering (min_area for polygon size)
         """
         if gdf is None:
             raise ValueError("No data to filter")
@@ -246,6 +402,7 @@ class SQLQueryGenerator:
         value = operation.parameters.get("value")
         operator = operation.parameters.get("operator", "==")
 
+        # Standard column filtering
         if column and value:
             if operator == "==":
                 gdf = gdf[gdf[column] == value]
@@ -255,6 +412,23 @@ class SQLQueryGenerator:
                 gdf = gdf[gdf[column] < value]
             elif operator == "contains":
                 gdf = gdf[gdf[column].str.contains(value, case=False, na=False)]
+
+        # Brand/name filtering (case-insensitive partial match)
+        name_filter = operation.parameters.get("name_contains")
+        if name_filter and 'name' in gdf.columns:
+            gdf = gdf[gdf['name'].str.contains(name_filter, case=False, na=False)]
+            logger.info(f"Filtered by name containing '{name_filter}': {len(gdf)} features remaining")
+
+        # Area filtering (minimum polygon area)
+        min_area = operation.parameters.get("min_area")
+        if min_area:
+            # Ensure projected CRS for area calculation
+            if gdf.crs and gdf.crs.is_geographic:
+                temp_gdf = gdf.to_crs("EPSG:3857")
+                gdf = gdf[temp_gdf.geometry.area >= min_area]
+            else:
+                gdf = gdf[gdf.geometry.area >= min_area]
+            logger.info(f"Filtered by min_area >= {min_area} m²: {len(gdf)} features remaining")
 
         return gdf
 

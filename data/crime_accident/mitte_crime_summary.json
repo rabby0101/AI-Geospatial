@@ -1,0 +1,48 @@
+{
+  "district": "Mitte",
+  "year": 2024,
+  "crime_types": [
+    {
+      "crime_category": "Raub (Mugging)",
+      "reported_cases": 145,
+      "rate_per_100k": 1356,
+      "trend": "up"
+    },
+    {
+      "crime_category": "Fahrraddiebstahl (Bike Theft)",
+      "reported_cases": 892,
+      "rate_per_100k": 8348,
+      "trend": "stable"
+    },
+    {
+      "crime_category": "Rauschgiftdelikte (Drug Crimes)",
+      "reported_cases": 234,
+      "rate_per_100k": 2189,
+      "trend": "down"
+    },
+    {
+      "crime_category": "Einbruch (Burglary)",
+      "reported_cases": 312,
+      "rate_per_100k": 2919,
+      "trend": "up"
+    },
+    {
+      "crime_category": "Kfz-Diebstahl (Car Theft)",
+      "reported_cases": 78,
+      "rate_per_100k": 730,
+      "trend": "stable"
+    },
+    {
+      "crime_category": "Gewaltkriminalit\u00e4t (Violent Crime)",
+      "reported_cases": 156,
+      "rate_per_100k": 1459,
+      "trend": "up"
+    },
+    {
+      "crime_category": "Sachbesch\u00e4digung (Property Damage)",
+      "reported_cases": 567,
+      "rate_per_100k": 5306,
+      "trend": "stable"
+    }
+  ]
+}

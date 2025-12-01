@@ -8,6 +8,7 @@ class OperationType(str, Enum):
     LOAD = "load"
     SPATIAL_QUERY = "spatial_query"  # Direct PostGIS SQL query
     RASTER_ANALYSIS = "raster_analysis"  # For NDVI, DEM, land cover analysis
+    ROUTING = "routing"  # Road network routing and connectivity analysis
     BUFFER = "buffer"
     CLIP = "clip"
     INTERSECTION = "intersection"
@@ -124,3 +125,36 @@ class DatasetInfo(BaseModel):
     bounds: Optional[List[float]] = None
     temporal_range: Optional[Dict[str, str]] = None
     tags: List[str] = Field(default_factory=list)
+
+
+class DirectionStep(BaseModel):
+    """Single step in turn-by-turn directions"""
+    step: int
+    instruction: str
+    street: Optional[str] = None
+    distance_m: float = 0.0
+    duration_seconds: Optional[float] = None
+
+
+class Waypoint(BaseModel):
+    """Waypoint in optimal tour"""
+    order: int
+    name: str
+    lat: float
+    lon: float
+    arrival_distance_m: Optional[float] = None
+
+
+class RoutingResult(BaseModel):
+    """Result of optimal tour routing"""
+    success: bool
+    geometry: Dict[str, Any] = Field(..., description="GeoJSON LineString of the route")
+    total_distance_m: float
+    total_time_minutes: Optional[float] = None
+    waypoints: List[Waypoint] = Field(default_factory=list)
+    directions: List[DirectionStep] = Field(default_factory=list)
+    optimal_sequence: List[int] = Field(default_factory=list, description="Order of visited waypoints")
+    layer_name: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    execution_time_ms: Optional[float] = None
+    error: Optional[str] = None

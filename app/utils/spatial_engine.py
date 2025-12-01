@@ -28,7 +28,7 @@ class SpatialEngine:
 
     def execute_plan(self, plan: OperationPlan) -> Dict[str, Any]:
         """
-        Execute operation plan using PostGIS SQL.
+        Execute operation plan using PostGIS SQL or specialized routing.
 
         Args:
             plan: OperationPlan with SQL operations from DeepSeek
@@ -37,6 +37,11 @@ class SpatialEngine:
             Dictionary with GeoJSON results
         """
         try:
+            # Check for routing operations first
+            routing_op = next((op for op in plan.operations if op.operation == "routing"), None)
+            if routing_op:
+                return self._execute_routing_operation(routing_op, plan)
+
             # Execute SQL operations via sql_generator
             result_gdf = sql_generator.execute_plan(plan)
 
@@ -242,6 +247,157 @@ class SpatialEngine:
             return {
                 "error": str(e),
                 "success": False,
+                "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+            }
+
+    def _execute_routing_operation(self, routing_op, plan: OperationPlan) -> Dict[str, Any]:
+        """
+        Execute a routing operation to find shortest paths or optimal tours.
+
+        Supports two modes:
+        1. "pairwise": Find all pairwise shortest paths between selected features
+        2. "optimal_tour": Find single optimal tour connecting all features (closed loop)
+
+        Args:
+            routing_op: GeospatialOperation with type "routing"
+            plan: OperationPlan for context and metadata
+
+        Returns:
+            Dictionary with route geometries as GeoJSON
+        """
+        try:
+            from app.utils.database import db_manager
+
+            params = routing_op.parameters
+            geometries = params.get("geometries", [])
+            feature_names = params.get("feature_names", [])
+            mode = params.get("mode", "pairwise")  # Default to pairwise for backward compatibility
+
+            if not geometries or len(geometries) < 2:
+                return {
+                    "success": False,
+                    "error": "Need at least 2 geometries for routing",
+                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                }
+
+            logger.info(f"🛣️  Computing {mode} routes for {len(geometries)} features")
+
+            # Route computation based on mode
+            if mode == "optimal_tour":
+                # Compute optimal tour (single route visiting all points)
+                result = db_manager.compute_optimal_tour(geometries, feature_names)
+
+                if not result.get("success"):
+                    return {
+                        "success": False,
+                        "error": result.get("error", "Optimal tour computation failed"),
+                        "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                    }
+
+                # Convert result to GeoJSON with waypoints and directions
+                feature = {
+                    "type": "Feature",
+                    "geometry": result.get("geometry"),
+                    "properties": {
+                        "route_type": "optimal_tour",
+                        "total_distance_m": result.get("total_distance_m", 0),
+                        "total_distance_km": round(result.get("total_distance_m", 0) / 1000, 2),
+                        "total_time_minutes": result.get("total_time_minutes"),
+                        "waypoint_count": len(result.get("waypoints", [])),
+                        "algorithm": "Nearest Neighbor TSP",
+                        "road_network": "Berlin Detailnetz"
+                    }
+                }
+
+                geojson = {
+                    "type": "FeatureCollection",
+                    "features": [feature]
+                }
+
+                # Include waypoints and directions in metadata
+                metadata = {
+                    "algorithm": "Nearest Neighbor TSP",
+                    "road_network": "Berlin Detailnetz",
+                    "total_distance_m": round(result.get("total_distance_m", 0), 2),
+                    "total_distance_km": round(result.get("total_distance_m", 0) / 1000, 2),
+                    "total_time_minutes": result.get("total_time_minutes"),
+                    "waypoints": result.get("waypoints", []),
+                    "directions": result.get("directions", []),
+                    "optimal_sequence": result.get("optimal_sequence", []),
+                    "feature_count": result.get("metadata", {}).get("feature_count", 0),
+                    "waypoint_count": result.get("metadata", {}).get("waypoint_count", 0)
+                }
+
+                return {
+                    "success": True,
+                    "result_type": "routing",
+                    "data": geojson,
+                    "layer_name": result.get("layer_name", "optimal_route"),
+                    "metadata": metadata,
+                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                }
+
+            else:  # pairwise mode (default)
+                # Compute pairwise shortest paths
+                result = db_manager.compute_pairwise_shortest_paths(geometries)
+
+                if not result.get("success"):
+                    return {
+                        "success": False,
+                        "error": result.get("error", "Routing computation failed"),
+                        "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                    }
+
+                # Convert routes to GeoJSON FeatureCollection
+                routes = result.get("routes", [])
+                features = []
+
+                for route_idx, route in enumerate(routes):
+                    feature = {
+                        "type": "Feature",
+                        "geometry": route.get("route_geometry"),
+                        "properties": {
+                            "route_id": route_idx + 1,
+                            "from_name": route.get("from_name", f"Item {route.get('from_index', 0) + 1}"),
+                            "to_name": route.get("to_name", f"Item {route.get('to_index', 1) + 1}"),
+                            "from_index": route.get("from_index"),
+                            "to_index": route.get("to_index"),
+                            "distance_m": round(route.get("distance_m", 0), 2),
+                            "distance_km": round(route.get("distance_m", 0) / 1000, 2)
+                        }
+                    }
+                    features.append(feature)
+
+                geojson = {
+                    "type": "FeatureCollection",
+                    "features": features
+                }
+
+                metadata = {
+                    "count": len(features),
+                    "total_distance_m": round(result.get("total_distance_m", 0), 2),
+                    "total_distance_km": round(result.get("total_distance_m", 0) / 1000, 2),
+                    "route_count": result.get("route_count", 0),
+                    "feature_count": result.get("feature_count", 0),
+                    "algorithm": "Dijkstra (pgRouting)",
+                    "road_network": "Berlin Detailnetz (43,420 segments, 30,922 vertices)"
+                }
+
+                return {
+                    "success": True,
+                    "result_type": "routing",
+                    "data": geojson,
+                    "metadata": metadata,
+                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                }
+
+        except Exception as e:
+            logger.error(f"Error in _execute_routing_operation: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                "success": False,
+                "error": str(e),
                 "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
             }
 

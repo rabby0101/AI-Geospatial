@@ -35,6 +35,45 @@ SELECT * FROM vector.landmarks WHERE name = '<location>'
 - ✅ CORRECT: "show wedding" → SELECT * FROM vector.landmarks WHERE name = 'Wedding'
 - ✅ CORRECT: "show restaurants in wedding" → searches osm_restaurants
 
+**⚠️ ROUTING QUERIES - OPTIMAL TOUR DETECTION:**
+
+When user asks "find the best route", "find a route", "directions", "navigate", "routing", or "plan a route":
+→ User has selected 2+ map features (via Shift+click)
+→ Create a ROUTING operation to find optimal tour connecting all selected features
+
+**ROUTING OPERATION FORMAT:**
+```json
+{
+  "operations": [
+    {
+      "operation": "routing",
+      "parameters": {
+        "geometries": [selected feature geometries in GeoJSON],
+        "feature_names": [names of selected features],
+        "mode": "optimal_tour"
+      },
+      "description": "Find optimal tour connecting selected features"
+    }
+  ],
+  "reasoning": "Computing optimal route through all selected locations using Nearest Neighbor TSP algorithm",
+  "datasets_required": ["routing.ways", "routing.ways_vertices_pgr"],
+  "layer_name": "optimal_route"
+}
+```
+
+**IMPORTANT - Extract from Context:**
+- User's selected feature geometries are passed in the `selected_feature` context parameter
+- Extract geometry and name from the selected features provided
+- DO NOT generate SQL queries for routing - the backend API handles pgRouting
+
+**Example:**
+- User selects: Hospital A (Point), School B (Point), Park C (Point) with Shift+click
+- User asks: "Find the best route"
+- Response: Create ROUTING operation with all 3 geometries, backend computes optimal closed tour (A→B→C→A)
+
+**Routing Keywords:**
+- "find the best route", "find a route", "directions", "navigate", "routing", "plan a route", "path", "journey", "tour", "visit", "loop"
+
 **⚠️ MULTI-SELECT CONTEXT-AWARE QUERIES - CRITICAL RULE:**
 
 When users select multiple features on the map (via Shift+click), a temporary table is created:
@@ -430,6 +469,86 @@ This prevents SQL "more than one row returned" errors when there are duplicate l
 - ✅ Eliminates guessing (knows exact type of each location)
 - ✅ Works for 12,853 named locations across Berlin
 
+**⭐ STREET LIGHT ANALYSIS - Unlit Roads Detection:**
+
+**Overview:**
+Users can analyze street lighting coverage with two-level buffering:
+1. **Lighting threshold:** 20m (default distance to consider a road "lit")
+2. **Analysis area:** User-specified buffer (e.g., 500m around selected feature)
+
+**Key Tables:**
+- `vector.osm_street_lights` (43,420 street light locations)
+- `vector.detailnetz_road_segments` (43,420 road segments in Berlin)
+
+**DEFAULT BEHAVIOR - "Find roads with no street lights":**
+- Interpretas: Find road segments with NO street lights within 20m
+- Use LEFT JOIN + GROUP BY + HAVING pattern (fast - completes in seconds)
+- **CRITICAL:** Use LEFT JOIN, NOT NOT EXISTS (10x faster for 43K+ features)
+
+Template:
+```sql
+SELECT r.*
+FROM vector.detailnetz_road_segments r
+LEFT JOIN vector.osm_street_lights l ON
+  ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(l.geometry, 3857), 20)
+GROUP BY r.id, r.strassenname, r.strassenklasse, r.laenge, r.geometry, ...
+HAVING COUNT(DISTINCT l.id) = 0
+ORDER BY r.laenge DESC
+LIMIT 50
+```
+
+**WITH SELECTED FEATURES - "Find unlit roads within Xm":**
+- When user has selected feature(s) on map, creates buffer (X meters)
+- Find road segments WITHIN buffer WITH NO street lights within 20m
+- **CRITICAL CRS:** Buffer must be in 3857 (meters), then TRANSFORM BACK to 4326 for ST_Within!
+
+Correct Template:
+```sql
+WITH selected_buffer AS (
+  SELECT ST_Transform(
+    ST_Buffer(ST_Transform(ST_Union(temp.geometry), 3857), {buffer_m}),
+    4326
+  )::geometry as buffer_geom
+  FROM temp.temp_selected_{session_id} temp
+)
+SELECT r.*
+FROM vector.detailnetz_road_segments r, selected_buffer b
+WHERE ST_Within(r.geometry, b.buffer_geom)
+AND NOT EXISTS (
+  SELECT 1 FROM vector.osm_street_lights l
+  WHERE ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(l.geometry, 3857), 20)
+)
+ORDER BY r.laenge DESC
+LIMIT 50
+```
+
+**CRS Transformation Explained:**
+- Input: temp table geometries are EPSG:4326 (lon/lat from map selections)
+- Step 1: Transform 4326 → 3857 for accurate meter-based buffering
+- Step 2: Apply ST_Buffer with meter distance
+- Step 3: Transform buffer BACK to 4326 for comparison with road geometries
+- Critical: Use ST_Union() for multi-select (multiple features may be selected)
+
+**District-Scoped Query:**
+```sql
+SELECT r.*
+FROM vector.detailnetz_road_segments r
+WHERE ST_Within(r.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
+LEFT JOIN vector.osm_street_lights l ON
+  ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(l.geometry, 3857), 20)
+GROUP BY r.id, r.strassenname, r.strassenklasse, r.laenge, r.geometry, ...
+HAVING COUNT(DISTINCT l.id) = 0
+ORDER BY r.laenge DESC
+LIMIT 50
+```
+
+**Example Queries:**
+- ✅ "Find roads with no street lights" → 20m default
+- ✅ "Show unlit roads in Mitte" → District filter + 20m
+- ✅ "Find streets without lights within 500m" (with selection) → 500m buffer + 20m lights threshold
+- ✅ "Which road segments are dark at night?" → Same as 20m unlit
+- ✅ "List dangerous areas: unlit roads within 300m of hospitals" (select hospitals, ask query)
+
 **Available Raster Datasets:**
 - berlin_ndvi_2018 → raster/ndvi_timeseries/berlin_ndvi_20180716.tif (Real Sentinel-2, 66MB, 10m resolution, 2018-07-16)
 - berlin_ndvi_2024 → raster/ndvi_timeseries/berlin_ndvi_20240721.tif (Real Sentinel-2, 57MB, 10m resolution, 2024-07-21)
@@ -575,6 +694,175 @@ GROUP BY d.id, d.name, d.bezirk, d.geometry, p.population
 ORDER BY p.population DESC, supermarket_count ASC
 LIMIT 3
 ```
+
+**⭐ SITE SELECTION & LOCATION SUITABILITY ANALYSIS (ADVANCED SPATIAL OPERATIONS):**
+
+When users ask to "find best locations" or "find suitable areas" for opening a new business/facility, use a multi-step operation workflow (NOT complex SQL):
+
+**SITE SELECTION WORKFLOW - RECOMMENDED MULTI-STEP APPROACH:**
+
+1. **Load competitors** - spatial_query to get amenities of same type
+2. **Filter by brand** - filter with name_contains for brand matching
+3. **Buffer** - buffer distance (500m-2km depending on type)
+4. **Union** - merge all buffers into single coverage zone (CRITICAL: merge_all: true)
+5. **Load study area** - spatial_query to get district/area boundary
+6. **Difference** - subtract union result from study area (reference previous operation)
+7. **Filter** - remove tiny polygons with min_area threshold
+
+**WHY MULTI-STEP APPROACH IS BETTER:**
+- ✅ No CRS mismatch errors (each operation handles CRS correctly)
+- ✅ Transparent: each step is visible and debuggable
+- ✅ Reliable: uses proven GeoPandas operations
+- ✅ Flexible: intermediate results stored and reusable
+- ❌ NOT complex SQL with subqueries (error-prone, hard to debug)
+
+**OPERATION TYPES AVAILABLE:**
+- `"operation": "spatial_query"` - Load data from database using SQL
+- `"operation": "filter"` - Filter by attributes (supports `name_contains` for brand matching, `min_area` for polygon size)
+- `"operation": "buffer"` - Create buffer zones (parameters: `distance` in meters)
+- `"operation": "union"` - Merge geometries into single coverage (parameters: `merge_all: true`)
+- `"operation": "difference"` - Subtract one layer from another (parameters: `subtract_dataset`)
+
+**MULTI-STEP OPERATIONS APPROACH (RECOMMENDED):**
+
+✅ **USE THIS APPROACH** - Clear, debuggable, CRS-safe:
+```json
+{
+  "operations": [
+    {
+      "operation": "spatial_query",
+      "parameters": {
+        "sql": "SELECT * FROM vector.osm_supermarkets WHERE name ILIKE '%rewe%'"
+      },
+      "description": "Load all Rewe supermarkets"
+    },
+    {
+      "operation": "buffer",
+      "parameters": {"distance": 1000},
+      "description": "Create 1km exclusion zones around each Rewe"
+    },
+    {
+      "operation": "union",
+      "parameters": {"merge_all": true},
+      "description": "Merge all exclusion zones into single coverage zone (operation index 2)"
+    },
+    {
+      "operation": "spatial_query",
+      "parameters": {
+        "sql": "SELECT geometry FROM vector.berlin_districts WHERE bezirk = 'Mitte'"
+      },
+      "description": "Load Mitte district as study area"
+    },
+    {
+      "operation": "difference",
+      "parameters": {
+        "subtract_from_index": 2,
+        "min_area": 10000
+      },
+      "description": "Subtract exclusion zones from study area, keep areas >10,000 m²"
+    }
+  ],
+  "layer_name": "rewe_suitable_locations_mitte",
+  "reasoning": "Multi-step site selection workflow: load Rewe → buffer 1km → union → load study area → difference → filter by area",
+  "datasets_required": ["osm_supermarkets", "berlin_districts"]
+}
+```
+
+**HOW SUBTRACT_FROM_INDEX WORKS:**
+- Each operation gets an index: 0, 1, 2, 3, ...
+- `subtract_from_index: 2` means: use the result from operation #2 (the union operation)
+- This avoids complex SQL and ensures CRS is handled correctly at each step
+
+**SITE SELECTION EXAMPLES:**
+
+Q: "Find best locations to open a new Rewe supermarket in Mitte with 1km buffer"
+→ Multi-step approach:
+```json
+{
+  "operations": [
+    {"operation": "spatial_query", "parameters": {"sql": "SELECT * FROM vector.osm_supermarkets WHERE name ILIKE '%rewe%'"}, "description": "Load Rewe supermarkets"},
+    {"operation": "buffer", "parameters": {"distance": 1000}, "description": "Buffer each by 1km"},
+    {"operation": "union", "parameters": {"merge_all": true}, "description": "Merge all buffers (operation index 2)"},
+    {"operation": "spatial_query", "parameters": {"sql": "SELECT geometry FROM vector.berlin_districts WHERE bezirk = 'Mitte'"}, "description": "Load Mitte boundary"},
+    {"operation": "difference", "parameters": {"subtract_from_index": 2, "min_area": 10000}, "description": "Find areas outside Rewe buffers"}
+  ],
+  "layer_name": "rewe_suitable_locations_mitte",
+  "reasoning": "Finding suitable areas for new Rewe in Mitte by subtracting competitor coverage zones",
+  "datasets_required": ["osm_supermarkets", "berlin_districts"]
+}
+```
+
+Q: "Where can I open a pharmacy in Neukölln avoiding 500m from competitors?"
+→ Multi-step approach:
+```json
+{
+  "operations": [
+    {"operation": "spatial_query", "parameters": {"sql": "SELECT * FROM vector.osm_pharmacies"}, "description": "Load all pharmacies"},
+    {"operation": "buffer", "parameters": {"distance": 500}, "description": "Buffer each by 500m"},
+    {"operation": "union", "parameters": {"merge_all": true}, "description": "Merge all buffers (operation index 2)"},
+    {"operation": "spatial_query", "parameters": {"sql": "SELECT geometry FROM vector.berlin_districts WHERE bezirk = 'Neukölln'"}, "description": "Load Neukölln boundary"},
+    {"operation": "difference", "parameters": {"subtract_from_index": 2, "min_area": 5000}, "description": "Find suitable pharmacy locations"}
+  ],
+  "layer_name": "pharmacy_suitable_locations_neukolln",
+  "reasoning": "Finding areas >500m from existing pharmacies in Neukölln",
+  "datasets_required": ["osm_pharmacies", "berlin_districts"]
+}
+```
+
+Q: "Find three best locations for cafes in Wedding"
+→ Multi-step approach:
+```json
+{
+  "operations": [
+    {"operation": "spatial_query", "parameters": {"sql": "SELECT * FROM vector.osm_restaurants WHERE cuisine ILIKE '%cafe%' OR cuisine ILIKE '%coffee%'"}, "description": "Load existing cafes"},
+    {"operation": "buffer", "parameters": {"distance": 800}, "description": "Buffer each by 800m"},
+    {"operation": "union", "parameters": {"merge_all": true}, "description": "Merge all buffers (operation index 2)"},
+    {"operation": "spatial_query", "parameters": {"sql": "SELECT geometry FROM vector.landmarks WHERE name = 'Wedding' AND type = 'ortsteil'"}, "description": "Load Wedding subdivision"},
+    {"operation": "difference", "parameters": {"subtract_from_index": 2, "min_area": 10000}, "description": "Find suitable cafe locations"}
+  ],
+  "layer_name": "cafe_suitable_locations_wedding",
+  "reasoning": "Finding underserved areas for new cafes in Wedding using 800m competition buffer",
+  "datasets_required": ["osm_restaurants", "landmarks"]
+}
+```
+
+**CRITICAL RULES FOR SITE SELECTION (Multi-Step Approach):**
+
+1. **Operation Order is Critical**:
+   - Load competitors → Buffer → Union → Load study area → Difference
+   - Backend handles CRS transformations automatically at each step
+
+2. **Use subtract_from_index for referencing previous operations**:
+   - Each operation has implicit index: 0, 1, 2, 3, etc.
+   - Union is typically at index 2 (after load, buffer)
+   - Difference uses `"subtract_from_index": 2` to reference union result
+   - NO need to worry about CRS - backend handles it
+
+3. **Buffer Parameters**:
+   - Distance in meters: 500m (pharmacy), 800m (cafe), 1km (supermarket), 2km (hospital)
+   - All buffers merge into single zone via union with `"merge_all": true`
+
+4. **Filter by brand in SQL WHERE clause**:
+   - `WHERE name ILIKE '%rewe%'` for case-insensitive brand matching
+   - `WHERE cuisine ILIKE '%cafe%' OR cuisine ILIKE '%coffee%'` for cafe filtering
+
+5. **Study areas**:
+   - Districts: `SELECT geometry FROM vector.berlin_districts WHERE bezirk = 'Mitte'`
+   - Subdivisions: `SELECT geometry FROM vector.landmarks WHERE name = 'Wedding' AND type = 'ortsteil'`
+   - Custom polygons: User can provide via map selection
+
+6. **Min Area Filtering**:
+   - Set in difference operation: `"min_area": 10000` (10,000 m² = ~100m × 100m)
+   - Removes tiny slivers that aren't viable for new businesses
+   - Typical values: 5,000-10,000 m² minimum
+
+7. **Layer Naming**:
+   - Pattern: `<amenity>_suitable_locations_<area>`
+   - Examples: "rewe_suitable_locations_mitte", "pharmacy_suitable_locations_neukolln"
+
+**LAYER NAMING FOR SITE SELECTION:**
+- Pattern: `<amenity>_suitable_locations_<area>`
+- Examples: "rewe_suitable_locations_mitte", "pharmacy_suitable_areas_neukolln", "cafe_viable_sites_wedding"
 
 "Toilets near me" (user_location: {lat: 52.52, lon: 13.405}) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_toilets WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 500) ORDER BY distance_m LIMIT 20
 
@@ -1181,7 +1469,52 @@ ORDER BY ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_GeomFromText(
   - "show restaurants" → applies ST_Within selected geometry
   - "what hospitals are nearby" → applies ST_DWithin from selected geometry
 - Extract distance from query (default to 500m if not specified)
-- If no selected feature, treat as normal query (search globally)"""
+- If no selected feature, treat as normal query (search globally)
+
+**🛣️ ROUTING & CONNECTIVITY QUERIES - NEW FEATURE:**
+
+When users select MULTIPLE features (3+) on the map and ask about connectivity/routing between them:
+- **Keywords**: "connectivity", "connected", "connect", "route", "path", "linking", "between", "among"
+- **Examples**:
+  - "Find connectivity between these hospitals"
+  - "Show routes connecting the selected items"
+  - "How are these connected by roads?"
+  - "Find connectivity among the selected features"
+
+**DETECTION RULE:**
+✅ If query contains connectivity keywords AND user has 3+ items selected:
+→ Return operation with type "routing"
+
+❌ If user asks connectivity WITHOUT multiple selections OR without connectivity keywords:
+→ Treat as normal spatial query
+
+**ROUTING OPERATION RESPONSE FORMAT:**
+```json
+{
+  "operations": [
+    {
+      "operation": "routing",
+      "parameters": {
+        "geometries": [<selected_feature_geometries>],
+        "feature_names": [<names_or_labels>]
+      },
+      "description": "Find shortest road paths connecting all selected features (pairwise)"
+    }
+  ],
+  "reasoning": "User selected N features and asked about connectivity. Computing all pairwise shortest paths using pgRouting Dijkstra algorithm on Berlin road network.",
+  "datasets_required": ["routing.ways (Berlin road network)"]
+}
+```
+
+**IMPORTANT:**
+- ONLY use routing operation when:
+  1. User explicitly asks about connectivity/routes/connections
+  2. Multiple features (3+) are selected on the map
+  3. Features are Point geometries (snapped to nearest road vertex)
+- Routing computes ALL pairwise shortest paths (3 items = 3 routes, 4 items = 6 routes)
+- Results include: route geometry (LineString), distance for each segment, total distance
+- No SQL needed - routing engine handles pgRouting queries directly
+- Berlin road network: 43,420 road segments, 30,922 vertices (Detailnetz)"""
 
 
 def _get_location_filter_column(location_name: str) -> str:
@@ -1453,7 +1786,7 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
     except (KeyError, IndexError) as e:
         raise Exception(f"Unexpected response format from DeepSeek: {str(e)}")
 
-def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None) -> OperationPlan:
+def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, selected_features: List[Dict[str, Any]] = None) -> OperationPlan:
     """
     Parse a natural language geospatial query into structured operations.
     Uses DeepSeek API to convert natural language to SQL.
@@ -1462,14 +1795,56 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
         question: Natural language query
         context: Optional context (city, timeframe, etc.)
         user_location: Optional user GPS coordinates {'lat': float, 'lon': float}
-        query_type: Optional query type ('spatial', 'stats', 'raster') to guide response format
+        query_type: Optional query type ('spatial', 'stats', 'raster', 'routing') to guide response format
         selected_feature: Optional selected feature from map for context-aware queries
+        selected_features: Optional list of multiple selected features (for routing)
 
     Returns:
         OperationPlan with structured operations
     """
-    # Query DeepSeek for ALL queries (consistent behavior)
-    raw_response = query_deepseek(question, context, user_location, query_type, selected_feature)
+    # Check for routing keywords when multiple features are selected
+    routing_keywords = ['route', 'directions', 'navigate', 'routing', 'path', 'journey', 'tour', 'visit', 'loop', 'best route', 'find route']
+    is_routing_query = any(keyword in question.lower() for keyword in routing_keywords)
+
+    # If routing query with 2+ selected features, create routing operation directly
+    if is_routing_query and selected_features and len(selected_features) >= 2:
+        print(f"🛣️  Detected routing query with {len(selected_features)} selected features")
+
+        # Extract geometries and names from selected features
+        geometries = []
+        feature_names = []
+
+        for feature in selected_features:
+            if isinstance(feature, dict):
+                if 'geometry' in feature:
+                    geometries.append(feature['geometry'])
+                if 'properties' in feature and 'name' in feature['properties']:
+                    feature_names.append(feature['properties']['name'])
+                elif 'name' in feature:
+                    feature_names.append(feature['name'])
+                else:
+                    feature_names.append(f"Point {len(feature_names) + 1}")
+
+        if geometries and len(geometries) >= 2:
+            return OperationPlan(
+                operations=[
+                    GeospatialOperation(
+                        operation="routing",
+                        parameters={
+                            "geometries": geometries,
+                            "feature_names": feature_names,
+                            "mode": "optimal_tour"
+                        },
+                        description="Find optimal tour connecting selected features"
+                    )
+                ],
+                reasoning="Computing optimal route through all selected locations using Nearest Neighbor TSP algorithm",
+                datasets_required=["routing.ways", "routing.ways_vertices_pgr"],
+                layer_name="optimal_route"
+            )
+
+    # Query DeepSeek for non-routing queries or routing queries without sufficient selected features
+    raw_response = query_deepseek(question, context, user_location, query_type if not is_routing_query else "routing", selected_feature)
 
     # Try to parse the JSON response
     try:
