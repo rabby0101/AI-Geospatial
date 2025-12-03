@@ -60,6 +60,8 @@ class OperationPlan(BaseModel):
     reasoning: Optional[str] = None
     datasets_required: List[str] = Field(default_factory=list)
     layer_name: Optional[str] = Field(default=None, description="Generated layer name for the result")
+    system_prompt: Optional[str] = Field(default=None, description="System prompt sent to DeepSeek (for debugging)")
+    user_prompt: Optional[str] = Field(default=None, description="User prompt sent to DeepSeek (for debugging)")
 
 
 class QueryResponse(BaseModel):
@@ -87,6 +89,14 @@ class QueryResponse(BaseModel):
     )
     error: Optional[str] = None
     execution_time: Optional[float] = None
+    system_prompt: Optional[str] = Field(
+        default=None,
+        description="System prompt sent to DeepSeek (for debugging in browser console)"
+    )
+    user_prompt: Optional[str] = Field(
+        default=None,
+        description="User prompt sent to DeepSeek (for debugging in browser console)"
+    )
 
     class Config:
         json_schema_extra = {

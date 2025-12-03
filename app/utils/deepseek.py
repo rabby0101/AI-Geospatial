@@ -8,8 +8,9 @@ from app.models.query_model import OperationPlan, GeospatialOperation
 load_dotenv()
 
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-# Use faster model for better user experience (deepseek-chat is 5-10x faster than v3)
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+# Use deepseek-chat for cleaner JSON responses (faster and more reliable parsing)
+# DO NOT use deepseek-reasoner as it produces verbose thinking output that breaks JSON parsing
+DEEPSEEK_MODEL = "deepseek-chat"  # Force chat model for reliable JSON output
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 
 # Simple in-memory cache (max 100 entries)
@@ -17,7 +18,14 @@ _query_cache: Dict[str, str] = {}
 _MAX_CACHE_SIZE = 100
 
 
-SYSTEM_PROMPT = """You are a geospatial reasoning assistant. Convert natural language queries to PostGIS SQL.
+SYSTEM_PROMPT = """You are a geospatial query assistant. Convert natural language queries to PostGIS SQL.
+
+**RESPONSE FORMAT - CRITICAL:**
+You MUST respond with ONLY a valid JSON object. Do NOT include any reasoning, explanations, or thinking text before or after the JSON.
+The response must be parseable by JSON parser on first attempt.
+
+Example valid response:
+{"operations": [{"operation": "spatial_query", "parameters": {"sql": "SELECT ..."}, "description": "..."}], "layer_name": "result_name", "reasoning": "Why this approach", "datasets_required": []}
 
 **DATA COVERAGE: BERLIN, GERMANY ONLY** (bbox: 13.08-13.76°E, 52.33-52.67°N)
 If user asks for locations OUTSIDE Berlin (Potsdam, Munich, Hamburg, etc.), respond with:
@@ -669,6 +677,19 @@ Layer naming rules:
   "reasoning": "Brief explanation",
   "datasets_required": ["table_name"]
 }
+
+**CRITICAL - JSON Escaping:**
+When generating SQL in JSON strings, ALWAYS escape double quotes inside SQL strings with a backslash (\").
+For example, if your SQL contains a column name like "diet:vegan", write it as:
+"sql": "SELECT * FROM table WHERE \\\"diet:vegan\\\" = 'yes'"
+
+WRONG ❌:
+"sql": "SELECT * FROM table WHERE "diet:vegan" = 'yes'"
+
+CORRECT ✅:
+"sql": "SELECT * FROM table WHERE \\\"diet:vegan\\\" = 'yes'"
+
+This ensures valid JSON that the parser can handle.
 
 **Examples:**
 "Find all parking" → SELECT * FROM vector.osm_parking
@@ -1698,7 +1719,7 @@ def _build_dynamic_system_prompt(user_query: str) -> str:
         return SYSTEM_PROMPT
 
 
-def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None) -> str:
+def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None) -> Dict[str, str]:
     """
     Query DeepSeek API with a prompt, using simple in-memory cache.
     Dynamically builds prompts with only relevant tables for the query.
@@ -1711,7 +1732,7 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
         selected_feature: Optional selected feature from map for context-aware queries
 
     Returns:
-        Raw text response from DeepSeek
+        Dict with 'content' (API response), 'system_prompt', and 'user_prompt'
     """
     if not DEEPSEEK_API_KEY:
         raise ValueError("DEEPSEEK_API_KEY not found in environment variables")
@@ -1722,7 +1743,7 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
     cache_key = _generate_cache_key(prompt, cache_context if cache_context else None)
     if cache_key in _query_cache:
         print(f"💨 Cache hit! Returning cached response")
-        return _query_cache[cache_key]
+        return _query_cache[cache_key]  # Returns dict with content, system_prompt, user_prompt
 
     # Build dynamic system prompt with relevant tables
     system_prompt = _build_dynamic_system_prompt(prompt)
@@ -1757,6 +1778,15 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
 
     try:
         print(f"🧠 Querying DeepSeek API ({DEEPSEEK_MODEL})...")
+        print("\n" + "="*80)
+        print("📤 DEEPSEEK SYSTEM PROMPT:")
+        print("="*80)
+        print(system_prompt[:2000] + ("...[TRUNCATED]" if len(system_prompt) > 2000 else ""))
+        print("\n" + "="*80)
+        print("📤 DEEPSEEK USER PROMPT:")
+        print("="*80)
+        print(full_prompt)
+        print("="*80 + "\n")
         response = requests.post(
             DEEPSEEK_URL,
             headers={
@@ -1771,13 +1801,20 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
         result = response.json()
         content = result["choices"][0]["message"]["content"]
 
+        # Create response dict with all three components
+        response_dict = {
+            "content": content,
+            "system_prompt": system_prompt,
+            "user_prompt": full_prompt
+        }
+
         # Cache the response (limit cache size)
         if len(_query_cache) >= _MAX_CACHE_SIZE:
             _query_cache.clear()  # Simple cache eviction
-        _query_cache[cache_key] = content
+        _query_cache[cache_key] = response_dict
 
         print(f"✅ DeepSeek response received ({len(content)} chars)")
-        return content
+        return response_dict
 
     except requests.exceptions.Timeout:
         raise Exception("DeepSeek API timeout. Please try a simpler query.")
@@ -1844,12 +1881,17 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
             )
 
     # Query DeepSeek for non-routing queries or routing queries without sufficient selected features
-    raw_response = query_deepseek(question, context, user_location, query_type if not is_routing_query else "routing", selected_feature)
+    response_dict = query_deepseek(question, context, user_location, query_type if not is_routing_query else "routing", selected_feature)
+
+    # Extract the content, system_prompt, and user_prompt from the dict
+    raw_content = response_dict.get("content", "")
+    system_prompt = response_dict.get("system_prompt", "")
+    user_prompt = response_dict.get("user_prompt", "")
 
     # Try to parse the JSON response
     try:
         # Clean the response - sometimes LLMs wrap JSON in markdown
-        cleaned_response = raw_response.strip()
+        cleaned_response = raw_content.strip()
         if cleaned_response.startswith("```json"):
             cleaned_response = cleaned_response[7:]
         if cleaned_response.startswith("```"):
@@ -1858,8 +1900,38 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
             cleaned_response = cleaned_response[:-3]
         cleaned_response = cleaned_response.strip()
 
-        # Parse JSON
-        parsed = json.loads(cleaned_response)
+        # Attempt to parse JSON - with retry logic for common escaping issues
+        try:
+            parsed = json.loads(cleaned_response)
+        except json.JSONDecodeError as first_error:
+            # Try fixing common JSON escaping issues (unescaped quotes in SQL strings)
+            import re
+
+            # Look for SQL strings with unescaped quotes and try to fix them
+            # Pattern: "sql": "SELECT ... " where " inside should be \"
+            fixed_response = cleaned_response
+
+            # Fix unescaped quotes within SQL strings
+            # This is a heuristic approach - look for "sql": "...SELECT..." patterns
+            pattern = r'"sql"\s*:\s*"((?:[^"\\]|\\.)*?(?:SELECT|INSERT|UPDATE|DELETE|WITH)[^"]*?)"'
+
+            def escape_sql_string(match):
+                sql_content = match.group(1)
+                # Escape any unescaped quotes in the SQL
+                # Don't escape quotes that are already escaped
+                escaped = sql_content.replace('"', '\\"').replace('\\"\\', '\\"')
+                return f'"sql": "{escaped}"'
+
+            fixed_response = re.sub(pattern, escape_sql_string, fixed_response, flags=re.IGNORECASE | re.DOTALL)
+
+            # Try parsing again with fixed response
+            try:
+                parsed = json.loads(fixed_response)
+                print("✅ JSON parsing fixed with escape handling")
+            except json.JSONDecodeError as second_error:
+                # If still failing, log and raise original error
+                print(f"❌ JSON parsing still failed after escape fix: {second_error}")
+                raise first_error
 
         # Convert to OperationPlan
         operations = [
@@ -1870,13 +1942,15 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
             operations=operations,
             layer_name=parsed.get("layer_name"),
             reasoning=parsed.get("reasoning"),
-            datasets_required=parsed.get("datasets_required", [])
+            datasets_required=parsed.get("datasets_required", []),
+            system_prompt=system_prompt,
+            user_prompt=user_prompt
         )
 
     except json.JSONDecodeError as e:
         # If JSON parsing fails, create a simple fallback plan
         print(f"Failed to parse DeepSeek response as JSON: {e}")
-        print(f"Raw response: {raw_response}")
+        print(f"Raw response: {raw_content}")
 
         # Return a basic error plan
         return OperationPlan(
@@ -1887,8 +1961,10 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
                     description=f"Could not parse: {question}"
                 )
             ],
-            reasoning=f"Error parsing response: {raw_response}",
-            datasets_required=[]
+            reasoning=f"Error parsing response: {raw_content}",
+            datasets_required=[],
+            system_prompt=system_prompt,
+            user_prompt=user_prompt
         )
 
 

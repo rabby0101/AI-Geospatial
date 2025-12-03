@@ -189,6 +189,222 @@
             cursor: not-allowed;
         }
 
+        /* Browse Datasets Button */
+        .browse-btn {
+            padding: 0.6rem 1.5rem;
+            background: rgba(var(--accent-secondary-rgb), 0.7);
+            color: rgb(255, 255, 255);
+            border: 1px solid rgba(var(--accent-secondary-rgb), 0.6);
+            border-radius: 50px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow:
+                0 8px 16px rgba(var(--accent-secondary-rgb), 0.25),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .browse-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: 0;
+            right: 0;
+            height: 200%;
+            pointer-events: none;
+        }
+
+        .browse-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            background: rgba(var(--accent-secondary-rgb), 0.85);
+            box-shadow: 0 12px 24px rgba(var(--accent-secondary-rgb), 0.35);
+        }
+
+        .browse-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .browse-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Dataset Browser Modal */
+        .dataset-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dataset-modal-overlay.active {
+            display: flex;
+        }
+
+        .dataset-modal {
+            background: var(--bg-panel);
+            border: 1.5px solid rgba(196, 195, 227, 0.3);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(25px);
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dataset-modal-header {
+            padding: 1.5rem;
+            border-bottom: 1.5px solid rgba(196, 195, 227, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .dataset-modal-close {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .dataset-modal-close:hover {
+            color: var(--accent-primary);
+            transform: scale(1.1);
+        }
+
+        .dataset-modal-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .dataset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .dataset-item {
+            padding: 1rem;
+            background: rgba(37, 32, 53, 0.4);
+            border: 1.5px solid rgba(196, 195, 227, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--text-primary);
+        }
+
+        .dataset-item:hover {
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            background: rgba(37, 32, 53, 0.6);
+            box-shadow: 0 8px 24px rgba(var(--accent-primary-rgb), 0.15);
+            transform: translateX(4px);
+        }
+
+        .dataset-item-icon {
+            font-size: 1.5rem;
+            color: var(--accent-primary);
+            flex-shrink: 0;
+        }
+
+        .dataset-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .dataset-item-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .dataset-item-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .dataset-item-count {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .dataset-item-type {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .dataset-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .dataset-empty {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .dataset-error {
+            padding: 1rem;
+            background: rgba(220, 53, 69, 0.2);
+            border: 1.5px solid rgba(220, 53, 69, 0.4);
+            border-radius: 12px;
+            color: #ff6b6b;
+            text-align: center;
+            margin: 1rem;
+        }
+
         /* Selected Feature Pill */
         .selected-feature-pill {
             display: inline-flex;
@@ -263,7 +479,7 @@
         .layers-panel {
             width: 320px;
             height: calc(100vh - 80px);
-            background: rgba(26, 24, 37, 0.85);
+            background: rgba(26, 24, 37, 0.464);
             backdrop-filter: blur(25px) saturate(180%);
             border-right: 1.5px solid rgba(196, 195, 227, 0.2);
             display: flex;
@@ -1214,7 +1430,7 @@
         .operations-panel {
             width: 350px;
             height: calc(100vh - 80px);
-            background: rgba(26, 24, 37, 0.85);
+            background: rgba(26, 24, 37, 0.4);
             backdrop-filter: blur(25px) saturate(180%);
             border-left: 2px solid rgba(196, 195, 227, 0.35);
             display: flex;
@@ -1374,7 +1590,7 @@
         .leaflet-control {
             background: rgba(37, 32, 53, 0.8) !important;
             border: 1.5px solid rgba(196, 195, 227, 0.2) !important;
-            backdrop-filter: blur(10px) !important;
+            margin-left: 300px !important;
         }
 
         .leaflet-control-zoom-in,
@@ -2168,6 +2384,7 @@
             display: flex;
             flex-direction: column;
             gap: 3px;
+            margin-right: 300px;
         }
 
         .basemap-btn {
@@ -2324,6 +2541,10 @@
                 </div>
                 <button id="searchBtn" onclick="executeSearch()">Search</button>
             </div>
+            <button id="browseBtn" class="browse-btn" onclick="openDatasetBrowser()" title="Browse and add layers from database">
+                <i data-lucide="database" style="width: 18px; height: 18px;"></i>
+                <span>Browse</span>
+            </button>
             <a href="/database-inspector" class="location-btn" style="text-decoration: none; background: rgba(var(--accent-primary-rgb), 0.2); border: 1px solid rgba(var(--accent-primary-rgb), 0.4); white-space: nowrap;">
                 <span style="font-size: 16px;"><i data-lucide="bar-chart-3" style="width: 18px; height: 18px;"></i></span>
                 <span>Database</span>
@@ -2515,6 +2736,25 @@
             <div class="style-dialog-actions">
                 <button class="btn-cancel" onclick="closeStyleDialog()">Cancel</button>
                 <button class="btn-apply" onclick="applyLayerStyle()">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dataset Browser Modal -->
+    <div class="dataset-modal-overlay" id="datasetModalOverlay">
+        <div class="dataset-modal">
+            <div class="dataset-modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="database" style="width: 24px; height: 24px;"></i>
+                    <span>Browse Datasets</span>
+                </div>
+                <button class="dataset-modal-close" onclick="closeDatasetBrowser()">✕</button>
+            </div>
+            <div class="dataset-modal-content" id="datasetModalContent">
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
+                    <span>Loading datasets...</span>
+                </div>
             </div>
         </div>
     </div>
@@ -6224,6 +6464,19 @@
                 // Debug: Log the full response
                 console.log('📊 API Response:', data);
 
+                // 🔥 LOG DEEPSEEK PROMPTS TO BROWSER CONSOLE
+                if (data.system_prompt || data.user_prompt) {
+                    console.log('\n' + '='.repeat(80));
+                    console.log('%c📤 DEEPSEEK SYSTEM PROMPT', 'color: #FFB162; font-size: 14px; font-weight: bold;');
+                    console.log('='.repeat(80));
+                    console.log(data.system_prompt || '[No system prompt available]');
+                    console.log('\n' + '='.repeat(80));
+                    console.log('%c📤 DEEPSEEK USER PROMPT', 'color: #FFB162; font-size: 14px; font-weight: bold;');
+                    console.log('='.repeat(80));
+                    console.log(data.user_prompt || '[No user prompt available]');
+                    console.log('='.repeat(80) + '\n');
+                }
+
                 if (isDEM) {
                     // Handle DEM response
                     if (data.success) {
@@ -6448,6 +6701,190 @@
                 }
             );
         }
+
+        // Dataset Browser Functions
+        async function openDatasetBrowser() {
+            const overlay = document.getElementById('datasetModalOverlay');
+            const content = document.getElementById('datasetModalContent');
+
+            // Show loading state
+            overlay.classList.add('active');
+            content.innerHTML = `
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
+                    <span>Loading datasets...</span>
+                </div>
+            `;
+
+            try {
+                // Fetch available datasets
+                const response = await fetch(`${API_URL}/datasets`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch datasets: ${response.status}`);
+                }
+
+                const datasets = await response.json();
+
+                if (!datasets || datasets.length === 0) {
+                    content.innerHTML = `
+                        <div class="dataset-empty">
+                            <i data-lucide="inbox" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
+                            <p>No datasets available</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Build dataset list HTML
+                let html = '<div class="dataset-list">';
+
+                datasets.forEach(dataset => {
+                    const tableName = dataset.table_name || dataset.name;
+                    const count = dataset.count || dataset.feature_count || 0;
+                    const geomType = dataset.geometry_type || 'Unknown';
+
+                    // Determine icon based on geometry type
+                    let icon = 'layers';
+                    if (geomType === 'Point') icon = 'map-pin';
+                    if (geomType === 'LineString' || geomType === 'MultiLineString') icon = 'zap';
+                    if (geomType === 'Polygon' || geomType === 'MultiPolygon') icon = 'square';
+
+                    html += `
+                        <div class="dataset-item" onclick="loadDatasetTable('${tableName}')">
+                            <div class="dataset-item-icon">
+                                <i data-lucide="${icon}" style="width: 24px; height: 24px;"></i>
+                            </div>
+                            <div class="dataset-item-info">
+                                <div class="dataset-item-name">${tableName}</div>
+                                <div class="dataset-item-meta">
+                                    <div class="dataset-item-count">
+                                        <i data-lucide="hash" style="width: 14px; height: 14px;"></i>
+                                        <span>${count.toLocaleString()} features</span>
+                                    </div>
+                                    <div class="dataset-item-type">
+                                        <i data-lucide="shape" style="width: 14px; height: 14px;"></i>
+                                        <span>${geomType}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                content.innerHTML = html;
+
+                // Re-render Lucide icons
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+
+            } catch (error) {
+                console.error('❌ Failed to load datasets:', error);
+                content.innerHTML = `
+                    <div class="dataset-error">
+                        <i data-lucide="alert-circle" style="width: 24px; height: 24px; margin-bottom: 0.5rem; display: inline;"></i>
+                        <p>Failed to load datasets</p>
+                        <small>${error.message}</small>
+                    </div>
+                `;
+            }
+        }
+
+        function closeDatasetBrowser() {
+            document.getElementById('datasetModalOverlay').classList.remove('active');
+        }
+
+        async function loadDatasetTable(tableName) {
+            const overlay = document.getElementById('datasetModalOverlay');
+            const browseBtn = document.getElementById('browseBtn');
+
+            // Update modal to show loading
+            const content = document.getElementById('datasetModalContent');
+            content.innerHTML = `
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
+                    <span>Loading ${tableName}...</span>
+                </div>
+            `;
+
+            // Show main loading indicator
+            setLoading(true, `Loading ${tableName}...`);
+            browseBtn.disabled = true;
+
+            try {
+                // Fetch table data
+                const response = await fetch(`${API_URL}/load-table/${tableName}`);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load table: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.detail || 'Failed to load table');
+                }
+
+                // Create layer from the loaded data
+                const geojson = result.data;
+
+                if (!geojson || !geojson.features) {
+                    throw new Error('Invalid data format received');
+                }
+
+                // Prepare operations array
+                const operations = [
+                    {
+                        operation: 'load',
+                        parameters: { table: tableName },
+                        description: `Load ${result.feature_count} features from ${tableName}`
+                    }
+                ];
+
+                // Prepare metadata
+                const metadata = {
+                    count: result.feature_count,
+                    geometry_type: result.geometry_type,
+                    columns: result.columns
+                };
+
+                // Create layer using existing addLayer function with proper parameters
+                addLayer(
+                    tableName,                                    // name
+                    geojson,                                      // geojsonData
+                    `[Manual] ${tableName}`,                      // query
+                    operations,                                   // operations
+                    `Manually selected table ${tableName} from the database`, // reasoning
+                    [tableName],                                  // datasetsUsed
+                    metadata,                                     // metadata
+                    0,                                            // executionTime
+                    `manual-${tableName}-${Date.now()}`,          // layerId
+                    null                                          // parentLayers
+                );
+
+                // Close modal and show success
+                closeDatasetBrowser();
+                showNotification(`Loaded ${result.feature_count} features from ${tableName}`, 'success');
+
+            } catch (error) {
+                console.error('❌ Failed to load table:', error);
+                showNotification(`Error loading ${tableName}: ${error.message}`, 'error');
+
+                // Reset modal content
+                openDatasetBrowser();
+            } finally {
+                setLoading(false);
+                browseBtn.disabled = false;
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('datasetModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDatasetBrowser();
+            }
+        });
 
         // Auto-locate on page load (optional - commented out by default)
         // Uncomment the next line to automatically locate user when page loads

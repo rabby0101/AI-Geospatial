@@ -79,7 +79,9 @@ async def geospatial_query(request: NLQuery) -> QueryResponse:
             operations=operations,
             reasoning=reasoning,
             datasets_used=datasets_used,
-            execution_time=execution_time
+            execution_time=execution_time,
+            system_prompt=operation_plan.system_prompt if operation_plan else None,
+            user_prompt=operation_plan.user_prompt if operation_plan else None
         )
 
     except Exception as e:
@@ -245,6 +247,98 @@ async def execute_sql_query(query: Dict[str, str]) -> Dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"SQL execution failed: {str(e)}"
+        )
+
+
+@router.get("/load-table/{table_name}")
+async def load_table(table_name: str, limit: int = 10000) -> Dict[str, Any]:
+    """
+    Load a complete table from PostGIS as GeoJSON.
+
+    This endpoint allows manual selection and loading of any PostGIS table
+    without requiring natural language queries.
+
+    Parameters:
+        table_name: Name of the table to load (from vector schema)
+        limit: Maximum number of features to return (default: 10000)
+
+    Returns:
+        GeoJSON FeatureCollection with:
+        - features: All geometries from the table
+        - table_name: Name of the loaded table
+        - feature_count: Number of features returned
+        - geometry_type: Type of geometries (POINT, POLYGON, etc.)
+        - columns: List of available columns
+
+    Example:
+        GET /api/load-table/osm_hospitals?limit=5000
+    """
+    try:
+        # Sanitize table name to prevent SQL injection
+        if not table_name or not table_name.replace('_', '').replace('-', '').isalnum():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid table name. Must contain only alphanumeric characters, underscores, and hyphens."
+            )
+
+        # Get list of available tables to validate
+        available_datasets = get_available_datasets()
+        available_table_names = [ds.get('table_name') or ds.get('name') for ds in available_datasets]
+
+        # Check if requested table exists
+        if table_name not in available_table_names:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Table '{table_name}' not found in available datasets. Available tables: {', '.join(available_table_names[:10])}"
+            )
+
+        # Build query with limit
+        query = f"""
+        SELECT *
+        FROM vector.{table_name}
+        LIMIT {limit}
+        """
+
+        # Execute the query
+        result_gdf = db_manager.execute_spatial_query(query)
+
+        if len(result_gdf) == 0:
+            return {
+                "success": True,
+                "table_name": table_name,
+                "feature_count": 0,
+                "geometry_type": "Unknown",
+                "columns": [],
+                "data": {
+                    "type": "FeatureCollection",
+                    "features": []
+                }
+            }
+
+        # Get geometry type from the first geometry
+        geometry_type = result_gdf.geometry.geom_type.iloc[0] if len(result_gdf) > 0 else "Unknown"
+
+        # Get column names
+        columns = [col for col in result_gdf.columns if col != 'geometry']
+
+        # Convert to GeoJSON
+        geojson = result_gdf.__geo_interface__
+
+        return {
+            "success": True,
+            "table_name": table_name,
+            "feature_count": len(result_gdf),
+            "geometry_type": geometry_type,
+            "columns": columns,
+            "data": geojson
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load table '{table_name}': {str(e)}"
         )
 
 
