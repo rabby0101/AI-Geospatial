@@ -63,4 +63,9 @@ logs/
 .claude/
 claude.md
 CLAUDE.md
+
+# Large data files (> 100MB)
 data/raster/dem/demo_results/berlin_development_suitability.geojson
+data/vector/osm/osm_buildings_berlin.geojson
+*.geojson
+!data/vector/sample*.geojson
