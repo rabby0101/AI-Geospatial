@@ -9,6 +9,12 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+    <!-- MapLibre GL CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" />
+
+    <!-- Leaflet.Draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+
     <!-- Font Awesome Icons (fallback only) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -112,13 +118,12 @@
         #searchInput {
             flex: 1;
             padding: 0.75rem 2.5rem 0.75rem 2.5rem;
-            background: rgba(37, 32, 53, 0.6);
-            border: 1.5px solid rgba(196, 195, 227, 0.25);
-            border-radius: 50px;
+           
+           
+            
             font-size: 0.95rem;
             font-family: inherit;
-            -webkit-backdrop-filter: blur(15px);
-            backdrop-filter: blur(15px);
+            
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             color: var(--text-primary);
             height: 40px;
@@ -131,8 +136,6 @@
         #searchInput:focus {
             outline: none;
             background: rgba(37, 32, 53, 0.9);
-            border-color: rgba(var(--accent-primary-rgb), 0.6);
-            box-shadow: 0 8px 24px rgba(var(--accent-primary-rgb), 0.2);
         }
 
         .search-icon {
@@ -478,7 +481,7 @@
         /* Left Layers Panel */
         .layers-panel {
             width: 320px;
-            height: calc(100vh - 80px);
+            height: 100vh;
             background: rgba(26, 24, 37, 0.464);
             backdrop-filter: blur(25px) saturate(180%);
             border-right: 1.5px solid rgba(196, 195, 227, 0.2);
@@ -488,6 +491,7 @@
             position: absolute;
             box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
             z-index: 500;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .panel-header {
@@ -499,6 +503,40 @@
             color: var(--text-primary);
             font-size: 0.95rem;
             letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 50px;
+        }
+
+        .panel-title {
+            flex: 1;
+        }
+
+        .panel-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .panel-action-btn {
+            width: 32px;
+            height: 32px;
+            background: rgba(37, 32, 53, 0.6);
+            border: 1.5px solid rgba(196, 195, 227, 0.25);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: rgba(196, 195, 227, 0.7);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .panel-action-btn:hover {
+            background: rgba(37, 32, 53, 0.9);
+            border-color: rgba(var(--accent-primary-rgb), 0.5);
+            color: var(--text-primary);
+            transform: translateY(-2px);
         }
 
         .layers-list {
@@ -724,65 +762,304 @@
             }
         }
 
-        /* Loading Indicator */
-        .loading-indicator {
-            position: absolute;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            display: none;
-            z-index: 999;
-            width: 24px;
-            height: 24px;
-        }
-
-        .loading-indicator.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .loading-spinner {
-            width: 24px;
-            height: 24px;
-            position: relative;
-        }
-
-        .loading-spinner::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border: 2.5px solid transparent;
-            border-top-color: var(--accent-primary);
-            border-right-color: var(--accent-primary);
-            border-radius: 50%;
-            animation: spinProgress 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-            box-shadow: 0 0 8px rgba(var(--accent-primary-rgb), 0.3);
-        }
-
-        .loading-spinner::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border: 2.5px solid transparent;
-            border-bottom-color: rgba(var(--accent-primary-rgb), 0.2);
-            border-left-color: rgba(var(--accent-primary-rgb), 0.2);
-            border-radius: 50%;
-            animation: spinProgress 2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
-        }
+        /* Loading Indicator - Removed (now using disabled button state) */
 
         .loading-text-small {
             display: none;
         }
 
-        @keyframes spinProgress {
-            to { transform: rotate(360deg); }
-        }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        /* ========================================
+           CHAT OVERLAY BOTTOM (NEW DESIGN)
+           ======================================== */
+
+        .chat-overlay-bottom {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            max-width: 900px;
+            width: calc(100% - 40px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            pointer-events: none;
+        }
+
+        .chat-overlay-bottom > * {
+            pointer-events: auto;
+        }
+
+        /* Main Chat Bar */
+        .chat-main-bar {
+            background: #1a18254b;
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 1.25rem 1.75rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            backdrop-filter: blur(30px) saturate(180%);
+            width: 80%;
+            min-height: auto;
+        }
+
+        .chat-input-row {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Bottom Controls Row */
+        .chat-controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        /* Left Section (Icon Buttons) */
+        .chat-left-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .chat-icon-btn {
+            width: 35px;
+            height: 35px;
+            background: rgba(60, 58, 70, 0.6);
+            border: 1.5px solid rgba(80, 78, 90, 0.4);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: rgba(196, 195, 227, 0.6);
+            transition: all 0.2s ease;
+        }
+
+        .chat-icon-btn:hover {
+            background: rgba(70, 68, 80, 0.8);
+            color: rgba(196, 195, 227, 0.9);
+            border-color: rgba(100, 98, 110, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .chat-icon-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Selected Feature Pill (in chat interface) */
+        .chat-left-section .selected-feature-pill {
+            padding: 0.6rem 1rem;
+            background: rgba(var(--accent-secondary-rgb), 0.3);
+            border: 1.5px solid rgba(var(--accent-primary-rgb), 0.4);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            height: 35px;
+        }
+
+        .chat-left-section .pill-icon {
+            color: var(--accent-primary);
+        }
+
+        .chat-left-section .pill-text {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-left-section .pill-close {
+            background: transparent;
+            border: none;
+            color: rgba(196, 195, 227, 0.7);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0 0.25rem;
+            transition: color 0.2s;
+        }
+
+        .chat-left-section .pill-close:hover {
+            color: var(--text-primary);
+        }
+
+        /* Center Input Container */
+        .chat-input-container {
+            width: 100%;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            padding: 0.5rem 0;
+        }
+
+        .chat-input-container #searchInput {
+            flex: 1;
+            padding-left: 20px;
+            background: transparent;
+            border: none;
+            font-size: 1.9rem;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: #f3f4f6;
+            outline: none;
+            min-width: 0;
+        }
+
+        .chat-input-container #searchInput::placeholder {
+            color: rgba(196, 195, 227, 0.5);
+            font-weight: 400;
+        }
+
+        /* Right Section (Model Selector + Submit) */
+        .chat-right-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        .model-selector-dropdown {
+            display: flex;
+            align-items: center;
+            color: #f3f4f6;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            user-select: none;
+        }
+
+        .model-selector-dropdown:hover {
+            color: rgba(196, 195, 227, 0.8);
+        }
+
+        .model-display-text {
+            user-select: none;
+        }
+
+        .chat-submit-btn {
+            width: 48px;
+            height: 48px;
+            background: #C4754B;
+            border: none;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+
+        
+
+        .chat-submit-btn:hover:not(:disabled) {
+            background: #d68355;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(196, 117, 75, 0.4);
+        }
+
+        .chat-submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .chat-submit-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(196, 117, 75, 0.5);
+        }
+
+        /* Tab Pills Row */
+        .chat-tabs-row {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 70%%;
+        }
+
+        .chat-tab-pill {
+            padding: 0.4rem 0.7rem;
+            background: rgba(30, 28, 40, 0.95);
+            border: 1.5px solid rgba(80, 78, 90, 0.4);
+            border-radius: 24px;
+            font-size: 0.70rem;
+            color: #e5e7eb;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(15px);
+            position: relative;
+        }
+
+        .chat-tab-pill:hover:not(.chat-tab-disabled) {
+            background: rgba(40, 38, 50, 1);
+            border-color: rgba(100, 98, 110, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            color: #fff;
+        }
+
+        .chat-tab-pill.chat-tab-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .chat-tab-pill.chat-tab-active {
+            background: rgba(var(--accent-primary-rgb), 0.3);
+            border-color: rgba(var(--accent-primary-rgb), 0.6);
+            color: #fff;
+        }
+
+        /* Draw Dropdown Menu */
+        .draw-dropdown-menu {
+            position: absolute;
+            bottom: calc(100% + 0.5rem);
+            left: 0;
+            background: rgba(30, 28, 40, 0.98);
+            border: 1.5px solid rgba(80, 78, 90, 0.4);
+            border-radius: 16px;
+            padding: 0.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+            z-index: 1100;
+            min-width: 150px;
+        }
+
+        .draw-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #e5e7eb;
+        }
+
+        .draw-menu-item:hover {
+            background: rgba(60, 58, 70, 0.8);
+            color: #fff;
         }
 
         /* Modern popup card styles */
@@ -1429,7 +1706,7 @@
         /* Right Operations Panel */
         .operations-panel {
             width: 350px;
-            height: calc(100vh - 80px);
+            height: 100vh;
             background: rgba(26, 24, 37, 0.4);
             backdrop-filter: blur(25px) saturate(180%);
             border-left: 2px solid rgba(196, 195, 227, 0.35);
@@ -1440,10 +1717,84 @@
             right: 0;
             box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
             z-index: 500;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .operations-panel-hidden {
             display: none !important;
+        }
+
+        /* Panel Collapsed States */
+        .layers-panel.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .operations-panel.collapsed {
+            transform: translateX(100%);
+        }
+
+        /* Floating Collapse Toggle Buttons */
+        .panel-toggle-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 80px;
+            background: rgba(26, 24, 37, 0.9);
+            backdrop-filter: blur(25px) saturate(180%);
+            border: 1.5px solid rgba(196, 195, 227, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 600;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .panel-toggle-btn:hover {
+            background: rgba(var(--accent-primary-rgb), 0.8);
+            border-color: rgba(var(--accent-primary-rgb), 0.6);
+            width: 44px;
+        }
+
+        .panel-toggle-btn svg {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Left panel toggle button */
+        .panel-toggle-btn.left {
+            left: 320px;
+            border-radius: 0 12px 12px 0;
+            border-left: none;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s, border-color 0.3s, width 0.3s;
+        }
+
+        .layers-panel.collapsed + .panel-toggle-btn.left {
+            left: 0;
+        }
+
+        .layers-panel.collapsed + .panel-toggle-btn.left svg {
+            transform: rotate(180deg);
+        }
+
+        /* Right panel toggle button */
+        .panel-toggle-btn.right {
+            right: 350px;
+            border-radius: 12px 0 0 12px;
+            border-right: none;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s, border-color 0.3s, width 0.3s;
+        }
+
+        .operations-panel.collapsed + .panel-toggle-btn.right {
+            right: 0;
+        }
+
+        .operations-panel.collapsed + .panel-toggle-btn.right svg {
+            transform: rotate(180deg);
         }
 
         .operations-header {
@@ -1455,6 +1806,7 @@
             color: #C4C3E3;
             font-size: 0.95rem;
             letter-spacing: 0.5px;
+            height: 50px;
         }
 
         .operations-content {
@@ -1586,11 +1938,26 @@
             font-weight: 600;
         }
 
-        /* Leaflet Dark Mode Styling */
-        .leaflet-control {
-            background: rgba(37, 32, 53, 0.8) !important;
-            border: 1.5px solid rgba(196, 195, 227, 0.2) !important;
-            margin-left: 300px !important;
+        
+       
+
+        /* Zoom Controls - Top Left */
+        .leaflet-top.leaflet-left {
+            
+            left: calc(320px + 1rem);
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Move zoom to edge when layers panel is collapsed */
+        .layers-panel.collapsed ~ .map-wrapper .leaflet-top.leaflet-left {
+            left: 1rem;
+        }
+
+        .leaflet-control-zoom {
+            margin-left: 0 !important;
+            border-radius: 20px !important;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
         }
 
         .leaflet-control-zoom-in,
@@ -1598,6 +1965,11 @@
             color: #ffffff !important;
             background: rgba(37, 32, 53, 0.8) !important;
             border: 1px solid rgba(var(--accent-primary-rgb), 0.3) !important;
+            width: 36px !important;
+            height: 36px !important;
+            line-height: 36px !important;
+            font-size: 18px !important;
+            border-radius: 20px !important;
         }
 
         .leaflet-control-zoom-in:hover,
@@ -1606,9 +1978,26 @@
             border-color: rgba(var(--accent-primary-rgb), 0.5) !important;
         }
 
+        @media (max-width: 768px) {
+            .leaflet-top.leaflet-left {
+                left: 0.5rem;
+                top: 0.5rem;
+            }
+
+            .leaflet-control-zoom-in,
+            .leaflet-control-zoom-out {
+                width: 32px !important;
+                height: 32px !important;
+                line-height: 32px !important;
+                font-size: 16px !important;
+                border-radius: 20px;
+            }
+        }
+
         .leaflet-control-attribution {
     
             border: 1px solid rgba(196, 195, 227, 0.15) !important;
+            display: none !important;
             
         }
 
@@ -2029,7 +2418,7 @@
         .slider-value {
             display: inline-block;
             margin-left: 1rem;
-            color: #C4C3E3;
+            color: #c4c3e300;
             font-weight: 600;
         }
 
@@ -2372,63 +2761,148 @@
             background: rgba(var(--accent-primary-rgb), 0.6);
         }
 
-        /* Basemap Selector Control */
+        /* Basemap Selector Control - Bottom Right */
+        .leaflet-bottom.leaflet-right {
+            bottom: 1rem;
+            right: calc(350px + 1rem);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Move basemap to edge when operations panel is collapsed */
+        .map-wrapper.operations-collapsed .leaflet-bottom.leaflet-right,
+        .map-wrapper.operations-collapsed .leaflet-top.leaflet-right {
+            right: 1rem;
+        }
+
         .leaflet-control.basemap-control {
             background: rgba(37, 32, 53, 0.9);
             border: 1px solid rgba(196, 195, 227, 0.25);
-            border-radius: 6px;
+            border-radius: 8px;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
             -webkit-backdrop-filter: blur(15px);
             backdrop-filter: blur(15px);
-            padding: 4px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            margin-right: 300px;
+            padding: 0;
+            margin: 0 !important;
+            position: relative;
         }
 
-        .basemap-btn {
-            width: 100%;
-            padding: 5px 8px;
+        .basemap-toggle-btn {
+            padding: 8px 12px;
             background: rgba(var(--accent-secondary-rgb), 0.3);
-            border: 1px solid rgba(196, 195, 227, 0.15);
-            border-radius: 5px;
+            border: none;
+            border-radius: 8px;
             color: var(--text-primary);
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             white-space: nowrap;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            min-width: 120px;
         }
 
-        .basemap-btn:hover {
+        .basemap-toggle-btn:hover {
+            background: rgba(var(--accent-secondary-rgb), 0.5);
+        }
+
+        .basemap-toggle-btn svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .basemap-control.expanded .basemap-toggle-btn svg {
+            transform: rotate(180deg);
+        }
+
+        .basemap-dropdown {
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            margin-bottom: 8px;
+            background: rgba(37, 32, 53, 0.95);
+            border: 1px solid rgba(196, 195, 227, 0.25);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            padding: 6px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 120px;
+        }
+
+        .basemap-control.expanded .basemap-dropdown {
+            display: flex;
+        }
+
+        .basemap-option {
+            padding: 8px 12px;
+            background: rgba(var(--accent-secondary-rgb), 0.3);
+            border: 1px solid rgba(196, 195, 227, 0.15);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .basemap-option:hover {
             background: rgba(var(--accent-secondary-rgb), 0.5);
             border-color: rgba(var(--accent-primary-rgb), 0.4);
             box-shadow: 0 2px 8px rgba(var(--accent-primary-rgb), 0.1);
         }
 
-        .basemap-btn.active {
+        .basemap-option.active {
             background: rgba(var(--accent-primary-rgb), 0.6);
             border-color: rgba(var(--accent-primary-rgb), 0.8);
             box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.3);
             color: white;
         }
 
-        /* North Arrow Control */
+        @media (max-width: 768px) {
+            .leaflet-bottom.leaflet-right {
+                right: 0.5rem;
+                bottom: 0.5rem;
+            }
+
+            .basemap-toggle-btn,
+            .basemap-option {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+                min-width: 100px;
+            }
+        }
+
+        /* North Arrow Control - Top Right */
+        .leaflet-top.leaflet-right {
+            top: 1rem;
+            right: calc(350px + 1rem);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         .leaflet-control.north-arrow {
             background: rgba(37, 32, 53, 0.85);
             border: 1px solid rgba(196, 195, 227, 0.25);
-            border-radius: 6px;
+            border-radius: 20px;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
             -webkit-backdrop-filter: blur(15px);
             backdrop-filter: blur(15px);
-            width: 38px;
-            height: 38px;
+            width: 42px;
+            height: 42px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 0 !important;
         }
 
         .leaflet-control.north-arrow:hover {
@@ -2438,29 +2912,80 @@
         }
 
         .north-arrow-svg {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
+            fill: #dc3545 !important;
+            stroke: #ffffff !important;
         }
 
-        /* Scale Control - Override Leaflet defaults */
+        @media (max-width: 768px) {
+            .leaflet-top.leaflet-right {
+                right: 0.5rem;
+                top: 0.5rem;
+            }
+
+            .leaflet-control.north-arrow {
+                width: 36px;
+                height: 36px;
+            }
+
+            .north-arrow-svg {
+                width: 18px;
+                height: 18px;
+                fill: #dc3545 !important;
+            }
+        }
+
+        /* Scale Control - Bottom Left */
+        .leaflet-bottom.leaflet-left {
+            bottom: 1rem;
+            left: calc(320px + 1rem);
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Move scale to edge when layers panel is collapsed */
+        .layers-panel.collapsed ~ .map-wrapper .leaflet-bottom.leaflet-left {
+            left: 1rem;
+        }
+
         .leaflet-control-scale {
-            background: rgba(37, 32, 53, 0.85) !important;
-            border: 1.5px solid rgba(196, 195, 227, 0.3) !important;
-            border-radius: 6px !important;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
             -webkit-backdrop-filter: blur(15px);
             backdrop-filter: blur(15px);
             padding: 6px 10px !important;
+            margin: 0 !important;
+        }
+
+        @media (max-width: 768px) {
+            .leaflet-bottom.leaflet-left {
+                left: 0.5rem;
+                bottom: 0.5rem;
+            }
+
+            .leaflet-control-scale {
+                font-size: 10px !important;
+                padding: 4px 8px !important;
+            }
         }
 
         .leaflet-control-scale-line {
-            
             font-size: 0.85rem !important;
-            color: black !important;
+            border: 2px solid rgba(196, 195, 227, 0.3) !important;
+            border-top: none !important;
+            background: none !important;
+            color: var(--text-primary) !important;
+            text-shadow: none !important;
         }
 
         .leaflet-control-scale-line:not(:last-child) {
             margin-bottom: 4px !important;
+        }
+
+        @media (max-width: 768px) {
+            .leaflet-control-scale-line {
+                font-size: 0.7rem !important;
+            }
         }
 
         /* Directions Panel Styling */
@@ -2520,44 +3045,20 @@
     <link rel="stylesheet" href="/static/css/safety-styles.css">
     </head>
 <body>
-    <!-- Top Search Bar -->
-    <div class="search-header">
-        <div class="search-container">
-            <div class="logo"><i data-lucide="globe" style="width: 24px; height: 24px; display: inline; margin-right: 8px; vertical-align: middle;"></i>GeoAssist</div>
-
-            <!-- Selected Feature Pill -->
-            <div class="selected-feature-pill" id="selectedFeaturePill" style="display: none;">
-                <span class="pill-icon"><i data-lucide="target" style="width: 18px; height: 18px;"></i></span>
-                <span class="pill-text" id="pillText"></span>
-                <button class="pill-close" onclick="clearSelectedFeature()" title="Clear selection">✕</button>
-            </div>
-
-            <div class="search-wrapper">
-                <span class="search-icon"><i data-lucide="search" style="width: 18px; height: 18px;"></i></span>
-                <input type="text" id="searchInput" placeholder="Ask a question... (e.g., hospitals in Mitte OR terrain elevation in Berlin)">
-                <div class="loading-indicator" id="loadingIndicator">
-                    <div class="loading-spinner"></div>
-                    <span class="loading-text-small" id="loadingIndicatorText">Processing...</span>
-                </div>
-                <button id="searchBtn" onclick="executeSearch()">Search</button>
-            </div>
-            <button id="browseBtn" class="browse-btn" onclick="openDatasetBrowser()" title="Browse and add layers from database">
-                <i data-lucide="database" style="width: 18px; height: 18px;"></i>
-                <span>Browse</span>
-            </button>
-            <a href="/database-inspector" class="location-btn" style="text-decoration: none; background: rgba(var(--accent-primary-rgb), 0.2); border: 1px solid rgba(var(--accent-primary-rgb), 0.4); white-space: nowrap;">
-                <span style="font-size: 16px;"><i data-lucide="bar-chart-3" style="width: 18px; height: 18px;"></i></span>
-                <span>Database</span>
-            </a>
-        </div>
-    </div>
-
     <!-- Main Container -->
     <div class="main-container">
         <!-- Left Layers Panel -->
-        <div class="layers-panel">
+        <div class="layers-panel" id="layersPanel">
             <div class="panel-header">
-                Layers
+                <span class="panel-title">Layers</span>
+                <div class="panel-actions">
+                    <button class="panel-action-btn" onclick="openDatasetBrowser()" title="Browse and add layers from database">
+                        <i data-lucide="database" style="width: 18px; height: 18px;"></i>
+                    </button>
+                    <a href="/database-inspector" class="panel-action-btn" title="Database Inspector" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="bar-chart-3" style="width: 18px; height: 18px;"></i>
+                    </a>
+                </div>
             </div>
             <div class="layers-list" id="layersList">
                 <div class="empty-state">
@@ -2566,6 +3067,11 @@
                 </div>
             </div>
         </div>
+
+        <!-- Left Panel Toggle Button -->
+        <button class="panel-toggle-btn left" onclick="toggleLayersPanel()" title="Toggle layers panel">
+            <i data-lucide="chevron-left" style="width: 20px; height: 20px;"></i>
+        </button>
 
         <!-- Map Container with Operations Panel -->
         <div class="map-wrapper">
@@ -2576,6 +3082,127 @@
                     <div class="timeline-title"><i data-lucide="bar-chart-3" style="width: 18px; height: 18px; margin-right: 6px; display: inline;"></i>Query Chain</div>
                     <div id="timelineContent"></div>
                     <button class="timeline-clear-btn" onclick="clearAllQueries()">Clear All</button>
+                </div>
+
+                <!-- Chat Interface Overlay (Bottom) -->
+                <div class="chat-overlay-bottom">
+                    <!-- Main Chat Bar -->
+                    <div class="chat-main-bar">
+                        <!-- Two Rows Layout -->
+                        <div class="chat-input-row">
+                            <!-- First Row: Search Input -->
+                            <div class="chat-input-container">
+                                <input type="text" id="searchInput" placeholder="How can I help you today?" />
+                            </div>
+
+                            <!-- Second Row: Controls (Left + Right Sections) -->
+                            <div class="chat-controls-row">
+                                <!-- Left: Icon Buttons + Selected Feature Pill -->
+                                <div class="chat-left-section">
+                                    <button class="chat-icon-btn" title="New conversation" onclick="clearAllLayers()">
+                                        <i data-lucide="plus" style="width: 22px; height: 22px;"></i>
+                                    </button>
+                                    <button class="chat-icon-btn" title="Settings" onclick="console.log('Settings placeholder')">
+                                        <i data-lucide="sliders" style="width: 22px; height: 22px;"></i>
+                                    </button>
+                                    <button class="chat-icon-btn" title="Recall" onclick="console.log('Recall placeholder')">
+                                        <i data-lucide="history" style="width: 22px; height: 22px;"></i>
+                                    </button>
+                                    <!-- Selected Feature Pill -->
+                                    <div class="selected-feature-pill" id="selectedFeaturePill" style="display: none;">
+                                        <span class="pill-icon"><i data-lucide="target" style="width: 16px; height: 16px;"></i></span>
+                                        <span class="pill-text" id="pillText"></span>
+                                        <button class="pill-close" onclick="clearSelectedFeature()" title="Clear selection">✕</button>
+                                    </div>
+                                </div>
+
+                                <!-- Right: Model Selector + Submit Button -->
+                                <div class="chat-right-section">
+                                    <div class="model-selector-dropdown">
+                                        <span class="model-display-text">DeepSeek</span>
+                                        <i data-lucide="chevron-down" style="width: 18px; height: 18px; margin-left: 8px;"></i>
+                                    </div>
+                                    <button class="chat-submit-btn" id="searchBtn" onclick="executeSearch()" title="Submit query">
+                                        <i data-lucide="chevron-down" style="width: 24px; height: 24px; "></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Pills Row (Below Main Bar) -->
+                    <div class="chat-tabs-row">
+                        <div class="chat-tab-pill" id="drawTab" onclick="toggleDrawMenu()" title="Draw shapes on map">
+                            <i data-lucide="pen-tool" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Draw</span>
+                            <!-- Draw Dropdown Menu -->
+                            <div class="draw-dropdown-menu" id="drawDropdownMenu" style="display: none;">
+                                <div class="draw-menu-item" onclick="activateDrawing('point')">
+                                    <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                                    <span>Point</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="activateDrawing('line')">
+                                    <i data-lucide="minus" style="width: 18px; height: 18px;"></i>
+                                    <span>Line</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="activateDrawing('polygon')">
+                                    <i data-lucide="pentagon" style="width: 18px; height: 18px;"></i>
+                                    <span>Polygon</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-tab-pill chat-tab-disabled" title="Learn (coming soon)">
+                            <i data-lucide="graduation-cap" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Learn</span>
+                        </div>
+                        <div class="chat-tab-pill chat-tab-disabled" title="Code (coming soon)">
+                            <i data-lucide="code" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Code</span>
+                        </div>
+                        <div class="chat-tab-pill chat-tab-disabled" title="Life stuff (coming soon)">
+                            <i data-lucide="coffee" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Life stuff</span>
+                        </div>
+                        <div class="chat-tab-pill" id="basemapTab" onclick="toggleBasemapMenu(event)" title="Change basemap">
+                            <i data-lucide="layers" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span id="basemapTabName">Satellite</span>
+                            <!-- Basemap Dropdown Menu -->
+                            <div class="draw-dropdown-menu" id="basemapDropdownMenu" style="display: none;">
+                                <div class="draw-menu-item" onclick="switchBasemap('Satellite', event)">
+                                    <i data-lucide="satellite" style="width: 18px; height: 18px;"></i>
+                                    <span>Satellite</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Liberty (Vector)', event)">
+                                    <i data-lucide="map" style="width: 18px; height: 18px;"></i>
+                                    <span>Liberty (Vector)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Bright (Vector)', event)">
+                                    <i data-lucide="sun" style="width: 18px; height: 18px;"></i>
+                                    <span>Bright (Vector)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Dark (Vector)', event)">
+                                    <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+                                    <span>Dark (Vector)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Dark', event)">
+                                    <i data-lucide="moon-star" style="width: 18px; height: 18px;"></i>
+                                    <span>Dark (Raster)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Light', event)">
+                                    <i data-lucide="sun-medium" style="width: 18px; height: 18px;"></i>
+                                    <span>Light (Raster)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Positron', event)">
+                                    <i data-lucide="circle-dot" style="width: 18px; height: 18px;"></i>
+                                    <span>Positron</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('OSM', event)">
+                                    <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                                    <span>OpenStreetMap</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2590,6 +3217,11 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Right Panel Toggle Button -->
+            <button class="panel-toggle-btn right" onclick="toggleOperationsPanel()" title="Toggle operations panel">
+                <i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i>
+            </button>
         </div>
     </div>
 
@@ -2765,6 +3397,15 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    <!-- MapLibre GL JS -->
+    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
+
+    <!-- MapLibre GL Leaflet Binding -->
+    <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.20/leaflet-maplibre-gl.js"></script>
+
+    <!-- Leaflet.Draw JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
     <script>
         // Initialize map centered on Berlin with smooth interaction settings
         const map = L.map('map', {
@@ -2790,8 +3431,9 @@
             inertiaDeceleration: 3400,
             inertiaMaxSpeed: 1200,
 
-            // Controls (all default enabled)
+            // Controls
             zoomControl: true,        // Show zoom buttons
+            zoomControlPosition: 'topleft', // Position zoom in top left corner
             attributionControl: true, // Show attribution
 
             // Zoom limits
@@ -2806,8 +3448,29 @@
             maxBoundsViscosity: 0.5   // Smooth boundary behavior
         });
 
-        // Define basemap layers
+        // Define basemap layers (free tile services only)
         const basemaps = {
+            // Satellite imagery (default)
+            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri, Maxar, Earthstar Geographics, CNES/Airbus DS, USDA FSA, USGS, Aerogrid, IGN, IGP, and the GIS User Community',
+                maxZoom: 19
+            }),
+
+            // MapLibre GL vector tiles from OpenFreeMap
+            'Liberty (Vector)': L.maplibreGL({
+                style: 'https://tiles.openfreemap.org/styles/liberty',
+                attribution: '© OpenStreetMap contributors'
+            }),
+            'Bright (Vector)': L.maplibreGL({
+                style: 'https://tiles.openfreemap.org/styles/bright',
+                attribution: '© OpenStreetMap contributors'
+            }),
+            'Dark (Vector)': L.maplibreGL({
+                style: 'https://tiles.openfreemap.org/styles/dark',
+                attribution: '© OpenStreetMap contributors'
+            }),
+
+            // Raster tile layers (existing)
             'Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap contributors, © CARTO',
                 maxZoom: 19,
@@ -2830,25 +3493,39 @@
             })
         };
 
-        // Add default basemap (Dark)
-        let currentBasemap = basemaps['Dark'];
+        // Add default basemap (Satellite)
+        let currentBasemap = basemaps['Satellite'];
         currentBasemap.addTo(map);
 
-        // Create custom basemap selector control
+        // Create custom basemap selector control (dropdown)
         L.Control.BasemapControl = L.Control.extend({
             onAdd: function(map) {
                 const container = L.DomUtil.create('div', 'leaflet-control basemap-control');
+                let currentBasemapName = 'Satellite';
+
+                // Create toggle button
+                const toggleBtn = L.DomUtil.create('button', 'basemap-toggle-btn', container);
+                toggleBtn.setAttribute('type', 'button');
+                toggleBtn.innerHTML = `
+                    <span class="basemap-current-name">${currentBasemapName}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                `;
+
+                // Create dropdown menu
+                const dropdown = L.DomUtil.create('div', 'basemap-dropdown', container);
 
                 Object.keys(basemaps).forEach(name => {
-                    const btn = L.DomUtil.create('button', 'basemap-btn', container);
-                    btn.textContent = name;
-                    btn.setAttribute('type', 'button');
+                    const option = L.DomUtil.create('div', 'basemap-option', dropdown);
+                    option.textContent = name;
+                    option.setAttribute('data-basemap', name);
 
                     if (name === 'Dark') {
-                        btn.classList.add('active');
+                        option.classList.add('active');
                     }
 
-                    btn.addEventListener('click', function(e) {
+                    option.addEventListener('click', function(e) {
                         L.DomEvent.stopPropagation(e);
 
                         // Remove current basemap
@@ -2858,20 +3535,43 @@
                         currentBasemap = basemaps[name];
                         currentBasemap.addTo(map);
 
-                        // Update button states
-                        container.querySelectorAll('.basemap-btn').forEach(b => {
-                            b.classList.remove('active');
+                        // Update current name
+                        currentBasemapName = name;
+                        toggleBtn.querySelector('.basemap-current-name').textContent = name;
+
+                        // Update active states
+                        dropdown.querySelectorAll('.basemap-option').forEach(opt => {
+                            opt.classList.remove('active');
                         });
-                        btn.classList.add('active');
+                        option.classList.add('active');
+
+                        // Close dropdown
+                        container.classList.remove('expanded');
                     });
                 });
+
+                // Toggle dropdown on button click
+                toggleBtn.addEventListener('click', function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    container.classList.toggle('expanded');
+                });
+
+                // Close dropdown when clicking outside
+                L.DomEvent.on(document, 'click', function() {
+                    container.classList.remove('expanded');
+                });
+
+                // Prevent map interactions when clicking on control
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
 
                 return container;
             }
         });
 
         // Add basemap control to map (bottom-right corner, compact)
-        new L.Control.BasemapControl({ position: 'bottomright' }).addTo(map);
+        // Commented out - basemap selector now in pill tab
+        // new L.Control.BasemapControl({ position: 'bottomright' }).addTo(map);
 
         // Initialize Lucide icons when popups are opened
         map.on('popupopen', function(e) {
@@ -2900,7 +3600,7 @@
                 // Create north arrow shape (triangle pointing up)
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 path.setAttribute('d', 'M 15 2 L 22 20 L 15 17 L 8 20 Z');
-                path.setAttribute('fill', '#F1642E');
+                path.setAttribute('fill', 'none');
 
                 svg.appendChild(path);
                 container.appendChild(svg);
@@ -2917,8 +3617,8 @@
             }
         });
 
-        // Add north arrow control to map (top-left, above zoom control)
-        new L.Control.NorthArrow({ position: 'topleft' }).addTo(map);
+        // Add north arrow control to map (top-right corner)
+        new L.Control.NorthArrow({ position: 'topright' }).addTo(map);
 
         // Add scale control to map (bottom-left)
         L.control.scale({
@@ -3001,6 +3701,173 @@
         let selectedFeatureLayers = [];  // Array of references to selected layers
         let selectedFeatureGeometries = [];  // Array of WKT format geometries for API
         let contextMode = false;  // Whether in context-aware query mode
+
+        // Drawing tool state
+        let drawingEnabled = false;
+        let currentDrawingMode = null;  // 'point', 'line', 'polygon'
+        let drawnLayer = null;
+        let drawnGeometry = null;
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        // ===== DRAWING TOOL FUNCTIONS =====
+
+        // Toggle draw menu dropdown
+        function toggleDrawMenu() {
+            const menu = document.getElementById('drawDropdownMenu');
+            const tab = document.getElementById('drawTab');
+
+            if (menu.style.display === 'none' || menu.style.display === '') {
+                menu.style.display = 'block';
+                tab.classList.add('chat-tab-active');
+            } else {
+                menu.style.display = 'none';
+                tab.classList.remove('chat-tab-active');
+            }
+        }
+
+        // Toggle basemap menu dropdown
+        function toggleBasemapMenu(event) {
+            if (event) {
+                event.stopPropagation();
+            }
+
+            const menu = document.getElementById('basemapDropdownMenu');
+            const tab = document.getElementById('basemapTab');
+
+            if (menu.style.display === 'none' || menu.style.display === '') {
+                menu.style.display = 'block';
+                tab.classList.add('chat-tab-active');
+            } else {
+                menu.style.display = 'none';
+                tab.classList.remove('chat-tab-active');
+            }
+        }
+
+        // Switch basemap
+        function switchBasemap(basemapName, event) {
+            // Stop event propagation
+            if (event) {
+                event.stopPropagation();
+            }
+
+            // Hide the dropdown menu
+            document.getElementById('basemapDropdownMenu').style.display = 'none';
+            document.getElementById('basemapTab').classList.remove('chat-tab-active');
+
+            // Remove current basemap
+            if (currentBasemap) {
+                map.removeLayer(currentBasemap);
+            }
+
+            // Add new basemap
+            currentBasemap = basemaps[basemapName];
+            if (currentBasemap) {
+                currentBasemap.addTo(map);
+            }
+
+            // Update the pill tab text to show current basemap name
+            const basemapTabName = document.getElementById('basemapTabName');
+            if (basemapTabName) {
+                basemapTabName.textContent = basemapName;
+            }
+
+            // Update Lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        // Activate drawing mode for a specific type
+        function activateDrawing(type) {
+            // Hide the dropdown menu
+            document.getElementById('drawDropdownMenu').style.display = 'none';
+
+            // Clear any previous drawings
+            drawnItems.clearLayers();
+            drawnGeometry = null;
+
+            // Set current mode
+            currentDrawingMode = type;
+            drawingEnabled = true;
+
+            // Create appropriate drawing handler
+            let drawHandler;
+            switch(type) {
+                case 'point':
+                    drawHandler = new L.Draw.Marker(map, {});
+                    break;
+                case 'line':
+                    drawHandler = new L.Draw.Polyline(map, {
+                        shapeOptions: {
+                            color: '#FFB162',
+                            weight: 3
+                        }
+                    });
+                    break;
+                case 'polygon':
+                    drawHandler = new L.Draw.Polygon(map, {
+                        shapeOptions: {
+                            color: '#FFB162',
+                            fillOpacity: 0.3
+                        }
+                    });
+                    break;
+            }
+
+            // Enable drawing
+            if (drawHandler) {
+                drawHandler.enable();
+
+                // Update tab to show active state
+                document.getElementById('drawTab').classList.add('chat-tab-active');
+
+                // Show notification
+                showNotification(`Drawing ${type} mode activated. Click on the map to draw.`, 'info');
+            }
+        }
+
+        // Handle drawing completion
+        map.on(L.Draw.Event.CREATED, function (event) {
+            const layer = event.layer;
+            drawnItems.addLayer(layer);
+            drawnLayer = layer;
+
+            // Convert to GeoJSON
+            const geoJSON = layer.toGeoJSON();
+            drawnGeometry = geoJSON.geometry;
+
+            // Reset drawing state
+            drawingEnabled = false;
+            document.getElementById('drawTab').classList.remove('chat-tab-active');
+
+            // Show success notification
+            showNotification(`${currentDrawingMode.charAt(0).toUpperCase() + currentDrawingMode.slice(1)} drawn successfully! It will be included in your next query.`, 'success');
+
+            console.log('Drawn geometry:', drawnGeometry);
+        });
+
+        // Close draw menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const drawTab = document.getElementById('drawTab');
+            const menu = document.getElementById('drawDropdownMenu');
+
+            if (menu && !drawTab.contains(e.target)) {
+                menu.style.display = 'none';
+                drawTab.classList.remove('chat-tab-active');
+            }
+        });
+
+        // Close basemap menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const basemapTab = document.getElementById('basemapTab');
+            const menu = document.getElementById('basemapDropdownMenu');
+
+            if (menu && !basemapTab.contains(e.target)) {
+                menu.style.display = 'none';
+                basemapTab.classList.remove('chat-tab-active');
+            }
+        });
 
         // ===== MULTI-STEP QUERY FUNCTIONS =====
 
@@ -3175,16 +4042,12 @@
             }, 4000);
         }
 
-        // Show/hide loading indicator
+        // Show/hide loading state (mute submit button)
         function setLoading(isLoading, text = 'Processing...') {
-            const indicator = document.getElementById('loadingIndicator');
-            const loadingText = document.getElementById('loadingIndicatorText');
+            const searchBtn = document.getElementById('searchBtn');
 
-            if (isLoading) {
-                loadingText.textContent = text;
-                indicator.classList.add('active');
-            } else {
-                indicator.classList.remove('active');
+            if (searchBtn) {
+                searchBtn.disabled = isLoading;
             }
         }
 
@@ -4186,6 +5049,41 @@
             }, 300);
         }
 
+        // Toggle layers panel collapse/expand
+        function toggleLayersPanel() {
+            const layersPanel = document.getElementById('layersPanel');
+            layersPanel.classList.toggle('collapsed');
+
+            // Tell Leaflet the container size changed (after CSS animation completes)
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
+
+            // Re-initialize Lucide icons for the button
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        // Toggle operations panel collapse/expand
+        function toggleOperationsPanel() {
+            const operationsPanel = document.getElementById('operationsPanel');
+            const mapWrapper = document.querySelector('.map-wrapper');
+
+            operationsPanel.classList.toggle('collapsed');
+            mapWrapper.classList.toggle('operations-collapsed');
+
+            // Tell Leaflet the container size changed (after CSS animation completes)
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
+
+            // Re-initialize Lucide icons for the button
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
         // Toggle layer visibility
         function toggleLayer(layerId) {
             const layerInfo = layers.find(l => l.id === layerId);
@@ -4791,6 +5689,9 @@
                         class: ['lucide-icon']
                     }
                 });
+                console.log('✓ Lucide icons initialized');
+            } else {
+                console.warn('⚠ Lucide library not loaded');
             }
         }
 
@@ -6288,6 +7189,22 @@
             checkProvidersHealth();
             // Initialize Lucide icons on page load
             initializeLucideIcons();
+
+            // Ensure submit button icon is visible
+            setTimeout(() => {
+                const submitBtn = document.getElementById('searchBtn');
+                if (submitBtn) {
+                    console.log('✓ Submit button found:', submitBtn);
+                    console.log('  Button innerHTML:', submitBtn.innerHTML);
+                } else {
+                    console.error('✗ Submit button NOT found!');
+                }
+
+                if (window.lucide) {
+                    lucide.createIcons();
+                    console.log('✓ Re-initialized Lucide icons for dynamic elements');
+                }
+            }, 100);
         });
 
         // Execute search

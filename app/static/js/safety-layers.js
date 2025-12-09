@@ -252,8 +252,7 @@ class SafetyLayersManager {
         } catch (error) {
             console.error('X Failed to create layers:', error);
         }
-    
-
+    }
 
     async createCrimeAndAccidentLayers() {
         try {
