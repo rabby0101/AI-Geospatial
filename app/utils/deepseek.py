@@ -557,6 +557,60 @@ LIMIT 50
 - ✅ "Which road segments are dark at night?" → Same as 20m unlit
 - ✅ "List dangerous areas: unlit roads within 300m of hospitals" (select hospitals, ask query)
 
+**⭐ STREET LIGHT COVERAGE VISUALIZATION:**
+
+**Overview:**
+Users can visualize street light coverage areas with directional orientation. The system uses a special endpoint `/api/street-lights/coverage` that calculates coverage polygons based on light fixture type and rotation.
+
+**Key Features:**
+- **Smart Coverage Patterns:**
+  - Pole-mounted (Aufsatzleuchte): Full circular coverage (20m radius)
+  - Cantilever (Auslegerleuchte): Directional 120° sector (25m radius)
+  - Attached (Ansatzleuchte): Directional 120° sector (20m radius)
+- **Rotation-aware:** Uses `rotation` field (0-360°) to orient directional fixtures
+- **Layer Persistence:** Coverage areas persist as toggleable map layers
+
+**When to Use Coverage Visualization:**
+Detect these query patterns and use the coverage endpoint instead of regular spatial queries:
+- "turn on lights" / "turn the lights on"
+- "show light coverage" / "show coverage areas"
+- "visualize lighting" / "light illumination"
+- "display street lights with coverage"
+- "show which areas are lit"
+
+**Backend Handling:**
+When these patterns are detected, the backend should:
+1. Extract the target geometry (drawn area, selected road, or specified location)
+2. Call `/api/street-lights/coverage` with the geometry
+3. Return both light points AND coverage polygons as separate feature sets
+4. Include metadata: light count, total coverage area, coverage type breakdown
+
+**Important:**
+- This is NOT a PostGIS spatial query - it's a special API call
+- The frontend will handle the visualization with glow animations
+- Coverage polygons are computed server-side using shapely
+- Result should include `feature_type: 'coverage_area'` property for coverage polygons
+
+**Example Operation Plan for Coverage Queries:**
+```json
+{
+  "operations": [
+    {
+      "operation": "load",
+      "parameters": {
+        "endpoint": "/api/street-lights/coverage",
+        "geometry": <drawn_geometry or selected_feature>,
+        "buffer_meters": 20
+      },
+      "description": "Load street lights with coverage areas"
+    }
+  ],
+  "reasoning": "User requested light coverage visualization. Using specialized endpoint to compute and display coverage areas with directional orientation.",
+  "datasets_required": ["osm_street_lights"],
+  "layer_name": "street_light_coverage_areas"
+}
+```
+
 **Available Raster Datasets:**
 - berlin_ndvi_2018 → raster/ndvi_timeseries/berlin_ndvi_20180716.tif (Real Sentinel-2, 66MB, 10m resolution, 2018-07-16)
 - berlin_ndvi_2024 → raster/ndvi_timeseries/berlin_ndvi_20240721.tif (Real Sentinel-2, 57MB, 10m resolution, 2024-07-21)
@@ -1719,7 +1773,7 @@ def _build_dynamic_system_prompt(user_query: str) -> str:
         return SYSTEM_PROMPT
 
 
-def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None) -> Dict[str, str]:
+def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, drawn_geometry: Dict[str, Any] = None) -> Dict[str, str]:
     """
     Query DeepSeek API with a prompt, using simple in-memory cache.
     Dynamically builds prompts with only relevant tables for the query.
@@ -1730,6 +1784,7 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
         user_location: Optional user GPS coordinates {'lat': float, 'lon': float}
         query_type: Optional query type ('spatial', 'stats', 'raster') to guide LLM response format
         selected_feature: Optional selected feature from map for context-aware queries
+        drawn_geometry: Optional geometry drawn by user (GeoJSON format) - used as spatial context
 
     Returns:
         Dict with 'content' (API response), 'system_prompt', and 'user_prompt'
@@ -1737,9 +1792,9 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
     if not DEEPSEEK_API_KEY:
         raise ValueError("DEEPSEEK_API_KEY not found in environment variables")
 
-    # Check cache first (include user_location and query_type in cache key)
+    # Check cache first (include user_location, query_type, and drawn_geometry in cache key)
     # Note: selected_feature is now handled via temp database layers, not in cache key
-    cache_context = {**(context or {}), **({"user_location": user_location} if user_location else {}), **({"query_type": query_type} if query_type else {})}
+    cache_context = {**(context or {}), **({"user_location": user_location} if user_location else {}), **({"query_type": query_type} if query_type else {}), **({"drawn_geometry": drawn_geometry} if drawn_geometry else {})}
     cache_key = _generate_cache_key(prompt, cache_context if cache_context else None)
     if cache_key in _query_cache:
         print(f"💨 Cache hit! Returning cached response")
@@ -1758,6 +1813,12 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
     # Add user location to prompt if available
     if user_location:
         full_prompt = f"{full_prompt}\n\nuser_location: {{lat: {user_location.get('lat')}, lon: {user_location.get('lon')}}}"
+
+    # Add drawn geometry to prompt if available - provides spatial context for queries
+    if drawn_geometry:
+        geometry_type = drawn_geometry.get('type', 'Unknown')
+        coordinates_str = json.dumps(drawn_geometry.get('coordinates', []))[:200]  # Truncate long coordinate lists
+        full_prompt = f"{full_prompt}\n\ndrawn_geometry: User has drawn a {geometry_type} on the map. Use this as spatial context for queries mentioning 'here', 'this area', 'drawn area', or location references. Geometry: {coordinates_str}..."
 
     # Add additional context if provided
     if context:
@@ -1823,7 +1884,7 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
     except (KeyError, IndexError) as e:
         raise Exception(f"Unexpected response format from DeepSeek: {str(e)}")
 
-def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, selected_features: List[Dict[str, Any]] = None) -> OperationPlan:
+def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, selected_features: List[Dict[str, Any]] = None, drawn_geometry: Dict[str, Any] = None) -> OperationPlan:
     """
     Parse a natural language geospatial query into structured operations.
     Uses DeepSeek API to convert natural language to SQL.
@@ -1835,6 +1896,7 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
         query_type: Optional query type ('spatial', 'stats', 'raster', 'routing') to guide response format
         selected_feature: Optional selected feature from map for context-aware queries
         selected_features: Optional list of multiple selected features (for routing)
+        drawn_geometry: Optional geometry drawn by user (GeoJSON format) - used as spatial context
 
     Returns:
         OperationPlan with structured operations
@@ -1881,7 +1943,7 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
             )
 
     # Query DeepSeek for non-routing queries or routing queries without sufficient selected features
-    response_dict = query_deepseek(question, context, user_location, query_type if not is_routing_query else "routing", selected_feature)
+    response_dict = query_deepseek(question, context, user_location, query_type if not is_routing_query else "routing", selected_feature, drawn_geometry)
 
     # Extract the content, system_prompt, and user_prompt from the dict
     raw_content = response_dict.get("content", "")

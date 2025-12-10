@@ -33,7 +33,8 @@ async def geospatial_query(request: NLQuery) -> QueryResponse:
             question=request.question,
             context=request.context,
             user_location=request.user_location,
-            selected_feature=request.selected_feature
+            selected_feature=request.selected_feature,
+            drawn_geometry=request.drawn_geometry
         )
 
         # Execute the operation plan
@@ -119,7 +120,8 @@ async def geospatial_stats_query(request: NLQuery) -> QueryResponse:
             question=request.question,
             context=request.context,
             user_location=request.user_location,
-            query_type="stats"  # Signal DeepSeek this is a stats query
+            query_type="stats",  # Signal DeepSeek this is a stats query
+            drawn_geometry=request.drawn_geometry
         )
 
         # Execute the operation plan with stats executor
@@ -529,4 +531,154 @@ async def drop_temp_layer(request: Dict[str, str]) -> Dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to drop temporary layer: {str(e)}"
+        )
+
+
+@router.post("/street-lights/coverage")
+async def get_street_lights_with_coverage(request: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Get street lights near a location or road with coverage area visualization.
+
+    This endpoint returns street lights within a buffer distance of a given geometry,
+    with computed coverage areas based on light type and orientation.
+
+    Body:
+        {
+            "geometry": {GeoJSON geometry object (Point, LineString, or Polygon)},
+            "buffer_meters": 20,  // Optional, default 20m
+            "include_coverage": true  // Optional, default true
+        }
+
+    Returns:
+        {
+            "success": true,
+            "lights": [array of light point features],
+            "coverage_areas": [array of coverage polygon features],
+            "metadata": {
+                "light_count": 42,
+                "total_coverage_area_km2": 0.023,
+                "coverage_types": {"circle": 10, "sector": 32}
+            }
+        }
+
+    Example:
+        POST /api/street-lights/coverage
+        {
+            "geometry": {"type": "LineString", "coordinates": [[13.4, 52.5], ...]},
+            "buffer_meters": 20
+        }
+    """
+    try:
+        from app.utils.lighting_analysis import (
+            calculate_light_coverage,
+            analyze_light_coverage_statistics,
+            add_coverage_to_lights_geojson
+        )
+        import json
+
+        # Extract parameters
+        geometry = request.get("geometry")
+        buffer_meters = request.get("buffer_meters", 20)
+        include_coverage = request.get("include_coverage", True)
+
+        if not geometry:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="geometry is required"
+            )
+
+        # Convert geometry to WKT for PostGIS
+        geom_type = geometry.get("type")
+        coordinates = geometry.get("coordinates")
+
+        if not geom_type or not coordinates:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid geometry format"
+            )
+
+        # Create a simple WKT representation
+        # For simplicity, we'll use ST_GeomFromGeoJSON in the query
+        geom_json_str = json.dumps(geometry)
+
+        # Convert buffer_meters to degrees (approximate for Berlin at ~52.5°N)
+        # 1 degree latitude ≈ 111km, 1 degree longitude ≈ 69km at this latitude
+        buffer_degrees = buffer_meters / 111000
+
+        # Query street lights within buffer
+        query = f"""
+        WITH input_geom AS (
+            SELECT ST_GeomFromGeoJSON('{geom_json_str}') as geom
+        )
+        SELECT
+            sl.id,
+            sl.leuchtstelle,
+            sl.kurznummer,
+            sl.betriebsart,
+            sl.status,
+            sl.bezirk,
+            sl.ortsteil,
+            sl.strasse,
+            sl.rotation,
+            sl.leuchtentyp,
+            sl.symbolnr,
+            sl.geometry
+        FROM vector.osm_street_lights sl, input_geom
+        WHERE ST_DWithin(
+            sl.geometry,
+            input_geom.geom,
+            {buffer_degrees}
+        )
+        ORDER BY ST_Distance(sl.geometry, input_geom.geom)
+        LIMIT 500
+        """
+
+        # Execute query
+        result_gdf = db_manager.execute_spatial_query(query)
+
+        if len(result_gdf) == 0:
+            return {
+                "success": True,
+                "lights": [],
+                "coverage_areas": [],
+                "metadata": {
+                    "light_count": 0,
+                    "total_coverage_area_km2": 0,
+                    "coverage_types": {}
+                }
+            }
+
+        # Convert lights to GeoJSON
+        lights_geojson = result_gdf.__geo_interface__
+
+        # Calculate coverage areas if requested
+        if include_coverage:
+            coverage_gdf = calculate_light_coverage(result_gdf)
+            coverage_geojson = coverage_gdf.__geo_interface__
+
+            # Calculate statistics
+            stats = analyze_light_coverage_statistics(coverage_gdf)
+
+            return {
+                "success": True,
+                "lights": lights_geojson,
+                "coverage_areas": coverage_geojson,
+                "metadata": stats
+            }
+        else:
+            return {
+                "success": True,
+                "lights": lights_geojson,
+                "coverage_areas": None,
+                "metadata": {
+                    "light_count": len(result_gdf)
+                }
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to query street lights: {str(e)}"
         )

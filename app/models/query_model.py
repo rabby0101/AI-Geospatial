@@ -43,6 +43,10 @@ class NLQuery(BaseModel):
         default=None,
         description="Selected feature from map for context-aware queries {'geometry': 'WKT', 'geometry_type': 'Point/Polygon/...', 'properties': {...}, 'name': 'feature_name'}"
     )
+    drawn_geometry: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Geometry drawn by user (GeoJSON geometry format) - used as spatial context for LLM"
+    )
 
     class Config:
         json_schema_extra = {

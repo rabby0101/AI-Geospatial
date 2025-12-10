@@ -126,7 +126,6 @@
             
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             color: var(--text-primary);
-            height: 40px;
         }
 
         #searchInput::placeholder {
@@ -773,6 +772,84 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Street Light Glow Animations */
+        @keyframes lightGlow {
+            0% {
+                box-shadow: 0 0 0 rgba(255, 215, 0, 0);
+                filter: brightness(1);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
+                filter: brightness(1.4);
+            }
+            100% {
+                box-shadow: 0 0 10px rgba(255, 215, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.3);
+                filter: brightness(1.2);
+            }
+        }
+
+        @keyframes coverageGlow {
+            0% {
+                fill-opacity: 0.05;
+                stroke-opacity: 0.2;
+            }
+            50% {
+                fill-opacity: 0.20;
+                stroke-opacity: 0.6;
+            }
+            100% {
+                fill-opacity: 0.15;
+                stroke-opacity: 0.4;
+            }
+        }
+
+        /* Light marker glow effect */
+        .street-light-marker.light-glow-marker.glow-active {
+            animation: lightGlow 2s ease-in-out;
+            animation-fill-mode: forwards;
+        }
+
+        /* Coverage area glow effect */
+        .light-coverage-area.light-glow.glow-active {
+            animation: coverageGlow 2s ease-in-out;
+            animation-fill-mode: forwards;
+        }
+
+        /* Smooth transitions for gradient zones */
+        .light-coverage-area {
+            transition: fill-opacity 0.5s ease-in-out, stroke-opacity 0.5s ease-in-out;
+        }
+
+        /* Static glow state after animation */
+        .street-light-marker {
+            transition: all 0.3s ease;
+        }
+
+        .street-light-marker:hover {
+            filter: brightness(1.5) drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+            transform: scale(1.15);
+        }
+
+        /* Directional arrow indicator styles */
+        .directional-arrow {
+            pointer-events: none; /* Don't block clicks on underlying elements */
+            filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.6));
+            transition: all 0.3s ease;
+        }
+
+        .directional-arrowhead {
+            pointer-events: none;
+            filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.6));
+            transition: all 0.3s ease;
+        }
+
+        /* Hover effect for directional arrows */
+        path.directional-arrow:hover,
+        path.directional-arrowhead:hover {
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.9));
+            stroke-width: 4;
+        }
+
         /* ========================================
            CHAT OVERLAY BOTTOM (NEW DESIGN)
            ======================================== */
@@ -918,6 +995,12 @@
             color: #f3f4f6;
             outline: none;
             min-width: 0;
+            resize: none;
+            overflow: hidden;
+            line-height: 1.4;
+            min-height: 2.66rem;
+            max-height: 12rem;
+            transition: font-size 0.2s ease;
         }
 
         .chat-input-container #searchInput::placeholder {
@@ -1705,7 +1788,7 @@
 
         /* Right Operations Panel */
         .operations-panel {
-            width: 350px;
+            width: 320px;
             height: 100vh;
             background: rgba(26, 24, 37, 0.4);
             backdrop-filter: blur(25px) saturate(180%);
@@ -1783,7 +1866,7 @@
 
         /* Right panel toggle button */
         .panel-toggle-btn.right {
-            right: 350px;
+            right: 320px;
             border-radius: 12px 0 0 12px;
             border-right: none;
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s, border-color 0.3s, width 0.3s;
@@ -2764,7 +2847,7 @@
         /* Basemap Selector Control - Bottom Right */
         .leaflet-bottom.leaflet-right {
             bottom: 1rem;
-            right: calc(350px + 1rem);
+            right: calc(320px + 1rem);
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -2884,7 +2967,7 @@
         /* North Arrow Control - Top Right */
         .leaflet-top.leaflet-right {
             top: 1rem;
-            right: calc(350px + 1rem);
+            right: calc(320px + 1rem);
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -2993,7 +3076,7 @@
             position: fixed;
             right: 0;
             top: 120px;
-            width: 350px;
+            width: 320px;
             max-height: calc(100vh - 140px);
             background: linear-gradient(135deg, rgba(15, 13, 26, 0.95) 0%, rgba(37, 31, 53, 0.95) 100%);
             border: 1px solid rgba(241, 100, 46, 0.3);
@@ -3092,7 +3175,7 @@
                         <div class="chat-input-row">
                             <!-- First Row: Search Input -->
                             <div class="chat-input-container">
-                                <input type="text" id="searchInput" placeholder="How can I help you today?" />
+                                <textarea id="searchInput" placeholder="How can I help you today?" rows="1"></textarea>
                             </div>
 
                             <!-- Second Row: Controls (Left + Right Sections) -->
@@ -3135,6 +3218,7 @@
                         <div class="chat-tab-pill" id="drawTab" onclick="toggleDrawMenu()" title="Draw shapes on map">
                             <i data-lucide="pen-tool" style="width: 18px; height: 18px; margin-right: 8px;"></i>
                             <span>Draw</span>
+                            <span id="drawActiveIndicator" style="display: none; width: 8px; height: 8px; background: #F1642E; border-radius: 50%; margin-left: 6px;" title="Shape drawn"></span>
                             <!-- Draw Dropdown Menu -->
                             <div class="draw-dropdown-menu" id="drawDropdownMenu" style="display: none;">
                                 <div class="draw-menu-item" onclick="activateDrawing('point')">
@@ -3148,6 +3232,11 @@
                                 <div class="draw-menu-item" onclick="activateDrawing('polygon')">
                                     <i data-lucide="pentagon" style="width: 18px; height: 18px;"></i>
                                     <span>Polygon</span>
+                                </div>
+                                <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 4px 0;"></div>
+                                <div class="draw-menu-item" onclick="clearDrawing(event)" id="clearDrawingBtn">
+                                    <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+                                    <span>Clear Drawing</span>
                                 </div>
                             </div>
                         </div>
@@ -3827,6 +3916,40 @@
             }
         }
 
+        // Clear drawn geometry
+        function clearDrawing(event) {
+            // Stop event propagation
+            if (event) {
+                event.stopPropagation();
+            }
+
+            // Hide the dropdown menu
+            const menu = document.getElementById('drawDropdownMenu');
+            const tab = document.getElementById('drawTab');
+            if (menu) {
+                menu.style.display = 'none';
+            }
+            if (tab) {
+                tab.classList.remove('chat-tab-active');
+            }
+
+            // Clear drawn layers from map
+            drawnItems.clearLayers();
+            drawnLayer = null;
+            drawnGeometry = null;
+
+            // Hide the active indicator
+            const indicator = document.getElementById('drawActiveIndicator');
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+
+            // Show notification
+            showNotification('Drawing cleared', 'success');
+
+            console.log('Drawn geometry cleared');
+        }
+
         // Handle drawing completion
         map.on(L.Draw.Event.CREATED, function (event) {
             const layer = event.layer;
@@ -3836,6 +3959,12 @@
             // Convert to GeoJSON
             const geoJSON = layer.toGeoJSON();
             drawnGeometry = geoJSON.geometry;
+
+            // Show indicator that geometry is active
+            const indicator = document.getElementById('drawActiveIndicator');
+            if (indicator) {
+                indicator.style.display = 'inline-block';
+            }
 
             // Reset drawing state
             drawingEnabled = false;
@@ -4241,7 +4370,7 @@
                 directionsPanel.className = 'operations-panel';
                 directionsPanel.style.right = '0px';
                 directionsPanel.style.top = '120px';
-                directionsPanel.style.width = '350px';
+                directionsPanel.style.width = '320px';
                 directionsPanel.style.zIndex = '999';
                 directionsPanel.innerHTML = `
                     <div style="padding: 15px; color: white; height: 100%;">
@@ -7207,6 +7336,310 @@
             }, 100);
         });
 
+        // Render street light coverage with glow animation
+        function renderStreetLightCoverage(coverageData, query) {
+            console.log('💡 Rendering street light coverage...');
+
+            // Extract lights and coverage areas
+            const lights = coverageData.lights;
+            const coverageAreas = coverageData.coverage_areas;
+            const metadata = coverageData.metadata;
+
+            // Create combined GeoJSON with both lights and coverage areas
+            const combinedFeatures = [];
+
+            // Add coverage area polygons first (so they render behind points)
+            if (coverageAreas && coverageAreas.features) {
+                // Sort coverage areas by gradient_zone (outermost first, innermost last)
+                // This ensures proper layering for the gradient fade effect
+                const sortedCoverageAreas = [...coverageAreas.features].sort((a, b) => {
+                    const zoneA = a.properties?.gradient_zone !== undefined ? a.properties.gradient_zone : -1;
+                    const zoneB = b.properties?.gradient_zone !== undefined ? b.properties.gradient_zone : -1;
+                    // Lower zone numbers (0=outermost) should render first (at bottom)
+                    return zoneA - zoneB;
+                });
+
+                sortedCoverageAreas.forEach(feature => {
+                    // Mark as coverage area for special styling
+                    feature.properties = feature.properties || {};
+                    feature.properties.feature_type = 'coverage_area';
+                    feature.properties.is_light_coverage = true;
+                    combinedFeatures.push(feature);
+                });
+            }
+
+            // Add light points
+            if (lights && lights.features) {
+                lights.features.forEach(feature => {
+                    // Mark as street light for special styling
+                    feature.properties = feature.properties || {};
+                    feature.properties.feature_type = 'street_light';
+                    feature.properties.is_street_light = true;
+                    combinedFeatures.push(feature);
+                });
+            }
+
+            const combinedGeoJSON = {
+                type: 'FeatureCollection',
+                features: combinedFeatures
+            };
+
+            // Generate layer name
+            const lightCount = lights && lights.features ? lights.features.length : 0;
+            const layerName = `Street Light Coverage (${lightCount} lights)`;
+
+            // Clear previous layers in single mode
+            if (queryMode === 'single') {
+                clearAllQueries();
+            }
+
+            // Add layer with special styling
+            addStreetLightCoverageLayer(layerName, combinedGeoJSON, query, metadata);
+
+            console.log(`✅ Rendered ${lightCount} lights with coverage areas`);
+        }
+
+        // Add street light coverage layer with custom styling and glow effects
+        function addStreetLightCoverageLayer(name, geojsonData, query, metadata) {
+            const numericId = ++layerIdCounter;
+
+            // Create Leaflet layer with custom styling for lights and coverage
+            const geojsonLayer = L.geoJSON(geojsonData, {
+                style: function(feature) {
+                    const props = feature.properties || {};
+
+                    // Style coverage areas
+                    if (props.feature_type === 'coverage_area' || props.is_light_coverage) {
+                        const coverageType = props.coverage_type || 'circle';
+
+                        // Use gradient opacity if available, otherwise default
+                        const fillOpacity = props.gradient_opacity !== undefined
+                            ? props.gradient_opacity
+                            : 0.15;
+
+                        // Innermost zones (highest opacity) have slightly more visible borders
+                        const borderOpacity = props.gradient_zone !== undefined
+                            ? (props.gradient_zone === 3 ? 0.5 : 0.2)  // Zone 3 = innermost
+                            : 0.4;
+
+                        const borderWeight = props.gradient_zone !== undefined
+                            ? (props.gradient_zone === 3 ? 1.5 : 0.5)  // Zone 3 = innermost
+                            : 1;
+
+                        return {
+                            fillColor: '#FFD700',  // Gold
+                            fillOpacity: fillOpacity,  // Dynamic opacity for gradient effect
+                            color: '#FF8C00',      // Dark orange border
+                            weight: borderWeight,
+                            opacity: borderOpacity,
+                            className: 'light-coverage-area light-glow'  // Add glow animation class
+                        };
+                    }
+
+                    // Default style for other features
+                    return {
+                        fillColor: '#FFB162',
+                        fillOpacity: 0.3,
+                        color: '#ffffff',
+                        weight: 2
+                    };
+                },
+                pointToLayer: function(feature, latlng) {
+                    const props = feature.properties || {};
+
+                    // Style street lights
+                    if (props.feature_type === 'street_light' || props.is_street_light) {
+                        const rotation = props.rotation || 0;
+                        const leuchtentyp = props.leuchtentyp || '';
+
+                        // Determine if directional (cantilever or attached)
+                        const isDirectional = leuchtentyp.toLowerCase().includes('ausleger') ||
+                                             leuchtentyp.toLowerCase().includes('ansatz');
+
+                        // Create marker with glow effect
+                        const marker = L.circleMarker(latlng, {
+                            radius: 6,                    // Larger radius for "on" lights
+                            fillColor: '#FFD700',         // Bright gold when "on"
+                            color: '#FFA500',             // Orange border
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.9,
+                            className: 'street-light-marker light-glow-marker'  // Glow animation
+                        });
+
+                        // Add popup with light details
+                        const popupContent = `
+                            <div style="min-width: 200px;">
+                                <h4 style="margin: 0 0 8px 0; color: #FFD700;">
+                                    💡 Street Light
+                                </h4>
+                                <div style="font-size: 13px; line-height: 1.6;">
+                                    ${props.strasse ? `<div><strong>Street:</strong> ${props.strasse}</div>` : ''}
+                                    ${props.leuchtentyp ? `<div><strong>Type:</strong> ${props.leuchtentyp}</div>` : ''}
+                                    ${props.rotation !== undefined ? `<div><strong>Orientation:</strong> ${Math.round(props.rotation)}°</div>` : ''}
+                                    ${props.status ? `<div><strong>Status:</strong> ${props.status}</div>` : ''}
+                                    ${props.betriebsart ? `<div><strong>Power:</strong> ${props.betriebsart}</div>` : ''}
+                                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2);">
+                                        <strong>Coverage:</strong> ${isDirectional ? 'Directional (120°)' : 'Omnidirectional'}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        // If directional, create layer group with arrow indicator
+                        if (isDirectional && rotation !== undefined && rotation !== null) {
+                            // Bind popup to marker before adding to group
+                            marker.bindPopup(popupContent);
+
+                            // Calculate arrow endpoint (pointing in the direction of beam)
+                            // rotation: 0° = North, 90° = East, 180° = South, 270° = West
+                            const arrowLength = 0.0002; // degrees (approx 20-25m)
+
+                            // Convert rotation to radians (0° = North, clockwise)
+                            // Leaflet uses standard math: 0° = East, counter-clockwise
+                            const angleRad = (90 - rotation) * Math.PI / 180;
+
+                            const arrowEndLat = latlng.lat + (arrowLength * Math.sin(angleRad));
+                            const arrowEndLng = latlng.lng + (arrowLength * Math.cos(angleRad));
+
+                            // Create directional arrow/wedge using polyline
+                            const arrow = L.polyline(
+                                [[latlng.lat, latlng.lng], [arrowEndLat, arrowEndLng]],
+                                {
+                                    color: '#FFD700',
+                                    weight: 3,
+                                    opacity: 0.8,
+                                    className: 'directional-arrow'
+                                }
+                            );
+
+                            // Add arrowhead using a small triangle at the end
+                            const arrowheadSize = 0.00005; // Small triangle
+                            const perpAngle1 = angleRad + (2.5 * Math.PI / 3); // 150° offset
+                            const perpAngle2 = angleRad - (2.5 * Math.PI / 3); // -150° offset
+
+                            const arrowhead = L.polygon([
+                                [arrowEndLat, arrowEndLng],
+                                [
+                                    arrowEndLat + (arrowheadSize * Math.sin(perpAngle1)),
+                                    arrowEndLng + (arrowheadSize * Math.cos(perpAngle1))
+                                ],
+                                [
+                                    arrowEndLat + (arrowheadSize * Math.sin(perpAngle2)),
+                                    arrowEndLng + (arrowheadSize * Math.cos(perpAngle2))
+                                ]
+                            ], {
+                                color: '#FFD700',
+                                fillColor: '#FFD700',
+                                fillOpacity: 0.9,
+                                weight: 1,
+                                className: 'directional-arrowhead'
+                            });
+
+                            // Create a feature group (supports getBounds) containing all elements
+                            const layerGroup = L.featureGroup([marker, arrow, arrowhead]);
+
+                            return layerGroup;
+                        }
+
+                        // For non-directional lights, just bind popup and return marker
+                        marker.bindPopup(popupContent);
+                        return marker;
+                    }
+
+                    // Default point styling
+                    return L.circleMarker(latlng, {
+                        radius: 4,
+                        fillColor: '#FFB162',
+                        color: '#ffffff',
+                        weight: 1,
+                        fillOpacity: 0.7
+                    });
+                },
+                onEachFeature: function(feature, layer) {
+                    // Add tooltips for coverage areas
+                    if (feature.properties.feature_type === 'coverage_area') {
+                        const props = feature.properties;
+                        const coverageType = props.coverage_type === 'elliptical_sector' ? 'Elliptical Directional' :
+                                            props.coverage_type === 'sector' ? 'Directional' : 'Circular';
+                        const radius = props.radius_m || 20;
+
+                        // Show gradient zone info if available
+                        let tooltipText = `${coverageType} coverage: ${Math.round(radius)}m`;
+                        if (props.gradient_zone !== undefined) {
+                            const zoneNames = ['Outer edge', 'Mid-outer', 'Mid-inner', 'Core'];
+                            const zoneName = zoneNames[props.gradient_zone] || 'Zone';
+                            const intensity = Math.round(props.gradient_opacity * 100);
+                            tooltipText += ` (${zoneName}: ${intensity}% intensity)`;
+                        }
+
+                        layer.bindTooltip(tooltipText);
+                    }
+                }
+            }).addTo(map);
+
+            // Fit map to layer bounds
+            try {
+                const bounds = geojsonLayer.getBounds();
+                if (bounds && bounds.isValid && bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            } catch (error) {
+                console.warn('Could not fit bounds automatically:', error);
+                // Fallback: calculate bounds from GeoJSON data
+                try {
+                    const allCoords = [];
+                    geojsonData.features.forEach(feature => {
+                        if (feature.geometry.type === 'Point') {
+                            allCoords.push(feature.geometry.coordinates);
+                        } else if (feature.geometry.type === 'Polygon') {
+                            feature.geometry.coordinates[0].forEach(coord => allCoords.push(coord));
+                        }
+                    });
+
+                    if (allCoords.length > 0) {
+                        const lats = allCoords.map(c => c[1]);
+                        const lngs = allCoords.map(c => c[0]);
+                        const bounds = [
+                            [Math.min(...lats), Math.min(...lngs)],
+                            [Math.max(...lats), Math.max(...lngs)]
+                        ];
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                } catch (fallbackError) {
+                    console.warn('Fallback bounds calculation also failed:', fallbackError);
+                }
+            }
+
+            // Store layer info
+            const layerInfo = {
+                id: numericId,
+                name: name,
+                query: query,
+                layer: geojsonLayer,
+                visible: true,
+                featureCount: geojsonData.features.length,
+                timestamp: new Date(),
+                color: '#FFD700',  // Gold for lights
+                geojsonData: geojsonData,
+                metadata: metadata,
+                layerType: 'street_light_coverage'  // Special type
+            };
+
+            layers.push(layerInfo);
+
+            // Update UI
+            updateLayersPanel();
+
+            // Trigger glow animation
+            setTimeout(() => {
+                const glowElements = document.querySelectorAll('.light-glow, .light-glow-marker');
+                glowElements.forEach(el => {
+                    el.classList.add('glow-active');
+                });
+            }, 100);
+        }
+
         // Execute search
         async function executeSearch() {
             const query = document.getElementById('searchInput').value.trim();
@@ -7315,6 +7748,107 @@
                     }
                 }
 
+                // Check for street light coverage visualization query
+                // More flexible matching: check for word combinations instead of exact phrases
+                const queryLower = query.toLowerCase();
+                const isCoverageQuery = (
+                    // Pattern 1: "turn" + "light/lights" + "on"
+                    (queryLower.includes('turn') && (queryLower.includes('light') || queryLower.includes('lights')) && queryLower.includes('on')) ||
+                    // Pattern 2: "show" + "light/lights"
+                    (queryLower.includes('show') && (queryLower.includes('light') || queryLower.includes('lights'))) ||
+                    // Pattern 3: Coverage-related terms
+                    queryLower.includes('light coverage') ||
+                    queryLower.includes('coverage area') ||
+                    queryLower.includes('illumination') ||
+                    queryLower.includes('visualize lighting') ||
+                    // Pattern 4: "display" + "light/lights"
+                    (queryLower.includes('display') && (queryLower.includes('light') || queryLower.includes('lights')))
+                );
+
+                // Check if user is asking for lights without context
+                if (isCoverageQuery && !drawnGeometry && (!selectedFeatures || selectedFeatures.length === 0)) {
+                    showNotification('Please draw an area or select a road segment first, then ask to turn on the lights', 'warning');
+                    setLoading(false);
+                    searchBtn.disabled = false;
+                    return;
+                }
+
+                // If coverage query with drawn geometry or selected features, call coverage endpoint directly
+                if (isCoverageQuery && (drawnGeometry || (selectedFeatures && selectedFeatures.length > 0))) {
+                    console.log(`💡 Street light coverage query detected`);
+                    console.log(`📊 Available context:`, {
+                        hasDrawnGeometry: !!drawnGeometry,
+                        selectedFeaturesCount: selectedFeatures ? selectedFeatures.length : 0,
+                        tempLayerName: window.tempLayerName
+                    });
+
+                    try {
+                        let targetGeometry;
+
+                        // Determine target geometry
+                        if (drawnGeometry) {
+                            targetGeometry = drawnGeometry;
+                            console.log('📐 Using drawn geometry for coverage analysis:', targetGeometry);
+                        } else if (selectedFeatures && selectedFeatures.length > 0) {
+                            // Use first selected feature geometry
+                            targetGeometry = selectedFeatures[0].geometry;
+                            console.log('📍 Using selected feature geometry for coverage analysis:', targetGeometry);
+                        }
+
+                        // Validate geometry
+                        if (!targetGeometry || !targetGeometry.type || !targetGeometry.coordinates) {
+                            throw new Error('Invalid geometry: missing type or coordinates');
+                        }
+
+                        const payload = {
+                            geometry: targetGeometry,
+                            buffer_meters: 20,  // Default 20m buffer
+                            include_coverage: true
+                        };
+
+                        console.log('💡 Coverage payload:', payload);
+
+                        const response = await fetch(`${API_URL}/street-lights/coverage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const coverageData = await response.json();
+                        console.log('💡 Coverage response:', coverageData);
+
+                        if (coverageData.success) {
+                            // Clear previous layers in single mode
+                            if (queryMode === 'single') {
+                                clearAllQueries();
+                            }
+
+                            // Render street lights and coverage areas
+                            renderStreetLightCoverage(coverageData, query);
+
+                            const lightCount = coverageData.metadata.light_count || 0;
+                            const coverageAreaKm2 = (coverageData.metadata.total_coverage_area_km2 || 0).toFixed(3);
+                            showNotification(`✅ ${lightCount} lights found, ${coverageAreaKm2} km² coverage area`, 'success');
+
+                            setLoading(false);
+                            searchBtn.disabled = false;
+                            return; // Exit early - coverage handled
+                        } else {
+                            showNotification(coverageData.error || 'Coverage analysis failed', 'error');
+                            setLoading(false);
+                            searchBtn.disabled = false;
+                            return;
+                        }
+
+                    } catch (error) {
+                        console.error('Coverage error:', error);
+                        showNotification('Error analyzing coverage: ' + error.message, 'error');
+                        setLoading(false);
+                        searchBtn.disabled = false;
+                        return;
+                    }
+                }
+
                 // Get selected LLM provider
                 const llmProvider = getSelectedLLMProvider();
                 console.log(`🧠 Using LLM: ${llmProvider.toUpperCase()}`);
@@ -7357,6 +7891,12 @@
                     if (userLocation) {
                         payload.user_location = userLocation;
                         console.log('🌍 Using user location:', userLocation);
+                    }
+
+                    // Add drawn geometry if available
+                    if (drawnGeometry) {
+                        payload.drawn_geometry = drawnGeometry;
+                        console.log('📐 Including drawn geometry:', drawnGeometry);
                     }
 
                     // Note: selected feature is now handled via temporary PostGIS layer
@@ -7493,8 +8033,12 @@
                     }
                 }
 
-                // Clear search input
-                document.getElementById('searchInput').value = '';
+                // Clear search input and reset styling
+                const inputField = document.getElementById('searchInput');
+                inputField.value = '';
+                currentFontSize = maxFontSize;
+                inputField.style.fontSize = maxFontSize + 'rem';
+                inputField.style.height = 'auto';
 
             } catch (error) {
                 showNotification(`Error: ${error.message}`, 'error');
@@ -7505,11 +8049,62 @@
             }
         }
 
-        // Allow Enter key to search
-        document.getElementById('searchInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
+        // Dynamic font sizing and textarea behavior
+        const searchInput = document.getElementById('searchInput');
+        const maxFontSize = 1.9; // rem
+        const minFontSize = 1.2; // rem
+        let currentFontSize = maxFontSize;
+
+        function adjustInputSize() {
+            const input = searchInput;
+
+            // Reset height to auto to get the correct scrollHeight
+            input.style.height = 'auto';
+
+            // Measure text width using a hidden span
+            const testSpan = document.createElement('span');
+            testSpan.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                white-space: nowrap;
+                font-size: ${currentFontSize}rem;
+                font-family: ${window.getComputedStyle(input).fontFamily};
+                font-weight: ${window.getComputedStyle(input).fontWeight};
+            `;
+            testSpan.textContent = input.value || input.placeholder;
+            document.body.appendChild(testSpan);
+
+            const textWidth = testSpan.offsetWidth;
+            const containerWidth = input.parentElement.offsetWidth - 40; // Account for padding
+
+            document.body.removeChild(testSpan);
+
+            // Adjust font size based on text width
+            if (textWidth > containerWidth * 0.8) {
+                // Text is approaching max width, reduce font size
+                currentFontSize = Math.max(minFontSize, currentFontSize - 0.1);
+                input.style.fontSize = currentFontSize + 'rem';
+            } else if (textWidth < containerWidth * 0.5 && currentFontSize < maxFontSize) {
+                // Text is short, can increase font size
+                currentFontSize = Math.min(maxFontSize, currentFontSize + 0.1);
+                input.style.fontSize = currentFontSize + 'rem';
+            }
+
+            // Auto-resize height based on content
+            input.style.height = Math.min(input.scrollHeight, 192) + 'px'; // 192px = 12rem max-height
+        }
+
+        // Listen for input changes
+        searchInput.addEventListener('input', adjustInputSize);
+
+        // Allow Enter key to search (Shift+Enter for new line)
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 executeSearch();
+                // Reset font size after search
+                currentFontSize = maxFontSize;
+                searchInput.style.fontSize = maxFontSize + 'rem';
             }
         });
 
