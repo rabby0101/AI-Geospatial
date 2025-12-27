@@ -1742,9 +1742,10 @@ def _get_database_schema_for_llm() -> str:
 def _build_dynamic_system_prompt(user_query: str) -> str:
     """
     Build a system prompt with LIVE table descriptions from the database.
+    Enhanced with ontology awareness for semantic query understanding.
 
     Single source of truth: descriptions are stored in vector.table_metadata
-    No hardcoded keyword mappings - LLM reads descriptions to understand what's available.
+    Ontology provides analytical purposes and dataset relationships.
 
     Args:
         user_query: The user's natural language question
@@ -1759,11 +1760,20 @@ def _build_dynamic_system_prompt(user_query: str) -> str:
         # Get LIVE schema from database (descriptions, row counts, columns)
         schema_section = _get_database_schema_for_llm()
 
+        # Get ONTOLOGY context for semantic enhancement
+        ontology_section = _get_ontology_context_for_llm(user_query)
+
         # Get the post-table rules section
         post_tables = SYSTEM_PROMPT.split("**⚠️ UNAVAILABLE TABLES")[1] if "**⚠️ UNAVAILABLE TABLES" in SYSTEM_PROMPT else ""
 
         # Combine into final prompt
-        final_prompt = base_prompt + "\n" + schema_section + "\n**⚠️ UNAVAILABLE TABLES" + post_tables
+        final_prompt = base_prompt + "\n" + schema_section
+        
+        # Add ontology section if relevant
+        if ontology_section:
+            final_prompt += "\n" + ontology_section
+        
+        final_prompt += "\n**⚠️ UNAVAILABLE TABLES" + post_tables
 
         return final_prompt
 
@@ -1771,6 +1781,159 @@ def _build_dynamic_system_prompt(user_query: str) -> str:
         print(f"⚠️ Error building dynamic prompt: {e}")
         # Gracefully fall back to static prompt on any error
         return SYSTEM_PROMPT
+
+
+def _get_ontology_context_for_llm(user_query: str) -> str:
+    """
+    Get relevant ontology context based on user query for enhanced semantic understanding.
+    
+    Detects analytical intent from keywords and returns relevant dataset recommendations
+    from the knowledge graph.
+    
+    Args:
+        user_query: The user's natural language question
+        
+    Returns:
+        Formatted ontology context string, or empty string if not relevant
+    """
+    try:
+        from app.utils.semantic_layer import create_semantic_layer
+        
+        query_lower = user_query.lower()
+        
+        # Define keyword-to-purpose mappings for semantic enhancement
+        purpose_keywords = {
+            'AccessibilityAnalysis': [
+                'accessibility', 'accessible', 'wheelchair', 'disability', 'disabled',
+                'mobility', 'barrier-free', 'reachable', 'reach', 'access to',
+                'healthcare access', 'service access', 'public transport access',
+                'walking distance', 'how far', 'nearest', 'closest'
+            ],
+            'EmergencyPlanning': [
+                'emergency', 'evacuation', 'disaster', 'fire station', 'fire fighting',
+                'police', 'ambulance', 'hospital', 'emergency services', 'safety',
+                'response time', 'crisis', 'rescue', 'first responder'
+            ],
+            'UrbanPlanning': [
+                'urban planning', 'city planning', 'zoning', 'land use', 'development',
+                'infrastructure', 'housing', 'residential', 'commercial', 'mixed use',
+                'density', 'urban growth', 'smart city', 'sustainable', 'best area',
+                'best district', 'ideal location', 'suitable for'
+            ],
+            'EnvironmentalMonitoring': [
+                'environment', 'environmental', 'pollution', 'air quality', 'water quality',
+                'vegetation', 'ndvi', 'green', 'greenery', 'trees', 'forest',
+                'climate', 'carbon', 'sustainability', 'ecological', 'biodiversity',
+                'nature', 'natural', 'green space', 'parks'
+            ],
+            'ChangeDetection': [
+                'change', 'changes', 'temporal', 'time series', 'over time',
+                'comparison', 'difference', 'evolution', 'growth', 'decline',
+                'before and after', 'trend', 'historical'
+            ],
+            'ProximityAnalysis': [
+                'near', 'nearby', 'close to', 'within', 'distance', 'proximity',
+                'around', 'surrounding', 'neighborhood', 'radius', 'buffer',
+                'walking distance', 'km from', 'meters from', 'minutes from'
+            ]
+        }
+        
+        # Detect which purposes are relevant for this query
+        detected_purposes = []
+        for purpose, keywords in purpose_keywords.items():
+            if any(kw in query_lower for kw in keywords):
+                detected_purposes.append(purpose)
+        
+        if not detected_purposes:
+            return ""  # No semantic enhancement needed
+        
+        # Get the semantic layer
+        semantic_layer = create_semantic_layer()
+        
+        # Build ontology context section
+        context_lines = [
+            "\n**🧠 SEMANTIC CONTEXT (from Knowledge Graph):**",
+            "Based on the query intent, these datasets are semantically relevant:\n"
+        ]
+        
+        all_relevant_datasets = set()
+        
+        for purpose in detected_purposes:
+            datasets = semantic_layer.get_datasets_by_purpose(purpose)
+            if datasets:
+                # Format purpose name nicely
+                purpose_name = purpose.replace('Analysis', ' Analysis').replace('Planning', ' Planning').replace('Monitoring', ' Monitoring').replace('Detection', ' Detection')
+                context_lines.append(f"**For {purpose_name}:**")
+                
+                for ds in datasets[:5]:  # Limit to top 5 per purpose
+                    title = ds.get('title', 'Unknown')
+                    table = ds.get('table', '')
+                    
+                    # Extract table name from URI if present
+                    if not table and 'dataset' in ds:
+                        dataset_uri = ds.get('dataset', '')
+                        if '#' in dataset_uri:
+                            table = dataset_uri.split('#')[-1]
+                    
+                    if table:
+                        # Convert ontology ID to actual table name
+                        table_name = _ontology_id_to_table_name(table)
+                        if table_name:
+                            all_relevant_datasets.add(table_name)
+                            context_lines.append(f"  - {title} → table: `vector.{table_name}`")
+                        else:
+                            context_lines.append(f"  - {title}")
+                    else:
+                        context_lines.append(f"  - {title}")
+                
+                context_lines.append("")
+        
+        # Add semantic recommendation
+        if all_relevant_datasets:
+            tables_list = ', '.join([f"vector.{t}" for t in sorted(all_relevant_datasets)])
+            context_lines.append(f"**Recommended tables for this query:** {tables_list}")
+            context_lines.append("\nConsider using these tables in your SQL query based on their semantic relevance.")
+        
+        return '\n'.join(context_lines)
+        
+    except ImportError:
+        print("⚠️ Semantic layer not available for ontology context")
+        return ""
+    except Exception as e:
+        print(f"⚠️ Error getting ontology context: {e}")
+        return ""
+
+
+def _ontology_id_to_table_name(ontology_id: str) -> str:
+    """
+    Convert an ontology dataset ID to the actual PostGIS table name.
+    
+    Args:
+        ontology_id: The ID from the ontology (e.g., 'osm_hospitals', 'berlin_ndvi_2024')
+        
+    Returns:
+        The actual table name without schema prefix, or empty string if unknown
+    """
+    # Direct mapping for known ontology IDs to table names
+    # These match the instances defined in geo_ontology.ttl
+    id_to_table = {
+        'osm_hospitals': 'osm_hospitals',
+        'osm_pharmacies': 'osm_pharmacies',
+        'osm_doctors': 'osm_doctors',
+        'osm_parks': 'osm_parks',
+        'osm_fire_stations': 'osm_fire_stations',
+        'osm_police_stations': 'osm_police_stations',
+        'osm_transport_stops': 'osm_transport_stops',
+        'osm_kindergartens': 'osm_kindergartens',
+        'osm_forests': 'osm_forests',
+        'osm_water_bodies': 'osm_water_bodies',
+        'berlin_districts': 'berlin_districts',
+        'berlin_ndvi_2018': None,  # Raster - no table
+        'berlin_ndvi_2024': None,  # Raster - no table
+        'berlin_ndvi_change': None,  # Raster - no table
+    }
+    
+    return id_to_table.get(ontology_id, ontology_id if ontology_id.startswith('osm_') else '')
 
 
 def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, drawn_geometry: Dict[str, Any] = None) -> Dict[str, str]:

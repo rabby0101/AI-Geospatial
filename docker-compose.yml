@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   postgis:
-    image: postgis/postgis:15-3.3
-    container_name: geoassist_postgis
+    image: pgrouting/pgrouting:15-3.3-3.4
+    container_name: aigeospatial
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-geoassist}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geoassist_password}
@@ -11,7 +11,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:
-      - postgis_data:/var/lib/postgresql/data
+      - aigeospatial_postgis_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-geoassist}"]
@@ -21,7 +21,7 @@ services:
 
   api:
     build: .
-    container_name: geoassist_api
+    container_name: aigeospatial_api
     environment:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - POSTGRES_HOST=postgis
@@ -40,4 +40,5 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
-  postgis_data:
+  aigeospatial_postgis_data:
+    external: true

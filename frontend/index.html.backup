@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="geospatial">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -20,56 +20,6 @@
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- Tailwind CSS + DaisyUI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
-
-    <!-- Configure Tailwind with custom DaisyUI theme -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'palladian': '#EEE9DF',
-                        'oatmeal': '#C9C1B1',
-                        'blue-fantastic': '#2C3B4D',
-                        'burning-flame': '#FFB162',
-                        'truffle-trouble': '#A35139',
-                        'abyssal-blue': '#1B2632',
-                    }
-                }
-            },
-            daisyui: {
-                themes: [
-                    {
-                        geospatial: {
-                            "primary": "#FFB162",
-                            "primary-content": "#1B2632",
-                            "secondary": "#A35139",
-                            "secondary-content": "#ffffff",
-                            "accent": "#2C3B4D",
-                            "accent-content": "#ffffff",
-                            "neutral": "#1B2632",
-                            "neutral-content": "#C4C3E3",
-                            "base-100": "#1a1825",
-                            "base-200": "#0f0d1a",
-                            "base-300": "#1B2632",
-                            "base-content": "#f5f5f5",
-                            "info": "#3b82f6",
-                            "info-content": "#ffffff",
-                            "success": "#28a745",
-                            "success-content": "#ffffff",
-                            "warning": "#ffc107",
-                            "warning-content": "#1B2632",
-                            "error": "#dc3545",
-                            "error-content": "#ffffff",
-                        },
-                    },
-                ],
-            },
-        }
-    </script>
 
     <!-- Turf.js for Geospatial Analysis -->
     <script src="https://unpkg.com/@turf/turf@latest/turf.min.js"></script>
@@ -951,7 +901,202 @@
             pointer-events: auto;
         }
 
-        /* Main Chat Bar styles removed (Migrated to Tailwind/DaisyUI) */
+        /* Main Chat Bar */
+        .chat-main-bar {
+            background: #1a18254b;
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 1.25rem 1.75rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            backdrop-filter: blur(30px) saturate(180%);
+            width: 80%;
+            min-height: auto;
+        }
+
+        .chat-input-row {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Bottom Controls Row */
+        .chat-controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        /* Left Section (Icon Buttons) */
+        .chat-left-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .chat-icon-btn {
+            width: 35px;
+            height: 35px;
+            background: rgba(60, 58, 70, 0.6);
+            border: 1.5px solid rgba(80, 78, 90, 0.4);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: rgba(196, 195, 227, 0.6);
+            transition: all 0.2s ease;
+        }
+
+        .chat-icon-btn:hover {
+            background: rgba(70, 68, 80, 0.8);
+            color: rgba(196, 195, 227, 0.9);
+            border-color: rgba(100, 98, 110, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .chat-icon-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Selected Feature Pill (in chat interface) */
+        .chat-left-section .selected-feature-pill {
+            padding: 0.6rem 1rem;
+            background: rgba(var(--accent-secondary-rgb), 0.3);
+            border: 1.5px solid rgba(var(--accent-primary-rgb), 0.4);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            height: 35px;
+        }
+
+        .chat-left-section .pill-icon {
+            color: var(--accent-primary);
+        }
+
+        .chat-left-section .pill-text {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-left-section .pill-close {
+            background: transparent;
+            border: none;
+            color: rgba(196, 195, 227, 0.7);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0 0.25rem;
+            transition: color 0.2s;
+        }
+
+        .chat-left-section .pill-close:hover {
+            color: var(--text-primary);
+        }
+
+        /* Center Input Container */
+        .chat-input-container {
+            width: 100%;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            padding: 0.5rem 0;
+        }
+
+        .chat-input-container #searchInput {
+            flex: 1;
+            padding-left: 20px;
+            background: transparent;
+            border: none;
+            font-size: 1.9rem;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: #f3f4f6;
+            outline: none;
+            min-width: 0;
+            resize: none;
+            overflow: hidden;
+            line-height: 1.4;
+            min-height: 2.66rem;
+            max-height: 12rem;
+            transition: font-size 0.2s ease;
+        }
+
+        .chat-input-container #searchInput::placeholder {
+            color: rgba(196, 195, 227, 0.5);
+            font-weight: 400;
+        }
+
+        /* Right Section (Model Selector + Submit) */
+        .chat-right-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        .model-selector-dropdown {
+            display: flex;
+            align-items: center;
+            color: #f3f4f6;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            user-select: none;
+        }
+
+        .model-selector-dropdown:hover {
+            color: rgba(196, 195, 227, 0.8);
+        }
+
+        .model-display-text {
+            user-select: none;
+        }
+
+        .chat-submit-btn {
+            width: 48px;
+            height: 48px;
+            background: #C4754B;
+            border: none;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+
+
+
+        .chat-submit-btn:hover:not(:disabled) {
+            background: #d68355;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(196, 117, 75, 0.4);
+        }
+
+        .chat-submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .chat-submit-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(196, 117, 75, 0.5);
+        }
 
         /* Tab Pills Row */
         .chat-tabs-row {
@@ -959,7 +1104,7 @@
             gap: 0.75rem;
             flex-wrap: wrap;
             justify-content: center;
-            width: 70%;
+            width: 70%%;
         }
 
         .chat-tab-pill {
@@ -3031,21 +3176,22 @@
         <div class="layers-panel" id="layersPanel">
             <div class="panel-header">
                 <span class="panel-title">Layers</span>
-                <div class="flex gap-1">
-                    <button class="btn btn-ghost btn-sm btn-square" onclick="openGdiBerlinModal()"
+                <div class="panel-actions">
+                    <button class="panel-action-btn" onclick="openGdiBerlinModal()"
                         title="Import layers from GDI Berlin">
-                        <i data-lucide="globe" class="w-5 h-5"></i>
+                        <i data-lucide="globe" style="width: 18px; height: 18px;"></i>
                     </button>
-                    <button class="btn btn-ghost btn-sm btn-square" onclick="openKnowledgeGraph()"
+                    <button class="panel-action-btn" onclick="openKnowledgeGraph()"
                         title="Knowledge Graph - Semantic Queries">
-                        <i data-lucide="share-2" class="w-5 h-5"></i>
+                        <i data-lucide="share-2" style="width: 18px; height: 18px;"></i>
                     </button>
-                    <button class="btn btn-ghost btn-sm btn-square" onclick="openDatasetBrowser()"
+                    <button class="panel-action-btn" onclick="openDatasetBrowser()"
                         title="Browse and add layers from database">
-                        <i data-lucide="database" class="w-5 h-5"></i>
+                        <i data-lucide="database" style="width: 18px; height: 18px;"></i>
                     </button>
-                    <a href="/database-inspector" class="btn btn-ghost btn-sm btn-square" title="Database Inspector">
-                        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                    <a href="/database-inspector" class="panel-action-btn" title="Database Inspector"
+                        style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="bar-chart-3" style="width: 18px; height: 18px;"></i>
                     </a>
                 </div>
 
@@ -3077,491 +3223,474 @@
 
                 <!-- Chat Interface Overlay (Bottom) -->
                 <div class="chat-overlay-bottom">
-                    <!-- Main Chat Bar (Refactored) -->
-                    <div class="w-full max-w-3xl mx-auto px-4 pb-6">
-                        <div
-                            class="bg-base-100/90 backdrop-blur-xl border border-base-content/10 rounded-2xl shadow-2xl p-4 transition-all hover:bg-base-100 hover:shadow-3xl ring-1 ring-base-content/5 focus-within:ring-primary/50">
-                            <div class="flex flex-col gap-3">
-                                <!-- Input Area -->
-                                <textarea id="searchInput"
-                                    class="textarea textarea-ghost text-lg w-full focus:outline-none resize-none bg-transparent placeholder-base-content/30 min-h-[3rem]"
-                                    placeholder="How can I help you today?" rows="1"></textarea>
+                    <!-- Main Chat Bar -->
+                    <div class="chat-main-bar">
+                        <!-- Two Rows Layout -->
+                        <div class="chat-input-row">
+                            <!-- First Row: Search Input -->
+                            <div class="chat-input-container">
+                                <textarea id="searchInput" placeholder="How can I help you today?" rows="1"></textarea>
+                            </div>
 
-                                <!-- Controls Row -->
-                                <div class="flex items-center justify-between pt-2 border-t border-base-content/5">
-                                    <!-- Left: Utilities -->
-                                    <div class="flex items-center gap-1">
-                                        <div class="tooltip" data-tip="Upload file">
-                                            <button class="btn btn-ghost btn-circle btn-sm opacity-70 hover:opacity-100"
-                                                onclick="document.getElementById('fileInput').click()">
-                                                <i data-lucide="paperclip" class="w-5 h-5"></i>
-                                            </button>
-                                        </div>
-                                        <div class="tooltip" data-tip="Settings">
-                                            <button class="btn btn-ghost btn-circle btn-sm opacity-70 hover:opacity-100"
-                                                onclick="console.log('Settings placeholder')">
-                                                <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
-                                            </button>
-                                        </div>
-
-                                        <!-- Selected Feature Pill -->
-                                        <div class="badge badge-primary gap-2 hidden shadow-sm"
-                                            id="selectedFeaturePill">
-                                            <i data-lucide="target" class="w-3 h-3"></i>
-                                            <span id="pillText" class="max-w-[100px] truncate"></span>
-                                            <button class="btn btn-ghost btn-xs btn-circle text-primary-content"
-                                                onclick="clearSelectedFeature()">
-                                                <i data-lucide="x" class="w-3 h-3"></i>
-                                            </button>
-                                        </div>
+                            <!-- Second Row: Controls (Left + Right Sections) -->
+                            <div class="chat-controls-row">
+                                <!-- Left: Icon Buttons + Selected Feature Pill -->
+                                <div class="chat-left-section">
+                                    <button class="chat-icon-btn" title="New conversation" onclick="clearAllLayers()">
+                                        <i data-lucide="plus" style="width: 22px; height: 22px;"></i>
+                                    </button>
+                                    <button class="chat-icon-btn" title="Settings"
+                                        onclick="console.log('Settings placeholder')">
+                                        <i data-lucide="sliders" style="width: 22px; height: 22px;"></i>
+                                    </button>
+                                    <button class="chat-icon-btn" title="Recall"
+                                        onclick="console.log('Recall placeholder')">
+                                        <i data-lucide="history" style="width: 22px; height: 22px;"></i>
+                                    </button>
+                                    <!-- Selected Feature Pill -->
+                                    <div class="selected-feature-pill" id="selectedFeaturePill" style="display: none;">
+                                        <span class="pill-icon"><i data-lucide="target"
+                                                style="width: 16px; height: 16px;"></i></span>
+                                        <span class="pill-text" id="pillText"></span>
+                                        <button class="pill-close" onclick="clearSelectedFeature()"
+                                            title="Clear selection">✕</button>
                                     </div>
+                                </div>
 
-                                    <!-- Right: Submit & Model -->
-                                    <div class="flex items-center gap-2">
-                                        <div class="dropdown dropdown-end">
-                                            <label tabindex="0"
-                                                class="btn btn-ghost btn-sm gap-2 normal-case font-normal opacity-80 hover:opacity-100">
-                                                <span class="text-xs font-medium opacity-70">Model:</span>
-                                                <span class="text-sm">DeepSeek</span>
-                                                <i data-lucide="chevron-down" class="w-3 h-3 opacity-50"></i>
-                                            </label>
-                                            <ul tabindex="0"
-                                                class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-200 rounded-box w-40 mt-2 border border-base-content/10">
-                                                <li><a>DeepSeek</a></li>
-                                                <li><a>GPT-4</a></li>
-                                                <li><a>Claude 3</a></li>
-                                            </ul>
-                                        </div>
-
-                                        <button
-                                            class="btn btn-primary btn-circle shadow-lg hover:scale-105 transition-transform"
-                                            id="searchBtn" onclick="executeSearch()" title="Submit query">
-                                            <i data-lucide="arrow-up" class="w-6 h-6"></i>
-                                        </button>
+                                <!-- Right: Model Selector + Submit Button -->
+                                <div class="chat-right-section">
+                                    <div class="model-selector-dropdown">
+                                        <span class="model-display-text">DeepSeek</span>
+                                        <i data-lucide="chevron-down"
+                                            style="width: 18px; height: 18px; margin-left: 8px;"></i>
                                     </div>
+                                    <button class="chat-submit-btn" id="searchBtn" onclick="executeSearch()"
+                                        title="Submit query">
+                                        <i data-lucide="chevron-down" style="width: 24px; height: 24px; "></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Chat Action Pills -->
-                    <div class="flex flex-wrap gap-2 justify-center mt-4 pb-4">
-                        <!-- Draw Dropdown -->
-                        <div class="dropdown dropdown-top dropdown-end">
-                            <label tabindex="0"
-                                class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/20 hover:bg-base-content/10 hover:border-base-content/30 text-base-content/70 hover:text-base-content">
-                                <i data-lucide="pen-tool" class="w-4 h-4"></i>
-                                Draw
-                                <span id="drawActiveIndicator" class="w-2 h-2 rounded-full bg-error ml-1 hidden"
-                                    title="Shape drawn"></span>
-                            </label>
-                            <ul tabindex="0"
-                                class="dropdown-content z-[50] menu p-2 shadow-xl bg-base-200 rounded-box w-52 mb-2 border border-base-content/10">
-                                <li><a onclick="activateDrawing('point')"><i data-lucide="map-pin" class="w-4 h-4"></i>
-                                        Point</a></li>
-                                <li><a onclick="activateDrawing('line')"><i data-lucide="minus" class="w-4 h-4"></i>
-                                        Line</a></li>
-                                <li><a onclick="activateDrawing('polygon')"><i data-lucide="pentagon"
-                                            class="w-4 h-4"></i> Polygon</a></li>
-                                <div class="divider my-1"></div>
-                                <li><a onclick="clearDrawing(event)" class="text-error"><i data-lucide="trash-2"
-                                            class="w-4 h-4"></i> Clear Drawing</a></li>
-                            </ul>
+                    <!-- Tab Pills Row (Below Main Bar) -->
+                    <div class="chat-tabs-row">
+                        <div class="chat-tab-pill" id="drawTab" onclick="toggleDrawMenu()" title="Draw shapes on map">
+                            <i data-lucide="pen-tool" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Draw</span>
+                            <span id="drawActiveIndicator"
+                                style="display: none; width: 8px; height: 8px; background: #F1642E; border-radius: 50%; margin-left: 6px;"
+                                title="Shape drawn"></span>
+                            <!-- Draw Dropdown Menu -->
+                            <div class="draw-dropdown-menu" id="drawDropdownMenu" style="display: none;">
+                                <div class="draw-menu-item" onclick="activateDrawing('point')">
+                                    <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                                    <span>Point</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="activateDrawing('line')">
+                                    <i data-lucide="minus" style="width: 18px; height: 18px;"></i>
+                                    <span>Line</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="activateDrawing('polygon')">
+                                    <i data-lucide="pentagon" style="width: 18px; height: 18px;"></i>
+                                    <span>Polygon</span>
+                                </div>
+                                <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 4px 0;"></div>
+                                <div class="draw-menu-item" onclick="clearDrawing(event)" id="clearDrawingBtn">
+                                    <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+                                    <span>Clear Drawing</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Disabled Features -->
-                        <button
-                            class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/10 text-base-content/40 cursor-not-allowed"
-                            disabled title="Coming soon">
-                            <i data-lucide="graduation-cap" class="w-4 h-4"></i> Learn
-                        </button>
-                        <button
-                            class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/10 text-base-content/40 cursor-not-allowed"
-                            disabled title="Coming soon">
-                            <i data-lucide="code" class="w-4 h-4"></i> Code
-                        </button>
-                        <button
-                            class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/10 text-base-content/40 cursor-not-allowed"
-                            disabled title="Coming soon">
-                            <i data-lucide="coffee" class="w-4 h-4"></i> Life stuff
-                        </button>
+                        <!-- Save Drawing Modal -->
+                        <div id="saveDrawingModal"
+                            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+                            <div
+                                style="background: white; padding: 24px; border-radius: 8px; max-width: 400px; width: 90%;">
+                                <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #333;">Save Drawing as Layer?
+                                </h3>
+                                <p style="margin: 0 0 16px 0; color: #666; font-size: 14px;">Would you like to save this
+                                    drawing as a new layer?</p>
 
-                        <!-- Basemap Dropdown -->
-                        <div class="dropdown dropdown-top dropdown-end">
-                            <label tabindex="0"
-                                class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/20 hover:bg-base-content/10 hover:border-base-content/30 text-base-content/70 hover:text-base-content">
-                                <i data-lucide="layers" class="w-4 h-4"></i>
-                                <span id="basemapTabName">Satellite</span>
-                            </label>
-                            <ul tabindex="0"
-                                class="dropdown-content z-[50] menu p-2 shadow-xl bg-base-200 rounded-box w-52 mb-2 border border-base-content/10 max-h-60 overflow-y-auto">
-                                <li><a onclick="switchBasemap('Satellite')"><i data-lucide="satellite"
-                                            class="w-4 h-4"></i> Satellite</a></li>
-                                <li><a onclick="switchBasemap('Liberty (Vector)')"><i data-lucide="map"
-                                            class="w-4 h-4"></i> Liberty (Vector)</a></li>
-                                <li><a onclick="switchBasemap('Bright (Vector)')"><i data-lucide="sun"
-                                            class="w-4 h-4"></i> Bright (Vector)</a></li>
-                                <li><a onclick="switchBasemap('Dark (Vector)')"><i data-lucide="moon"
-                                            class="w-4 h-4"></i> Dark (Vector)</a></li>
-                                <li><a onclick="switchBasemap('Dark')"><i data-lucide="moon-star" class="w-4 h-4"></i>
-                                        Dark (Raster)</a></li>
-                                <li><a onclick="switchBasemap('Light')"><i data-lucide="sun-medium" class="w-4 h-4"></i>
-                                        Light</a></li>
-                            </ul>
+                                <input type="text" id="drawingLayerName" placeholder="Enter layer name"
+                                    style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button onclick="declineSaveDrawing()"
+                                        style="padding: 8px 16px; background: #f5f5f5; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                                        No, Keep as Temporary
+                                    </button>
+                                    <button onclick="confirmSaveDrawing()"
+                                        style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                                        Yes, Save as Layer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-tab-pill chat-tab-disabled" title="Learn (coming soon)">
+                            <i data-lucide="graduation-cap" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Learn</span>
+                        </div>
+                        <div class="chat-tab-pill chat-tab-disabled" title="Code (coming soon)">
+                            <i data-lucide="code" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Code</span>
+                        </div>
+                        <div class="chat-tab-pill chat-tab-disabled" title="Life stuff (coming soon)">
+                            <i data-lucide="coffee" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Life stuff</span>
+                        </div>
+                        <div class="chat-tab-pill" id="basemapTab" onclick="toggleBasemapMenu(event)"
+                            title="Change basemap">
+                            <i data-lucide="layers" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span id="basemapTabName">Satellite</span>
+                            <!-- Basemap Dropdown Menu -->
+                            <div class="draw-dropdown-menu" id="basemapDropdownMenu" style="display: none;">
+                                <div class="draw-menu-item" onclick="switchBasemap('Satellite', event)">
+                                    <i data-lucide="satellite" style="width: 18px; height: 18px;"></i>
+                                    <span>Satellite</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Liberty (Vector)', event)">
+                                    <i data-lucide="map" style="width: 18px; height: 18px;"></i>
+                                    <span>Liberty (Vector)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Bright (Vector)', event)">
+                                    <i data-lucide="sun" style="width: 18px; height: 18px;"></i>
+                                    <span>Bright (Vector)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Dark (Vector)', event)">
+                                    <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+                                    <span>Dark (Vector)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Dark', event)">
+                                    <i data-lucide="moon-star" style="width: 18px; height: 18px;"></i>
+                                    <span>Dark (Raster)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Light', event)">
+                                    <i data-lucide="sun-medium" style="width: 18px; height: 18px;"></i>
+                                    <span>Light (Raster)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Positron', event)">
+                                    <i data-lucide="circle-dot" style="width: 18px; height: 18px;"></i>
+                                    <span>Positron</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('OSM', event)">
+                                    <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                                    <span>OpenStreetMap</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <span>OpenStreetMap</span>
+            <!-- Right Operations Panel -->
+            <div class="operations-panel" id="operationsPanel">
+                <div class="operations-header">
+                    <div id="operationsTitle">Operations</div>
+                </div>
+                <div class="operations-content" id="operationsContent">
+                    <div class="no-selection">
+                        Click a layer to view operations
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel Toggle Button -->
+            <button class="panel-toggle-btn right" onclick="toggleOperationsPanel()" title="Toggle operations panel">
+                <i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Export Dialog -->
+    <div class="export-dialog-overlay" id="exportDialogOverlay">
+        <div class="export-dialog">
+            <div class="export-dialog-header"><i data-lucide="download"
+                    style="width: 20px; height: 20px; margin-right: 8px; display: inline;"></i>Export Layer as GeoJSON
+            </div>
+
+            <div class="export-dialog-content">
+                <div class="export-option">
+                    <label class="export-option-label">Include Properties</label>
+                    <div class="export-option-description">Add feature attributes to the export</div>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="exportIncludeProperties" checked>
+                        <span>Include feature properties</span>
+                    </label>
+                </div>
+
+                <div class="export-option">
+                    <label class="export-option-label">Formatting</label>
+                    <div class="export-option-description">Choose output formatting</div>
+                    <select class="export-format-select" id="exportFormatSelect">
+                        <option value="minified">Minified (compact)</option>
+                        <option value="pretty">Pretty printed (formatted)</option>
+                    </select>
+                </div>
+
+                <div class="export-option">
+                    <label class="export-option-label">Additional Options</label>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="exportIncludeCRS">
+                        <span>Include CRS (Coordinate Reference System)</span>
+                    </label>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="exportIncludeBbox">
+                        <span>Include bounding box (bbox)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="export-dialog-actions">
+                <button class="export-btn export-btn-secondary" onclick="closeExportDialog()">Cancel</button>
+                <button class="export-btn export-btn-primary" onclick="performExport()">Export</button>
             </div>
         </div>
     </div>
-    </div>
-    </div>
-    </div>
 
-    <!-- Right Operations Panel -->
-    <div class="operations-panel" id="operationsPanel">
-        <div class="operations-header">
-            <div id="operationsTitle">Operations</div>
-        </div>
-        <div class="operations-content" id="operationsContent">
-            <div class="no-selection">
-                Click a layer to view operations
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Panel Toggle Button -->
-    <button class="panel-toggle-btn right" onclick="toggleOperationsPanel()" title="Toggle operations panel">
-        <i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i>
-    </button>
-    </div>
-    </div>
-
-    <!-- Save Drawing Modal (DaisyUI) -->
-    <dialog id="saveDrawingModal" class="modal">
-        <div class="modal-box">
-            <h3 class="font-bold text-lg">Save Drawing as Layer?</h3>
-            <p class="py-4">Would you like to save this drawing as a new layer?</p>
-            <input type="text" id="drawingLayerName" placeholder="Enter layer name"
-                class="input input-bordered w-full mb-4" />
-            <div class="modal-action">
-                <button class="btn btn-ghost" onclick="declineSaveDrawing()">No, Keep as Temporary</button>
-                <button class="btn btn-primary" onclick="confirmSaveDrawing()">Yes, Save as Layer</button>
-            </div>
-        </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
-
-    <!-- Export Dialog (DaisyUI) -->
-    <dialog id="exportDialogOverlay" class="modal">
-        <div class="modal-box bg-base-200">
-            <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
-                <i data-lucide="download" class="w-5 h-5"></i>
-                Export Layer as GeoJSON
-            </h3>
-
-            <div class="form-control">
-                <label class="label cursor-pointer">
-                    <span class="label-text font-semibold">Include Properties</span>
-                    <input type="checkbox" id="exportIncludeProperties" class="toggle toggle-primary toggle-sm"
-                        checked />
-                </label>
+    <!-- Style Dialog -->
+    <div class="style-dialog-overlay" id="styleDialogOverlay">
+        <div class="style-dialog">
+            <div class="style-dialog-header">
+                <h2>Style: <span id="styleLayerName">Layer</span></h2>
+                <span class="close-btn" onclick="closeStyleDialog()"><i data-lucide="x"
+                        style="width: 20px; height: 20px;"></i></span>
             </div>
 
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text font-semibold">Format</span>
-                </label>
-                <select id="exportFormatSelect" class="select select-bordered select-sm w-full">
-                    <option value="minified">Minified (Compact)</option>
-                    <option value="pretty">Pretty Print (Formatted)</option>
-                </select>
-            </div>
-
-            <div class="form-control mt-2">
-                <label class="label cursor-pointer">
-                    <span class="label-text font-semibold">Include CRS</span>
-                    <input type="checkbox" id="exportIncludeCRS" class="toggle toggle-primary toggle-sm" />
-                </label>
-            </div>
-
-            <div class="form-control">
-                <label class="label cursor-pointer">
-                    <span class="label-text font-semibold">Include BBox</span>
-                    <input type="checkbox" id="exportIncludeBbox" class="toggle toggle-primary toggle-sm" />
-                </label>
-            </div>
-
-            <div class="modal-action">
-                <form method="dialog">
-                    <button class="btn btn-ghost" onclick="closeExportDialog()">Cancel</button>
-                    <button class="btn btn-primary" onclick="performExport()">Export</button>
-                </form>
-            </div>
-        </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
-
-    <!-- Style Dialog (DaisyUI) -->
-    <dialog id="styleDialogOverlay" class="modal">
-        <div class="modal-box bg-base-200">
-            <h3 class="font-bold text-lg mb-4">Style: <span id="styleLayerName">Layer</span></h3>
-
-            <div class="tabs tabs-boxed bg-base-300 mb-4">
-                <a class="tab tab-active" data-tab="basic" onclick="switchStyleTab(this)">
-                    <i data-lucide="palette" class="w-4 h-4 mr-2"></i>Basic
-                </a>
-                <a class="tab" data-tab="gradient" onclick="switchStyleTab(this)">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4 mr-2"></i>Gradient
-                </a>
+            <div class="style-tabs">
+                <button class="style-tab active" data-tab="basic" onclick="switchStyleTab(this)"><i
+                        data-lucide="palette"
+                        style="width: 16px; height: 16px; margin-right: 4px; display: inline;"></i>Basic Colors</button>
+                <button class="style-tab" data-tab="gradient" onclick="switchStyleTab(this)"><i
+                        data-lucide="bar-chart-3"
+                        style="width: 16px; height: 16px; margin-right: 4px; display: inline;"></i>Gradient by
+                    Property</button>
             </div>
 
             <!-- Basic Styling Tab -->
-            <div id="basicTab" class="space-y-4">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Fill Color</span>
-                    </label>
-                    <input type="color" id="fillColor" class="w-full h-10 cursor-pointer rounded-lg">
+            <div class="style-tab-content" id="basicTab">
+                <div class="style-option">
+                    <label>Fill Color</label>
+                    <input type="color" id="fillColor" class="style-color-input">
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Border Color</span>
-                    </label>
-                    <input type="color" id="borderColor" class="w-full h-10 cursor-pointer rounded-lg">
+                <div class="style-option">
+                    <label>Border Color</label>
+                    <input type="color" id="borderColor" class="style-color-input">
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Fill Opacity</span>
-                        <span class="label-text-alt" id="fillOpacityValue">0.8</span>
-                    </label>
-                    <input type="range" id="fillOpacity" min="0" max="1" step="0.1" class="range range-primary range-sm"
-                        value="0.8">
+                <div class="style-option">
+                    <label>Fill Opacity</label>
+                    <input type="range" id="fillOpacity" min="0" max="1" step="0.1" class="style-slider" value="0.8">
+                    <span class="slider-value" id="fillOpacityValue">0.8</span>
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Border Width</span>
-                        <span class="label-text-alt" id="borderWidthValue">2</span>
-                    </label>
-                    <input type="range" id="borderWidth" min="0" max="5" step="1" class="range range-primary range-sm"
-                        value="2">
+                <div class="style-option">
+                    <label>Border Width</label>
+                    <input type="range" id="borderWidth" min="0" max="5" step="1" class="style-slider" value="2">
+                    <span class="slider-value" id="borderWidthValue">2</span>
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Icon (optional)</span>
-                    </label>
-                    <div class="flex gap-2">
-                        <input type="text" id="iconNameInput" class="input input-bordered w-full"
+                <div class="style-option">
+                    <label>Icon (optional)</label>
+                    <div style="display: flex; gap: 0.8rem; align-items: flex-start;">
+                        <input type="text" id="iconNameInput" class="style-color-input"
+                            style="flex: 1; padding: 0.6rem 0.8rem; font-size: 0.9rem;"
                             placeholder="e.g., hospital, school, park" oninput="updateIconPreview()">
                         <div id="iconPreview"
-                            class="w-12 h-12 flex items-center justify-center bg-base-300 rounded-lg border border-base-content/20">
+                            style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(var(--accent-secondary-rgb), 0.4); border: 1px solid rgba(196, 195, 227, 0.3); border-radius: 8px; flex-shrink: 0; color: var(--accent-primary); font-size: 20px;">
                         </div>
                     </div>
-                    <label class="label">
-                        <span class="label-text-alt text-base-content/50">Supports Lucide icons. See <a
-                                href="https://lucide.dev" target="_blank"
-                                class="link link-primary">lucide.dev</a></span>
-                    </label>
+                    <div style="font-size: 0.8rem; color: rgba(196, 195, 227, 0.5); margin-top: 0.4rem;">
+                        Lucide icons: hospital, pharmacy, school, university, restaurant, cafe, bank, atm, park, trees,
+                        police, ambulance, church, museum, theater, gym, shopping-cart, hotel, and 1000+ more at <a
+                            href="https://lucide.dev" target="_blank"
+                            style="color: var(--accent-primary); text-decoration: none;">lucide.dev</a>
+                    </div>
                 </div>
+
             </div>
 
             <!-- Gradient Styling Tab -->
-            <div id="gradientTab" class="space-y-4 hidden">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Property to Visualize</span>
-                    </label>
-                    <select id="propertySelect" class="select select-bordered w-full"
-                        onchange="updateGradientPreview()">
+            <div class="style-tab-content hidden" id="gradientTab">
+                <div class="style-option">
+                    <label>Property to Visualize</label>
+                    <select id="propertySelect" class="style-select" onchange="updateGradientPreview()">
                         <option value="">-- Select a numerical property --</option>
                     </select>
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Color Scheme</span>
-                    </label>
-                    <select id="colorScheme" class="select select-bordered w-full" onchange="updateGradientPreview()">
-                        <option value="viridis">Viridis</option>
-                        <option value="plasma">Plasma</option>
-                        <option value="inferno">Inferno</option>
-                        <option value="cool-warm">Cool to Warm</option>
-                        <option value="red-green">Red to Green</option>
-                        <option value="blue-red">Blue to Red</option>
+                <div class="style-option">
+                    <label>Color Scheme</label>
+                    <select id="colorScheme" class="style-select" onchange="updateGradientPreview()">
+                        <option value="viridis"><i data-lucide="palette"
+                                style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Viridis
+                        </option>
+                        <option value="plasma"><i data-lucide="circle"
+                                style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Plasma
+                        </option>
+                        <option value="inferno">🔥 Inferno</option>
+                        <option value="cool-warm">🌊 Cool to Warm</option>
+                        <option value="red-green"><i data-lucide="circle"
+                                style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Red to Green
+                        </option>
+                        <option value="blue-red">🔵 Blue to Red</option>
                     </select>
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Range</span>
-                        <button class="btn btn-xs btn-ghost" onclick="autoDetectRange()">Auto Detect</button>
-                    </label>
-                    <div class="flex gap-2 items-center">
-                        <input type="number" id="rangeMin" placeholder="Min" class="input input-bordered w-full"
+                <div class="style-option">
+                    <label>Range</label>
+                    <div class="style-range-inputs">
+                        <input type="number" id="rangeMin" placeholder="Min" class="style-number-input"
                             onchange="updateGradientPreview()">
                         <span>to</span>
-                        <input type="number" id="rangeMax" placeholder="Max" class="input input-bordered w-full"
+                        <input type="number" id="rangeMax" placeholder="Max" class="style-number-input"
                             onchange="updateGradientPreview()">
                     </div>
+                    <button id="autoRangeBtn" class="style-button-small" onclick="autoDetectRange()"><i
+                            data-lucide="bar-chart-3"
+                            style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Auto
+                        Detect</button>
                 </div>
 
-                <div class="mt-4">
-                    <div id="styleLegend" class="w-full h-8 rounded-lg border border-base-content/20"></div>
+                <div style="margin-top: 1rem;">
+                    <div class="style-legend" id="styleLegend">
+                        <!-- Legend preview will be rendered here -->
+                    </div>
                 </div>
             </div>
 
-            <div class="form-control mt-4">
-                <label class="label cursor-pointer justify-start gap-2">
-                    <input type="checkbox" id="livePreview" class="toggle toggle-sm toggle-primary" checked>
-                    <span class="label-text font-semibold">Live Preview</span>
+            <!-- Live Preview Checkbox -->
+            <div class="style-option">
+                <label>
+                    <input type="checkbox" id="livePreview" checked>
+                    Live Preview
                 </label>
             </div>
 
-            <div class="modal-action">
-                <form method="dialog">
-                    <button class="btn btn-ghost" onclick="closeStyleDialog()">Cancel</button>
-                    <button class="btn btn-primary" onclick="applyLayerStyle()">Apply</button>
-                </form>
+            <div class="style-dialog-actions">
+                <button class="btn-cancel" onclick="closeStyleDialog()">Cancel</button>
+                <button class="btn-apply" onclick="applyLayerStyle()">Apply</button>
             </div>
         </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
+    </div>
 
-    <!-- Dataset Browser Modal (DaisyUI) -->
-    <dialog id="datasetModalOverlay" class="modal">
-        <div class="modal-box max-w-2xl bg-base-200">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="database" class="w-6 h-6 text-primary"></i>
-                    <h3 class="text-lg font-bold">Browse Datasets</h3>
+    <!-- Dataset Browser Modal -->
+    <div class="dataset-modal-overlay" id="datasetModalOverlay">
+        <div class="dataset-modal">
+            <div class="dataset-modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="database" style="width: 24px; height: 24px;"></i>
+                    <span>Browse Datasets</span>
                 </div>
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-                </form>
+                <button class="dataset-modal-close" onclick="closeDatasetBrowser()">✕</button>
             </div>
-            <div id="datasetModalContent" class="max-h-96 overflow-y-auto">
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
+            <div class="dataset-modal-content" id="datasetModalContent">
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
                     <span>Loading datasets...</span>
                 </div>
             </div>
         </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
+    </div>
 
     <!-- Notification -->
     <div class="notification" id="notification"></div>
 
-    <!-- GDI Berlin Import Modal (DaisyUI) -->
-    <dialog id="gdiBerlinOverlay" class="modal">
-        <div class="modal-box max-w-2xl bg-base-200">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="globe" class="w-6 h-6 text-primary"></i>
-                    <h3 class="text-lg font-bold">Import from GDI Berlin</h3>
+    <!-- GDI Berlin Import Modal -->
+    <div class="dataset-modal-overlay" id="gdiBerlinOverlay">
+        <div class="dataset-modal" style="max-width: 600px; max-height: 80vh;">
+            <div class="dataset-modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="globe" style="width: 24px; height: 24px;"></i>
+                    <span>Import from GDI Berlin</span>
                 </div>
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-                </form>
+                <button class="dataset-modal-close" onclick="closeGdiBerlinModal()">✕</button>
             </div>
-            <p class="text-sm opacity-70 mb-4">
-                Import official Berlin geodata layers from the Berlin Geodata Infrastructure (GDI Berlin).
-            </p>
-            <div id="gdiBerlinLayersList" class="flex flex-col gap-3 max-h-96 overflow-y-auto">
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
-                    <span>Loading available layers...</span>
+            <div class="dataset-modal-content" id="gdiBerlinContent" style="padding: 1rem;">
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                    Import official Berlin geodata layers from the Berlin Geodata Infrastructure (GDI Berlin).
+                </p>
+                <div id="gdiBerlinLayersList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div class="dataset-loading">
+                        <div class="loading-spinner" style="width: 24px; height: 24px;"></div>
+                        <span>Loading available layers...</span>
+                    </div>
                 </div>
             </div>
         </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
+    </div>
 
-    <!-- Knowledge Graph Modal (DaisyUI) -->
-    <dialog id="knowledgeGraphOverlay" class="modal">
-        <div class="modal-box max-w-3xl bg-base-200 p-0">
-            <!-- Header -->
-            <div class="flex items-center justify-between p-4 border-b border-base-300">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="share-2" class="w-6 h-6 text-primary"></i>
-                    <h3 class="text-lg font-bold">Knowledge Graph</h3>
+    <!-- Knowledge Graph Modal -->
+    <div class="dataset-modal-overlay" id="knowledgeGraphOverlay">
+        <div class="dataset-modal" style="max-width: 700px; max-height: 85vh;">
+            <div class="dataset-modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="share-2" style="width: 24px; height: 24px;"></i>
+                    <span>Knowledge Graph</span>
                 </div>
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-                </form>
+                <button class="dataset-modal-close" onclick="closeKnowledgeGraph()">✕</button>
             </div>
-
-            <!-- Tabs -->
-            <div role="tablist" class="tabs tabs-bordered bg-base-300">
-                <button role="tab" class="tab tab-active" onclick="showKGTab('purposes')" id="kgTabPurposes">
-                    <i data-lucide="target" class="w-4 h-4 mr-2"></i>
-                    By Purpose
-                </button>
-                <button role="tab" class="tab" onclick="showKGTab('sparql')" id="kgTabSparql">
-                    <i data-lucide="code" class="w-4 h-4 mr-2"></i>
-                    SPARQL
-                </button>
-                <button role="tab" class="tab" onclick="showKGTab('stats')" id="kgTabStats">
-                    <i data-lucide="bar-chart-2" class="w-4 h-4 mr-2"></i>
-                    Statistics
-                </button>
-            </div>
-
-            <!-- Tab Content: By Purpose -->
-            <div class="kg-tab-content active p-4" id="kgContentPurposes">
-                <p class="text-sm opacity-70 mb-4">Find datasets by analytical purpose:</p>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    <button class="btn btn-outline btn-sm gap-2"
-                        onclick="loadDatasetsByPurpose('AccessibilityAnalysis')">
-                        <i data-lucide="accessibility" class="w-4 h-4"></i>
-                        Accessibility
+            <div class="dataset-modal-content" id="knowledgeGraphContent" style="padding: 0;">
+                <!-- Tabs -->
+                <div style="display: flex; border-bottom: 1px solid rgba(196, 195, 227, 0.2);">
+                    <button class="kg-tab active" onclick="showKGTab('purposes')" id="kgTabPurposes">
+                        <i data-lucide="target" style="width: 16px; height: 16px;"></i>
+                        By Purpose
                     </button>
-                    <button class="btn btn-outline btn-sm gap-2" onclick="loadDatasetsByPurpose('EmergencyPlanning')">
-                        <i data-lucide="siren" class="w-4 h-4"></i>
-                        Emergency
+                    <button class="kg-tab" onclick="showKGTab('sparql')" id="kgTabSparql">
+                        <i data-lucide="code" style="width: 16px; height: 16px;"></i>
+                        SPARQL
                     </button>
-                    <button class="btn btn-outline btn-sm gap-2" onclick="loadDatasetsByPurpose('UrbanPlanning')">
-                        <i data-lucide="building-2" class="w-4 h-4"></i>
-                        Urban Planning
-                    </button>
-                    <button class="btn btn-outline btn-sm gap-2"
-                        onclick="loadDatasetsByPurpose('EnvironmentalMonitoring')">
-                        <i data-lucide="leaf" class="w-4 h-4"></i>
-                        Environmental
-                    </button>
-                    <button class="btn btn-outline btn-sm gap-2" onclick="loadDatasetsByPurpose('ChangeDetection')">
-                        <i data-lucide="git-compare" class="w-4 h-4"></i>
-                        Change Detection
-                    </button>
-                    <button class="btn btn-outline btn-sm gap-2" onclick="loadDatasetsByPurpose('ProximityAnalysis')">
-                        <i data-lucide="map-pin" class="w-4 h-4"></i>
-                        Proximity
+                    <button class="kg-tab" onclick="showKGTab('stats')" id="kgTabStats">
+                        <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
+                        Statistics
                     </button>
                 </div>
-                <div id="kgPurposeResults" class="mt-4"></div>
-            </div>
 
-            <!-- Tab Content: SPARQL -->
-            <div class="kg-tab-content hidden p-4" id="kgContentSparql">
-                <p class="text-sm opacity-70 mb-3">Run SPARQL queries on the knowledge graph:</p>
-                <textarea id="sparqlQueryInput" class="textarea textarea-bordered w-full h-32 font-mono text-sm"
-                    placeholder="Enter SPARQL query...">PREFIX geo: <http://geoassist.ai/ontology#>
+                <!-- Tab Content: By Purpose -->
+                <div class="kg-tab-content active" id="kgContentPurposes">
+                    <div style="padding: 1rem;">
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">Find datasets
+                            by analytical purpose:</p>
+                        <div class="kg-purpose-grid">
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('AccessibilityAnalysis')">
+                                <i data-lucide="accessibility" style="width: 20px; height: 20px;"></i>
+                                Accessibility
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('EmergencyPlanning')">
+                                <i data-lucide="siren" style="width: 20px; height: 20px;"></i>
+                                Emergency
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('UrbanPlanning')">
+                                <i data-lucide="building-2" style="width: 20px; height: 20px;"></i>
+                                Urban Planning
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('EnvironmentalMonitoring')">
+                                <i data-lucide="leaf" style="width: 20px; height: 20px;"></i>
+                                Environmental
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('ChangeDetection')">
+                                <i data-lucide="git-compare" style="width: 20px; height: 20px;"></i>
+                                Change Detection
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('ProximityAnalysis')">
+                                <i data-lucide="map-pin" style="width: 20px; height: 20px;"></i>
+                                Proximity
+                            </button>
+                        </div>
+                        <div id="kgPurposeResults" style="margin-top: 1rem;"></div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: SPARQL -->
+                <div class="kg-tab-content" id="kgContentSparql">
+                    <div style="padding: 1rem;">
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.75rem;">Run SPARQL
+                            queries on the knowledge graph:</p>
+                        <textarea id="sparqlQueryInput" class="kg-sparql-input" placeholder="Enter SPARQL query...">PREFIX geo: <http://geoassist.ai/ontology#>
 PREFIX dct: <http://purl.org/dc/terms/>
 
 SELECT ?dataset ?title
@@ -3569,36 +3698,37 @@ WHERE {
     ?dataset dct:title ?title .
 }
 LIMIT 10</textarea>
-                <div class="flex gap-2 mt-3">
-                    <button class="btn btn-primary btn-sm gap-2" onclick="runSparqlQuery()">
-                        <i data-lucide="play" class="w-4 h-4"></i>
-                        Run Query
-                    </button>
-                    <select id="sparqlPresets" class="select select-bordered select-sm" onchange="loadSparqlPreset()">
-                        <option value="">Load preset...</option>
-                        <option value="all_datasets">All Datasets</option>
-                        <option value="healthcare">Healthcare Datasets</option>
-                        <option value="emergency">Emergency Services</option>
-                        <option value="capabilities">Spatial Capabilities</option>
-                    </select>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                            <button class="kg-run-btn" onclick="runSparqlQuery()">
+                                <i data-lucide="play" style="width: 16px; height: 16px;"></i>
+                                Run Query
+                            </button>
+                            <select id="sparqlPresets" class="kg-preset-select" onchange="loadSparqlPreset()">
+                                <option value="">Load preset...</option>
+                                <option value="all_datasets">All Datasets</option>
+                                <option value="healthcare">Healthcare Datasets</option>
+                                <option value="emergency">Emergency Services</option>
+                                <option value="capabilities">Spatial Capabilities</option>
+                            </select>
+                        </div>
+                        <div id="sparqlResults" style="margin-top: 1rem;"></div>
+                    </div>
                 </div>
-                <div id="sparqlResults" class="mt-4"></div>
-            </div>
 
-            <!-- Tab Content: Statistics -->
-            <div class="kg-tab-content hidden p-4" id="kgContentStats">
-                <div id="kgStatsContent">
-                    <div class="flex items-center justify-center gap-2 p-4">
-                        <span class="loading loading-spinner loading-md"></span>
-                        <span>Loading statistics...</span>
+                <!-- Tab Content: Statistics -->
+                <div class="kg-tab-content" id="kgContentStats">
+                    <div style="padding: 1rem;">
+                        <div id="kgStatsContent">
+                            <div class="dataset-loading">
+                                <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
+                                <span>Loading statistics...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
+    </div>
 
     <style>
         /* Knowledge Graph Tab Styles */
@@ -3798,7 +3928,7 @@ LIMIT 10</textarea>
 
     <script>
         // Initialize map centered on Berlin with smooth interaction settings
-        const map = window.map = L.map('map', {
+        const map = L.map('map', {
             // Default Leaflet settings
             center: [52.52, 13.405],
             zoom: 11,
@@ -3839,7 +3969,7 @@ LIMIT 10</textarea>
         });
 
         // Define basemap layers (free tile services only)
-        const basemaps = window.basemaps = {
+        const basemaps = {
             // Satellite imagery (default)
             'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: '© Esri, Maxar, Earthstar Geographics, CNES/Airbus DS, USDA FSA, USGS, Aerogrid, IGN, IGP, and the GIS User Community',
@@ -3884,7 +4014,7 @@ LIMIT 10</textarea>
         };
 
         // Add default basemap (Satellite)
-        let currentBasemap = window.currentBasemap = basemaps['Satellite'];
+        let currentBasemap = basemaps['Satellite'];
         currentBasemap.addTo(map);
 
         // Create custom basemap selector control (dropdown)
@@ -4174,10 +4304,8 @@ LIMIT 10</textarea>
 
         // Activate drawing mode for a specific type
         function activateDrawing(type) {
-            // Close dropdown by blurring active element
-            if (document.activeElement && document.activeElement.blur) {
-                document.activeElement.blur();
-            }
+            // Hide the dropdown menu
+            document.getElementById('drawDropdownMenu').style.display = 'none';
 
             // Clear any previous drawings
             drawnItems.clearLayers();
@@ -4189,14 +4317,6 @@ LIMIT 10</textarea>
 
             // Create appropriate drawing handler
             let drawHandler;
-            const drawOptions = {
-                shapeOptions: {
-                    color: '#FFB162',
-                    weight: 3,
-                    fillOpacity: 0.3
-                }
-            };
-
             switch (type) {
                 case 'point':
                     drawHandler = new L.Draw.Marker(map, {
@@ -4212,16 +4332,29 @@ LIMIT 10</textarea>
                     });
                     break;
                 case 'line':
-                    drawHandler = new L.Draw.Polyline(map, drawOptions);
+                    drawHandler = new L.Draw.Polyline(map, {
+                        shapeOptions: {
+                            color: '#FFB162',
+                            weight: 3
+                        }
+                    });
                     break;
                 case 'polygon':
-                    drawHandler = new L.Draw.Polygon(map, drawOptions);
+                    drawHandler = new L.Draw.Polygon(map, {
+                        shapeOptions: {
+                            color: '#FFB162',
+                            fillOpacity: 0.3
+                        }
+                    });
                     break;
             }
 
             // Enable drawing
             if (drawHandler) {
                 drawHandler.enable();
+
+                // Update tab to show active state
+                document.getElementById('drawTab').classList.add('chat-tab-active');
 
                 // Show notification
                 showNotification(`Drawing ${type} mode activated. Click on the map to draw.`, 'info');
@@ -4230,24 +4363,35 @@ LIMIT 10</textarea>
 
         // Clear drawn geometry
         function clearDrawing(event) {
-            // Close dropdown
-            if (document.activeElement && document.activeElement.blur) {
-                document.activeElement.blur();
+            // Stop event propagation
+            if (event) {
+                event.stopPropagation();
             }
-            if (event) event.preventDefault();
 
+            // Hide the dropdown menu
+            const menu = document.getElementById('drawDropdownMenu');
+            const tab = document.getElementById('drawTab');
+            if (menu) {
+                menu.style.display = 'none';
+            }
+            if (tab) {
+                tab.classList.remove('chat-tab-active');
+            }
+
+            // Clear drawn layers from map
             drawnItems.clearLayers();
+            drawnLayer = null;
             drawnGeometry = null;
-            drawingEnabled = false;
-            currentDrawingMode = null;
 
-            // Hide indicator
+            // Hide the active indicator
             const indicator = document.getElementById('drawActiveIndicator');
             if (indicator) {
-                indicator.classList.add('hidden');
+                indicator.style.display = 'none';
             }
 
-            showNotification('Drawing cleared', 'info');
+            // Show notification
+            showNotification('Drawing cleared', 'success');
+
             console.log('Drawn geometry cleared');
         }
 
@@ -4261,7 +4405,7 @@ LIMIT 10</textarea>
             nameInput.value = `Drawing (${currentDrawingMode}) - ${timestamp}`;
 
             // Show modal
-            if (modal) modal.showModal();
+            modal.style.display = 'flex';
 
             // Auto-select text for easy editing
             setTimeout(() => nameInput.select(), 100);
@@ -4336,7 +4480,7 @@ LIMIT 10</textarea>
         // Close save dialog
         function closeSaveDrawingDialog() {
             const modal = document.getElementById('saveDrawingModal');
-            if (modal) modal.close();
+            modal.style.display = 'none';
         }
 
         // Clear drawing after saving to layer
@@ -4349,7 +4493,12 @@ LIMIT 10</textarea>
 
             const indicator = document.getElementById('drawActiveIndicator');
             if (indicator) {
-                indicator.classList.add('hidden');
+                indicator.style.display = 'none';
+            }
+
+            const tab = document.getElementById('drawTab');
+            if (tab) {
+                tab.classList.remove('chat-tab-active');
             }
         }
 
@@ -4366,7 +4515,7 @@ LIMIT 10</textarea>
             // Show indicator that geometry is active
             const indicator = document.getElementById('drawActiveIndicator');
             if (indicator) {
-                indicator.classList.remove('hidden');
+                indicator.style.display = 'inline-block';
             }
 
             // Keep drawing mode active until user decides
@@ -4379,7 +4528,27 @@ LIMIT 10</textarea>
             console.log('Drawn geometry:', drawnGeometry);
         });
 
-        // Obsolete manual listeners removed (handled by DaisyUI)
+        // Close draw menu when clicking outside
+        document.addEventListener('click', function (e) {
+            const drawTab = document.getElementById('drawTab');
+            const menu = document.getElementById('drawDropdownMenu');
+
+            if (menu && !drawTab.contains(e.target)) {
+                menu.style.display = 'none';
+                drawTab.classList.remove('chat-tab-active');
+            }
+        });
+
+        // Close basemap menu when clicking outside
+        document.addEventListener('click', function (e) {
+            const basemapTab = document.getElementById('basemapTab');
+            const menu = document.getElementById('basemapDropdownMenu');
+
+            if (menu && !basemapTab.contains(e.target)) {
+                menu.style.display = 'none';
+                basemapTab.classList.remove('chat-tab-active');
+            }
+        });
 
         // ===== MULTI-STEP QUERY FUNCTIONS =====
 
@@ -4542,51 +4711,15 @@ LIMIT 10</textarea>
             showNotification('Query removed from chain');
         }
 
-        // Show notification using DaisyUI toast
+        // Show notification
         function showNotification(message, type = 'success') {
-            // Create toast container if it doesn't exist
-            let toastContainer = document.getElementById('toast-container');
-            if (!toastContainer) {
-                toastContainer = document.createElement('div');
-                toastContainer.id = 'toast-container';
-                toastContainer.className = 'toast toast-end toast-bottom z-[9999]';
-                document.body.appendChild(toastContainer);
-            }
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
 
-            // Map type to DaisyUI alert classes
-            const alertClasses = {
-                'success': 'alert-success',
-                'error': 'alert-error',
-                'warning': 'alert-warning',
-                'info': 'alert-info'
-            };
-
-            // Map type to icons
-            const icons = {
-                'success': 'check-circle',
-                'error': 'x-circle',
-                'warning': 'alert-triangle',
-                'info': 'info'
-            };
-
-            const alertClass = alertClasses[type] || 'alert-info';
-            const icon = icons[type] || 'info';
-
-            // Create toast element
-            const toast = document.createElement('div');
-            toast.className = `alert ${alertClass} shadow-lg animate-fade-in`;
-            toast.innerHTML = `
-                <i data-lucide="${icon}" class="w-5 h-5"></i>
-                <span>${message}</span>
-            `;
-
-            toastContainer.appendChild(toast);
-            lucide.createIcons();
-
-            // Auto-remove after 4 seconds
             setTimeout(() => {
-                toast.classList.add('opacity-0', 'transition-opacity');
-                setTimeout(() => toast.remove(), 300);
+                notification.style.display = 'none';
             }, 4000);
         }
 
@@ -5299,63 +5432,48 @@ LIMIT 10</textarea>
             // Reverse order to show newest first
             [...layers].reverse().forEach(layerInfo => {
                 const layerItem = document.createElement('div');
-                // Base classes
-                layerItem.className = 'card shadow-sm mb-2 hover:bg-base-200 transition-colors border-l-4';
+                layerItem.className = 'layer-item' + (layerInfo.visible ? ' active' : '');
 
                 // Get the actual color used on the map
                 const style = layerInfo.style || {};
                 const fillColor = style.fillColor || layerInfo.color || '#F1642E';
+                const borderColor = style.borderColor || '#ffffff';
+                const isGradient = style.isGradient && style.gradientProperty;
 
-                // Apply dynamic coloring if visible
-                if (layerInfo.visible) {
-                    // Use color-mix for background tint (modern CSS) to handle hex, rgb, or named colors
-                    layerItem.style.background = `color-mix(in srgb, ${fillColor}, transparent 85%)`;
-                    layerItem.style.borderLeftColor = fillColor;
-                } else {
-                    layerItem.classList.add('bg-base-300', 'border-transparent');
-                }
+                // Apply color-tinted background based on layer's fill color (or gradient)
+                applyLayerColor(layerItem, fillColor, isGradient, style.gradientScheme);
 
                 const timeAgo = getTimeAgo(layerInfo.timestamp);
 
                 layerItem.innerHTML = `
-                    <div class="card-body p-3">
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-semibold text-sm truncate pr-2" title="${layerInfo.name}">${layerInfo.name}</h3>
-                            <div class="flex items-center gap-1">
-                                <input type="checkbox" class="toggle toggle-xs toggle-primary" ${layerInfo.visible ? 'checked' : ''} onclick="toggleLayer(${layerInfo.id})" />
-                                
-                                <div class="dropdown dropdown-end">
-                                    <label tabindex="0" class="btn btn-ghost btn-xs btn-circle" onclick="event.stopPropagation()">
-                                        <i data-lucide="more-vertical" class="w-4 h-4"></i>
-                                    </label>
-                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32 border border-base-content/10">
-                                        <li><a onclick="openStyleDialog(event, ${layerInfo.id})"><i data-lucide="palette" class="w-3 h-3"></i> Style</a></li>
-                                        <li><a onclick="openExportDialog(${layerInfo.id}, event)"><i data-lucide="download" class="w-3 h-3"></i> Export</a></li>
-                                    </ul>
+                    <div class="layer-header">
+                        <div class="layer-name" title="${layerInfo.name}">${layerInfo.name}</div>
+                        <div class="layer-controls">
+                            <div class="layer-toggle ${layerInfo.visible ? 'active' : ''}"
+                                 onclick="toggleLayer(${layerInfo.id})"></div>
+                            <div class="layer-menu-wrapper">
+                                <button class="layer-menu-btn" onclick="toggleLayerMenu(event, ${layerInfo.id})" title="More options"><i data-lucide="more-vertical" style="width: 18px; height: 18px;"></i></button>
+                                <div class="layer-dropdown-menu" id="menu${layerInfo.id}">
+                                    <div class="layer-dropdown-item" onclick="openStyleDialog(event, ${layerInfo.id})"><i data-lucide="palette" style="width: 16px; height: 16px; margin-right: 6px; display: inline;"></i>Style</div>
+                                    <div class="layer-dropdown-item" onclick="openExportDialog(${layerInfo.id}, event)"><i data-lucide="download" style="width: 16px; height: 16px; margin-right: 6px; display: inline;"></i>Export as GeoJSON</div>
                                 </div>
-                                
-                                <button class="btn btn-ghost btn-xs btn-circle text-error" onclick="removeLayer(${layerInfo.id}); event.stopPropagation()">
-                                    <i data-lucide="x" class="w-4 h-4"></i>
-                                </button>
                             </div>
+                            <span class="layer-remove" onclick="removeLayer(${layerInfo.id})"><i data-lucide="x" style="width: 16px; height: 16px;"></i></span>
                         </div>
-                        
-                        <div class="flex justify-between items-center text-xs opacity-70">
-                            <div class="flex items-center gap-1">
-                                <i data-lucide="map-pin" class="w-3 h-3"></i>
-                                <span>${layerInfo.featureCount} features</span>
-                            </div>
-                            <span>${timeAgo}</span>
+                    </div>
+                    <div class="layer-info">
+                        <div class="layer-count">
+                            <span><i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>${layerInfo.featureCount} features</span>
                         </div>
+                        <div class="layer-time">${timeAgo}</div>
                     </div>
                 `;
 
                 layerItem.onclick = (e) => {
                     // Don't zoom if clicking controls
-                    if (e.target.closest('.toggle') ||
-                        e.target.closest('.btn') ||
-                        e.target.closest('.dropdown') ||
-                        e.target.closest('a')) {
+                    if (e.target.classList.contains('layer-toggle') ||
+                        e.target.classList.contains('layer-remove') ||
+                        e.target.classList.contains('layer-menu-btn')) {
                         return;
                     }
                     // Display operations when layer is clicked
@@ -5900,23 +6018,24 @@ LIMIT 10</textarea>
 
         // Open export dialog
         function openExportDialog(layerId, event) {
-            if (event) event.stopPropagation();
+            event.stopPropagation();
             currentExportLayerId = layerId;
-            const modal = document.getElementById('exportDialogOverlay');
-            if (modal) {
-                modal.showModal();
+            const overlay = document.getElementById('exportDialogOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
             }
-            // Close any active dropdowns (DaisyUI handles this mostly, but good to be sure if manually toggled)
-            if (document.activeElement) {
-                document.activeElement.blur();
+            // Close the menu
+            const menu = document.getElementById(`menu${layerId}`);
+            if (menu) {
+                menu.classList.remove('active');
             }
         }
 
         // Close export dialog
         function closeExportDialog() {
-            const modal = document.getElementById('exportDialogOverlay');
-            if (modal) {
-                modal.close();
+            const overlay = document.getElementById('exportDialogOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
             }
             currentExportLayerId = null;
         }
@@ -6018,7 +6137,7 @@ LIMIT 10</textarea>
 
         // Open style dialog
         function openStyleDialog(event, layerId) {
-            if (event) event.stopPropagation();
+            event.stopPropagation();
             currentStyleLayerId = layerId;
 
             const layerInfo = layers.find(l => l.id === layerId);
@@ -6041,13 +6160,13 @@ LIMIT 10</textarea>
                 gradientRange: { min: null, max: null }
             };
 
-            // Set simple style inputs
+            // Set basic tab values
             document.getElementById('fillColor').value = style.fillColor || '#FF6B6B';
             document.getElementById('borderColor').value = style.borderColor || '#ffffff';
-            document.getElementById('fillOpacity').value = style.fillOpacity !== undefined ? style.fillOpacity : 0.8;
-            document.getElementById('fillOpacityValue').textContent = style.fillOpacity !== undefined ? style.fillOpacity : 0.8;
-            document.getElementById('borderWidth').value = style.borderWidth !== undefined ? style.borderWidth : 2;
-            document.getElementById('borderWidthValue').textContent = style.borderWidth !== undefined ? style.borderWidth : 2;
+            document.getElementById('fillOpacity').value = style.fillOpacity || 0.8;
+            document.getElementById('borderWidth').value = style.borderWidth || 2;
+            document.getElementById('fillOpacityValue').textContent = (style.fillOpacity || 0.8).toFixed(1);
+            document.getElementById('borderWidthValue').textContent = style.borderWidth || 2;
 
             // Set icon name input and preview
             if (document.getElementById('iconNameInput')) {
@@ -6067,24 +6186,18 @@ LIMIT 10</textarea>
                     document.getElementById('rangeMin').value = style.gradientRange.min || '';
                     document.getElementById('rangeMax').value = style.gradientRange.max || '';
                 }
-
-                // Switch to gradient tab if active
-                const gradientTabBtn = document.querySelector('.tab[data-tab="gradient"]');
-                if (gradientTabBtn) switchStyleTab(gradientTabBtn);
-            } else {
-                // Default to basic tab
-                const basicTabBtn = document.querySelector('.tab[data-tab="basic"]');
-                if (basicTabBtn) switchStyleTab(basicTabBtn);
             }
 
             // Show dialog
-            const modal = document.getElementById('styleDialogOverlay');
-            if (modal) {
-                modal.showModal();
+            const overlay = document.getElementById('styleDialogOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
             }
 
-            if (document.activeElement) {
-                document.activeElement.blur();
+            // Close the menu
+            const menu = document.getElementById(`menu${layerId}`);
+            if (menu) {
+                menu.classList.remove('active');
             }
 
             // Add event listeners for sliders
@@ -6093,9 +6206,9 @@ LIMIT 10</textarea>
 
         // Close style dialog
         function closeStyleDialog() {
-            const modal = document.getElementById('styleDialogOverlay');
-            if (modal) {
-                modal.close();
+            const overlay = document.getElementById('styleDialogOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
             }
             currentStyleLayerId = null;
             styleFormData = null;
@@ -6103,23 +6216,24 @@ LIMIT 10</textarea>
 
         // Switch between tabs
         function switchStyleTab(tabButton) {
-            const tabs = document.querySelectorAll('.tab');
-            const targetId = tabButton.getAttribute('data-tab') + 'Tab';
-
             // Remove active class from all tabs
-            tabs.forEach(tab => tab.classList.remove('tab-active'));
+            document.querySelectorAll('.style-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
 
             // Add active class to clicked tab
-            tabButton.classList.add('tab-active');
+            tabButton.classList.add('active');
 
-            // Hide all contents
-            document.getElementById('basicTab').classList.add('hidden');
-            document.getElementById('gradientTab').classList.add('hidden');
+            // Hide all tab contents
+            document.querySelectorAll('.style-tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
 
-            // Show target content
-            const content = document.getElementById(targetId);
-            if (content) {
-                content.classList.remove('hidden');
+            // Show selected tab content
+            const tabName = tabButton.getAttribute('data-tab');
+            const tabContent = document.getElementById(tabName + 'Tab');
+            if (tabContent) {
+                tabContent.classList.remove('hidden');
             }
         }
 
@@ -8858,16 +8972,16 @@ LIMIT 10</textarea>
         }
         // GDI Berlin Import Functions
         async function openGdiBerlinModal() {
-            const modal = document.getElementById('gdiBerlinOverlay');
+            const overlay = document.getElementById('gdiBerlinOverlay');
             const layersList = document.getElementById('gdiBerlinLayersList');
 
-            modal.showModal();
+            overlay.classList.add('active');
             lucide.createIcons();
 
-            // Show loading state with DaisyUI spinner
+            // Show loading state
             layersList.innerHTML = `
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 24px; height: 24px;"></div>
                     <span>Loading available layers...</span>
                 </div>
             `;
@@ -8879,39 +8993,36 @@ LIMIT 10</textarea>
                 const data = await response.json();
 
                 if (!data.layers || data.layers.length === 0) {
-                    layersList.innerHTML = '<p class="text-center opacity-70">No layers available</p>';
+                    layersList.innerHTML = '<p style="color: var(--text-secondary);">No layers available</p>';
                     return;
                 }
 
-                // Build layer list HTML with DaisyUI cards
-                let html = '<div class="alert alert-info mb-3 text-sm"><i data-lucide="info" class="w-4 h-4"></i> Features will be filtered to your current map view.</div>';
+                // Build layer list HTML with category grouping
+                let html = '<p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Features will be filtered to your current map view.</p>';
                 data.layers.forEach(layer => {
                     const categoryColors = {
-                        'administrative': 'badge-info',
-                        'lor': 'badge-success',
-                        'buildings': 'badge-warning',
-                        'land': 'badge-neutral',
-                        'environment': 'badge-accent',
-                        'recreation': 'badge-secondary',
-                        'transport': 'badge-primary',
-                        'facilities': 'badge-error'
+                        'administrative': '#64B5F6',
+                        'lor': '#81C784',
+                        'buildings': '#FFB74D',
+                        'land': '#A1887F',
+                        'environment': '#4DB6AC',
+                        'recreation': '#BA68C8',
+                        'transport': '#90A4AE',
+                        'facilities': '#F06292'
                     };
-                    const badgeClass = categoryColors[layer.category] || 'badge-ghost';
+                    const categoryColor = categoryColors[layer.category] || '#9E9E9E';
 
                     html += `
-                        <div class="card bg-base-300 shadow-sm">
-                            <div class="card-body p-3 flex-row justify-between items-center">
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-sm">${layer.name}</h4>
-                                    <p class="text-xs opacity-70">${layer.description}</p>
-                                    <span class="badge ${badgeClass} badge-xs mt-1">${layer.category}</span>
-                                </div>
-                                <button onclick="importGdiBerlinLayer('${layer.id}', '${layer.name}')" 
-                                    class="btn btn-primary btn-sm">
-                                    <i data-lucide="download" class="w-4 h-4"></i>
-                                    Import
-                                </button>
+                        <div class="gdi-layer-card" style="background: rgba(var(--accent-secondary-rgb), 0.2); border: 1px solid rgba(196, 195, 227, 0.2); border-radius: 8px; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">${layer.name}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">${layer.description}</div>
+                                <span style="display: inline-block; margin-top: 0.25rem; font-size: 0.7rem; padding: 0.15rem 0.5rem; background: ${categoryColor}22; color: ${categoryColor}; border-radius: 4px;">${layer.category}</span>
                             </div>
+                            <button onclick="importGdiBerlinLayer('${layer.id}', '${layer.name}')" 
+                                style="background: rgba(var(--accent-primary-rgb), 0.8); border: none; border-radius: 6px; padding: 0.5rem 1rem; color: white; cursor: pointer; font-weight: 500; white-space: nowrap;">
+                                <i data-lucide="download" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Import
+                            </button>
                         </div>
                     `;
                 });
@@ -8921,12 +9032,12 @@ LIMIT 10</textarea>
 
             } catch (error) {
                 console.error('Error loading GDI Berlin layers:', error);
-                layersList.innerHTML = `<div class="alert alert-error"><span>Error: ${error.message}</span></div>`;
+                layersList.innerHTML = `<p style="color: #ff6b6b;">Error loading layers: ${error.message}</p>`;
             }
         }
 
         function closeGdiBerlinModal() {
-            document.getElementById('gdiBerlinOverlay').close();
+            document.getElementById('gdiBerlinOverlay').classList.remove('active');
         }
 
         async function importGdiBerlinLayer(layerId, layerName) {
@@ -8978,14 +9089,14 @@ LIMIT 10</textarea>
 
         // Dataset Browser Functions
         async function openDatasetBrowser() {
-            const modal = document.getElementById('datasetModalOverlay');
+            const overlay = document.getElementById('datasetModalOverlay');
             const content = document.getElementById('datasetModalContent');
 
             // Show loading state
-            modal.showModal();
+            overlay.classList.add('active');
             content.innerHTML = `
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
                     <span>Loading datasets...</span>
                 </div>
             `;
@@ -9001,17 +9112,16 @@ LIMIT 10</textarea>
 
                 if (!datasets || datasets.length === 0) {
                     content.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-8 opacity-50">
-                            <i data-lucide="inbox" class="w-12 h-12 mb-2"></i>
+                        <div class="dataset-empty">
+                            <i data-lucide="inbox" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
                             <p>No datasets available</p>
                         </div>
                     `;
-                    lucide.createIcons();
                     return;
                 }
 
-                // Build dataset list HTML with DaisyUI cards
-                let html = '<div class="flex flex-col gap-2">';
+                // Build dataset list HTML
+                let html = '<div class="dataset-list">';
 
                 datasets.forEach(dataset => {
                     const tableName = dataset.table_name || dataset.name;
@@ -9025,25 +9135,22 @@ LIMIT 10</textarea>
                     if (geomType === 'Polygon' || geomType === 'MultiPolygon') icon = 'square';
 
                     html += `
-                        <div class="card bg-base-300 hover:bg-base-100 cursor-pointer transition-colors" onclick="loadDatasetTable('${tableName}')">
-                            <div class="card-body p-3 flex-row items-center gap-3">
-                                <div class="bg-primary/20 p-2 rounded-lg">
-                                    <i data-lucide="${icon}" class="w-5 h-5 text-primary"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-sm">${tableName}</h4>
-                                    <div class="flex gap-3 text-xs opacity-70">
-                                        <span class="flex items-center gap-1">
-                                            <i data-lucide="hash" class="w-3 h-3"></i>
-                                            ${count.toLocaleString()} features
-                                        </span>
-                                        <span class="flex items-center gap-1">
-                                            <i data-lucide="shape" class="w-3 h-3"></i>
-                                            ${geomType}
-                                        </span>
+                        <div class="dataset-item" onclick="loadDatasetTable('${tableName}')">
+                            <div class="dataset-item-icon">
+                                <i data-lucide="${icon}" style="width: 24px; height: 24px;"></i>
+                            </div>
+                            <div class="dataset-item-info">
+                                <div class="dataset-item-name">${tableName}</div>
+                                <div class="dataset-item-meta">
+                                    <div class="dataset-item-count">
+                                        <i data-lucide="hash" style="width: 14px; height: 14px;"></i>
+                                        <span>${count.toLocaleString()} features</span>
+                                    </div>
+                                    <div class="dataset-item-type">
+                                        <i data-lucide="shape" style="width: 14px; height: 14px;"></i>
+                                        <span>${geomType}</span>
                                     </div>
                                 </div>
-                                <i data-lucide="chevron-right" class="w-4 h-4 opacity-50"></i>
                             </div>
                         </div>
                     `;
@@ -9053,36 +9160,35 @@ LIMIT 10</textarea>
                 content.innerHTML = html;
 
                 // Re-render Lucide icons
-                lucide.createIcons();
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
 
             } catch (error) {
                 console.error('❌ Failed to load datasets:', error);
                 content.innerHTML = `
-                    <div class="alert alert-error">
-                        <i data-lucide="alert-circle" class="w-5 h-5"></i>
-                        <div>
-                            <p class="font-semibold">Failed to load datasets</p>
-                            <p class="text-sm">${error.message}</p>
-                        </div>
+                    <div class="dataset-error">
+                        <i data-lucide="alert-circle" style="width: 24px; height: 24px; margin-bottom: 0.5rem; display: inline;"></i>
+                        <p>Failed to load datasets</p>
+                        <small>${error.message}</small>
                     </div>
                 `;
-                lucide.createIcons();
             }
         }
 
         function closeDatasetBrowser() {
-            document.getElementById('datasetModalOverlay').close();
+            document.getElementById('datasetModalOverlay').classList.remove('active');
         }
 
         async function loadDatasetTable(tableName) {
-            // const modal = document.getElementById('datasetModalOverlay'); // Not needed if already open
+            const overlay = document.getElementById('datasetModalOverlay');
             const browseBtn = document.getElementById('browseBtn');
 
             // Update modal to show loading
             const content = document.getElementById('datasetModalContent');
             content.innerHTML = `
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
                     <span>Loading ${tableName}...</span>
                 </div>
             `;
@@ -9170,8 +9276,8 @@ LIMIT 10</textarea>
         // ========================================
 
         function openKnowledgeGraph() {
-            const modal = document.getElementById('knowledgeGraphOverlay');
-            modal.showModal();
+            const overlay = document.getElementById('knowledgeGraphOverlay');
+            overlay.classList.add('active');
 
             // Load statistics by default
             loadKnowledgeGraphStats();
@@ -9183,32 +9289,23 @@ LIMIT 10</textarea>
         }
 
         function closeKnowledgeGraph() {
-            document.getElementById('knowledgeGraphOverlay').close();
+            const overlay = document.getElementById('knowledgeGraphOverlay');
+            overlay.classList.remove('active');
         }
 
         function showKGTab(tabName) {
-            // Hide all tab contents and deactivate tabs
-            document.querySelectorAll('.kg-tab-content').forEach(el => {
-                el.classList.add('hidden');
-                el.classList.remove('active');
-            });
-            document.querySelectorAll('[role="tab"]').forEach(el => el.classList.remove('tab-active'));
+            // Hide all tab contents
+            document.querySelectorAll('.kg-tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.kg-tab').forEach(el => el.classList.remove('active'));
 
-            // Show selected tab content
-            const contentId = `kgContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`;
-            const tabId = `kgTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`;
-
-            document.getElementById(contentId).classList.remove('hidden');
-            document.getElementById(contentId).classList.add('active');
-            document.getElementById(tabId).classList.add('tab-active');
+            // Show selected tab
+            document.getElementById(`kgContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+            document.getElementById(`kgTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
 
             // Load stats if stats tab
             if (tabName === 'stats') {
                 loadKnowledgeGraphStats();
             }
-
-            // Re-render icons
-            lucide.createIcons();
         }
 
         async function loadKnowledgeGraphStats() {
@@ -9440,18 +9537,6 @@ ORDER BY ?title`
         // Auto-locate on page load (optional - commented out by default)
         // Uncomment the next line to automatically locate user when page loads
         // window.addEventListener('load', () => setTimeout(locateUser, 1000));
-
-        // Expose critical functions to window for HTML event handlers
-        window.switchBasemap = switchBasemap;
-        window.activateDrawing = activateDrawing;
-        window.clearDrawing = clearDrawing;
-        window.toggleLayer = toggleLayer;
-        window.removeLayer = removeLayer;
-        window.openStyleDialog = openStyleDialog;
-        window.openExportDialog = openExportDialog;
-        window.openGdiBerlinModal = openGdiBerlinModal;
-        window.openDatasetBrowserModal = openDatasetBrowserModal;
-        window.openKnowledgeGraphModal = openKnowledgeGraphModal;
     </script>
 
 

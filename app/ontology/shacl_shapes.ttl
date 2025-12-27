@@ -1,0 +1,276 @@
+@prefix : <http://geoassist.ai/ontology#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# =============================================================================
+# SHACL Shapes for GeoAssist Geodata Validation
+# Ensures data quality and conformance for geographic datasets
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# GeoDataset Shape - Base validation for all geographic datasets
+# -----------------------------------------------------------------------------
+
+:GeoDatasetShape a sh:NodeShape ;
+    sh:targetClass :GeoDataset ;
+    rdfs:label "Geographic Dataset Shape"@en ;
+    rdfs:comment "Validation rules for all geographic datasets."@en ;
+    
+    # Required: Title
+    sh:property [
+        sh:path dct:title ;
+        sh:name "title" ;
+        sh:description "Dataset must have a title" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:minLength 3 ;
+        sh:severity sh:Violation
+    ] ;
+    
+    # Required: Description
+    sh:property [
+        sh:path dct:description ;
+        sh:name "description" ;
+        sh:description "Dataset must have a description" ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+        sh:minLength 10 ;
+        sh:severity sh:Violation
+    ] ;
+    
+    # Required: CRS
+    sh:property [
+        sh:path :hasCRS ;
+        sh:name "coordinate reference system" ;
+        sh:description "Dataset must specify a CRS" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^EPSG:\\d+$" ;
+        sh:severity sh:Violation
+    ] ;
+    
+    # Optional but recommended: Source
+    sh:property [
+        sh:path dct:source ;
+        sh:name "source" ;
+        sh:description "Dataset should specify its source" ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning
+    ] ;
+    
+    # Recommended: Analytical purpose
+    sh:property [
+        sh:path :hasAnalyticalPurpose ;
+        sh:name "analytical purpose" ;
+        sh:description "Dataset should have at least one analytical purpose" ;
+        sh:minCount 1 ;
+        sh:class :AnalyticalPurpose ;
+        sh:severity sh:Warning
+    ] .
+
+# -----------------------------------------------------------------------------
+# VectorDataset Shape - Validation for vector datasets
+# -----------------------------------------------------------------------------
+
+:VectorDatasetShape a sh:NodeShape ;
+    sh:targetClass :VectorDataset ;
+    rdfs:label "Vector Dataset Shape"@en ;
+    rdfs:comment "Additional validation rules for vector datasets."@en ;
+    
+    # Required: Table name
+    sh:property [
+        sh:path :hasTableName ;
+        sh:name "table name" ;
+        sh:description "Vector dataset must have a PostGIS table name" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^vector\\..+$" ;
+        sh:severity sh:Violation
+    ] ;
+    
+    # Required: Geometry type
+    sh:property [
+        sh:path :hasGeometryType ;
+        sh:name "geometry type" ;
+        sh:description "Vector dataset must specify geometry type" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:in ( "Point" "LineString" "Polygon" "MultiPoint" "MultiLineString" "MultiPolygon" "Point/Polygon" "Mixed (Point/Polygon)" ) ;
+        sh:severity sh:Violation
+    ] ;
+    
+    # Recommended: Spatial capability
+    sh:property [
+        sh:path :hasSpatialCapability ;
+        sh:name "spatial capability" ;
+        sh:description "Vector dataset should specify supported spatial operations" ;
+        sh:minCount 1 ;
+        sh:class :SpatialCapability ;
+        sh:severity sh:Info
+    ] .
+
+# -----------------------------------------------------------------------------
+# RasterDataset Shape - Validation for raster datasets
+# -----------------------------------------------------------------------------
+
+:RasterDatasetShape a sh:NodeShape ;
+    sh:targetClass :RasterDataset ;
+    rdfs:label "Raster Dataset Shape"@en ;
+    rdfs:comment "Additional validation rules for raster datasets."@en ;
+    
+    # Required: File path
+    sh:property [
+        sh:path :hasFilePath ;
+        sh:name "file path" ;
+        sh:description "Raster dataset must have a file path" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^data/raster/.+\\.(tif|tiff|TIF|TIFF)$" ;
+        sh:severity sh:Violation
+    ] ;
+    
+    # Required: Resolution
+    sh:property [
+        sh:path :hasResolution ;
+        sh:name "resolution" ;
+        sh:description "Raster dataset must specify spatial resolution" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:severity sh:Violation
+    ] ;
+    
+    # Required: Band count
+    sh:property [
+        sh:path :hasBandCount ;
+        sh:name "band count" ;
+        sh:description "Raster dataset must specify number of bands" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:severity sh:Violation
+    ] .
+
+# -----------------------------------------------------------------------------
+# HealthcareFacilityDataset Shape - Domain-specific validation
+# -----------------------------------------------------------------------------
+
+:HealthcareFacilityDatasetShape a sh:NodeShape ;
+    sh:targetClass :HealthcareFacilityDataset ;
+    rdfs:label "Healthcare Facility Dataset Shape"@en ;
+    rdfs:comment "Validation rules for healthcare facility datasets."@en ;
+    
+    # Must support accessibility analysis
+    sh:property [
+        sh:path :hasAnalyticalPurpose ;
+        sh:name "analytical purpose" ;
+        sh:description "Healthcare datasets must support accessibility analysis" ;
+        sh:hasValue :AccessibilityAnalysis ;
+        sh:severity sh:Warning
+    ] ;
+    
+    # Must support distance calculation
+    sh:property [
+        sh:path :hasSpatialCapability ;
+        sh:name "spatial capability" ;
+        sh:description "Healthcare datasets should support distance calculations" ;
+        sh:hasValue :DistanceCalculation ;
+        sh:severity sh:Info
+    ] .
+
+# -----------------------------------------------------------------------------
+# EmergencyServiceDataset Shape - Domain-specific validation
+# -----------------------------------------------------------------------------
+
+:EmergencyServiceDatasetShape a sh:NodeShape ;
+    sh:targetClass :EmergencyServiceDataset ;
+    rdfs:label "Emergency Service Dataset Shape"@en ;
+    rdfs:comment "Validation rules for emergency service datasets."@en ;
+    
+    # Must support emergency planning
+    sh:property [
+        sh:path :hasAnalyticalPurpose ;
+        sh:name "analytical purpose" ;
+        sh:description "Emergency datasets must support emergency planning" ;
+        sh:hasValue :EmergencyPlanning ;
+        sh:severity sh:Warning
+    ] .
+
+# -----------------------------------------------------------------------------
+# GeoAnalyticalWorkflow Shape - Workflow validation
+# -----------------------------------------------------------------------------
+
+:GeoAnalyticalWorkflowShape a sh:NodeShape ;
+    sh:targetClass :GeoAnalyticalWorkflow ;
+    rdfs:label "Geo-Analytical Workflow Shape"@en ;
+    rdfs:comment "Validation rules for geo-analytical workflows."@en ;
+    
+    # Must have at least one step
+    sh:property [
+        sh:path :hasWorkflowStep ;
+        sh:name "workflow steps" ;
+        sh:description "Workflow must have at least one step" ;
+        sh:minCount 1 ;
+        sh:class :WorkflowStep ;
+        sh:severity sh:Violation
+    ] .
+
+# -----------------------------------------------------------------------------
+# WorkflowStep Shape - Workflow step validation
+# -----------------------------------------------------------------------------
+
+:WorkflowStepShape a sh:NodeShape ;
+    sh:targetClass :WorkflowStep ;
+    rdfs:label "Workflow Step Shape"@en ;
+    rdfs:comment "Validation rules for workflow steps."@en ;
+    
+    # Must have step order
+    sh:property [
+        sh:path :stepOrder ;
+        sh:name "step order" ;
+        sh:description "Step must have an order number" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:severity sh:Violation
+    ] ;
+    
+    # Must apply an operation
+    sh:property [
+        sh:path :appliesOperation ;
+        sh:name "applies operation" ;
+        sh:description "Step must apply a spatial operation" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class :SpatialCapability ;
+        sh:severity sh:Violation
+    ] .
+
+# -----------------------------------------------------------------------------
+# CRS Consistency Rule - Cross-dataset validation
+# -----------------------------------------------------------------------------
+
+:CRSConsistencyShape a sh:NodeShape ;
+    sh:targetClass :GeoDataset ;
+    rdfs:label "CRS Consistency Shape"@en ;
+    rdfs:comment "Warns if datasets have inconsistent CRS."@en ;
+    
+    # Preferred CRS is EPSG:4326
+    sh:property [
+        sh:path :hasCRS ;
+        sh:name "preferred CRS" ;
+        sh:description "Datasets should use EPSG:4326 for consistency" ;
+        sh:pattern "^EPSG:4326$" ;
+        sh:severity sh:Info ;
+        sh:message "Dataset uses a CRS other than EPSG:4326. Consider reprojecting for consistency."
+    ] .
