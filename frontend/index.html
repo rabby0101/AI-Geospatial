@@ -168,81 +168,7 @@
             gap: 0.75rem;
         }
 
-        #searchInput {
-            flex: 1;
-            padding: 0.75rem 2.5rem 0.75rem 2.5rem;
 
-
-
-            font-size: 0.95rem;
-            font-family: inherit;
-
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--text-primary);
-        }
-
-        #searchInput::placeholder {
-            color: rgba(196, 195, 227, 0.5);
-        }
-
-        #searchInput:focus {
-            outline: none;
-            background: rgba(37, 32, 53, 0.9);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(196, 195, 227, 0.6);
-            font-size: 1.2rem;
-            pointer-events: none;
-        }
-
-        #searchBtn {
-            padding: 0.6rem 1.5rem;
-            background: rgba(var(--accent-blue-rgb), 0.85);
-            color: rgb(255, 255, 255);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 50px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            box-shadow:
-                0 8px 16px rgba(var(--accent-blue-rgb), 0.25),
-                inset 0 1px 2px rgba(255, 255, 255, 0);
-            position: relative;
-            overflow: hidden;
-            white-space: nowrap;
-            height: 40px;
-            display: flex;
-            align-items: center;
-        }
-
-        #searchBtn::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: 0;
-            right: 0;
-            height: 200%;
-            pointer-events: none;
-        }
-
-        #searchBtn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            background: rgba(var(--accent-blue-rgb), 0.95);
-            box-shadow: 0 12px 24px rgba(var(--accent-secondary-rgb), 0.3);
-        }
-
-        #searchBtn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        #searchBtn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
 
         /* Browse Datasets Button */
         .browse-btn {
@@ -536,14 +462,12 @@
         .layers-panel {
             width: 320px;
             height: 100vh;
-            background: rgba(26, 24, 37, 0.464);
-            backdrop-filter: blur(25px) saturate(180%);
+            background: rgba(50, 50, 50, 1.0);
             border-right: 1.5px solid rgba(196, 195, 227, 0.2);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             position: absolute;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
             z-index: 500;
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -3918,14 +3842,10 @@ LIMIT 10</textarea>
                     option.addEventListener('click', function (e) {
                         L.DomEvent.stopPropagation(e);
 
-                        // Remove current basemap
-                        map.removeLayer(currentBasemap);
+                        // Use global function
+                        switchBasemap(name);
 
-                        // Add new basemap
-                        currentBasemap = basemaps[name];
-                        currentBasemap.addTo(map);
-
-                        // Update current name
+                        // Update local UI
                         currentBasemapName = name;
                         toggleBtn.querySelector('.basemap-current-name').textContent = name;
 
@@ -3960,8 +3880,8 @@ LIMIT 10</textarea>
         });
 
         // Add basemap control to map (bottom-right corner, compact)
-        // Commented out - basemap selector now in pill tab
-        // new L.Control.BasemapControl({ position: 'bottomright' }).addTo(map);
+        // Basemap selector now in pill tab AND bottom right
+        new L.Control.BasemapControl({ position: 'bottomright' }).addTo(map);
 
         // Initialize Lucide icons when popups are opened
         map.on('popupopen', function (e) {
@@ -4139,35 +4059,46 @@ LIMIT 10</textarea>
         }
 
         // Switch basemap
+        // Switch basemap
         function switchBasemap(basemapName, event) {
-            // Stop event propagation
+            // Stop event propagation if event is provided
             if (event) {
                 event.stopPropagation();
             }
 
-            // Hide the dropdown menu
-            document.getElementById('basemapDropdownMenu').style.display = 'none';
-            document.getElementById('basemapTab').classList.remove('chat-tab-active');
+            // Close the dropdown (DaisyUI style) by blurring the active element
+            if (document.activeElement && document.activeElement.blur) {
+                document.activeElement.blur();
+            }
 
-            // Remove current basemap
+            // Legacy cleanups (optional/fail-safe)
+            const dropdown = document.getElementById('basemapDropdownMenu');
+            if (dropdown) dropdown.style.display = 'none';
+
+            const tab = document.getElementById('basemapTab');
+            if (tab) tab.classList.remove('chat-tab-active');
+
+            // Remove current basemap layer
             if (currentBasemap) {
                 map.removeLayer(currentBasemap);
             }
 
-            // Add new basemap
-            currentBasemap = basemaps[basemapName];
-            if (currentBasemap) {
+            // Add new basemap layer
+            if (basemaps[basemapName]) {
+                currentBasemap = basemaps[basemapName];
                 currentBasemap.addTo(map);
+
+                // Update the UI text
+                const basemapTabName = document.getElementById('basemapTabName');
+                if (basemapTabName) {
+                    basemapTabName.textContent = basemapName;
+                }
+            } else {
+                console.error(`Basemap '${basemapName}' not found.`);
             }
 
-            // Update the pill tab text to show current basemap name
-            const basemapTabName = document.getElementById('basemapTabName');
-            if (basemapTabName) {
-                basemapTabName.textContent = basemapName;
-            }
-
-            // Update Lucide icons
-            if (typeof lucide !== 'undefined') {
+            // Re-render icons if needed
+            if (window.lucide) {
                 lucide.createIcons();
             }
         }
@@ -4596,6 +4527,24 @@ LIMIT 10</textarea>
 
             if (searchBtn) {
                 searchBtn.disabled = isLoading;
+
+                if (isLoading) {
+                    // Save original content if not already saved
+                    if (!searchBtn.dataset.originalContent) {
+                        searchBtn.dataset.originalContent = searchBtn.innerHTML;
+                    }
+                    // Show spinner
+                    searchBtn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>';
+                } else {
+                    // Restore original content
+                    if (searchBtn.dataset.originalContent) {
+                        searchBtn.innerHTML = searchBtn.dataset.originalContent;
+                        // Re-initialize icons for the restored content
+                        if (window.lucide) {
+                            lucide.createIcons();
+                        }
+                    }
+                }
             }
         }
 
@@ -9452,6 +9401,13 @@ ORDER BY ?title`
         window.openGdiBerlinModal = openGdiBerlinModal;
         window.openDatasetBrowserModal = openDatasetBrowserModal;
         window.openKnowledgeGraphModal = openKnowledgeGraphModal;
+
+        // Initialize icons on load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
     </script>
 
 
