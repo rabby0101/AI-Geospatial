@@ -75,6 +75,48 @@ class WeightCalculator:
             'osm_transport_stops': 0.10,
             'osm_restaurants': 0.05,
         },
+        # ========== BUSINESS SITE SELECTION CONTEXTS ==========
+        'restaurant': {
+            'osm_transport_stops': 0.25,  # Foot traffic - positive
+            'osm_buildings': 0.20,         # Residential density - positive (use filter)
+            'osm_universities': 0.15,      # Young demographics - positive
+            'osm_restaurants': -0.30,      # Competition - NEGATIVE
+            'osm_parks': 0.10,             # Visibility/synergy - positive
+        },
+        'cafe': {
+            'osm_transport_stops': 0.30,   # Foot traffic - critical for cafes
+            'osm_buildings': 0.25,         # Office workers (COMMERCIAL filter)
+            'osm_universities': 0.20,      # Students
+            'osm_libraries': 0.10,         # Study spots synergy
+            'osm_restaurants': -0.25,      # Competition (filter by coffee/cafe)
+        },
+        'pharmacy': {
+            'osm_hospitals': 0.25,         # Healthcare proximity
+            'osm_clinics': 0.15,           # Healthcare proximity
+            'osm_doctors': 0.10,           # Healthcare proximity
+            'osm_buildings': 0.25,         # Residential density
+            'osm_pharmacies': -0.35,       # Competition - NEGATIVE
+        },
+        'library': {
+            'osm_schools': 0.25,           # Educational synergy
+            'osm_universities': 0.20,      # Academic users
+            'osm_buildings': 0.20,         # Residential base
+            'osm_parks': 0.05,             # Recreation synergy
+            'osm_libraries': -0.30,        # Competition - NEGATIVE
+        },
+        'supermarket': {
+            'osm_buildings': 0.40,         # Residential density - primary driver
+            'osm_transport_stops': 0.15,   # Accessibility
+            'osm_parking': 0.10,           # Car accessibility
+            'osm_supermarkets': -0.40,     # Competition - NEGATIVE
+        },
+        'gym': {
+            'osm_buildings': 0.30,         # Residential + commercial
+            'osm_universities': 0.15,      # Young population
+            'osm_transport_stops': 0.15,   # Accessibility
+            'osm_parks': 0.10,             # Fitness culture synergy
+            'osm_restaurants': -0.20,      # Competition (filter by gym/fitness)
+        },
         'general': None,  # Use equal weights
     }
 
