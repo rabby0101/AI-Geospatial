@@ -25,6 +25,7 @@ The system will:
 
 - **Natural Language Queries**: Ask geospatial questions in plain English
 - **LLM-Powered Reasoning**: DeepSeek translates queries to spatial operations
+- **Intelligent Site Selection**: Find optimal business locations with distance decay scoring
 - **Multiple Data Sources**: Vector (PostGIS, GeoJSON) and raster (GeoTIFF) support
 - **Interactive Map Viewer**: Leaflet-based frontend for visualization
 - **RESTful API**: Well-documented endpoints with FastAPI
@@ -172,9 +173,38 @@ curl http://localhost:8000/api/health
 - "Show forests and water bodies in relation to residential areas"
 - "Find parks with nearby forests"
 
+### Business Site Selection
+- "Where can I open a new supermarket in Marzahn-Hellersdorf? Area >= 800 sqm, with parking"
+- "Find suitable locations for a Mexican restaurant in Berlin"
+- "Where should I open a pharmacy near hospitals?"
+- "Best locations for a new library near schools and universities"
+
 ### Change Detection (with raster data)
 - "Find areas where NDVI decreased between 2018 and 2024"
 - "Show vegetation loss in urban areas"
+
+## Site Selection Scoring
+
+The system uses **sophisticated scoring algorithms** for business site selection queries:
+
+### Distance Decay Functions
+| Function | Formula | Use Case |
+|----------|---------|----------|
+| Exponential | `EXP(-distance/constant)` | Foot traffic (closer = much better) |
+| Inverse | `1/(1 + distance/scale)` | Competition penalty (closer = worse) |
+| Linear | `1 - distance/radius` | General proximity scoring |
+| Gaussian | `EXP(-distance²/2σ²)` | Smooth decay for schools/universities |
+
+### Scoring Factors
+- **Positive factors**: Transport stops, residential density, parking, complementary businesses
+- **Negative factors**: Direct competitors, indirect competitors
+- **Synergy factors**: Nightlife for restaurants, hospitals for pharmacies
+
+### Key Features
+1. **Excludes existing businesses**: Won't suggest locations where the target business already exists
+2. **Normalized scores**: All results have a `composite_score` from 0-1 for easy comparison
+3. **Business-specific profiles**: Different weights for restaurants, pharmacies, supermarkets, etc.
+4. **Area/size filters**: Can filter by building area requirements
 
 ## Project Structure
 
