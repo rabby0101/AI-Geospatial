@@ -507,7 +507,7 @@ If you use this project in your research, please cite:
   title={Cognitive Geospatial Assistant API},
   author={Sk Fazla Rabby},
   year={2025},
-  url={https://github.com/yourusername/geoassist}
+  url={https://github.com/rabby0101/geoassist}
 }
 ```
 
