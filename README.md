@@ -25,6 +25,7 @@ The system will:
 
 - **Natural Language Queries**: Ask geospatial questions in plain English
 - **LLM-Powered Reasoning**: DeepSeek translates queries to spatial operations
+- **Valhalla Pedestrian Routing**: Accurate walking distance and isochrone calculations
 - **Intelligent Site Selection**: Find optimal business locations with distance decay scoring
 - **Multiple Data Sources**: Vector (PostGIS, GeoJSON) and raster (GeoTIFF) support
 - **Interactive Map Viewer**: Leaflet-based frontend for visualization
@@ -43,7 +44,8 @@ User → FastAPI → DeepSeek Reasoning → Spatial Engine → Result (GeoJSON)
 |-----------|------------|
 | API Framework | FastAPI |
 | LLM | DeepSeek API |
-| Spatial Database | PostGIS |
+| Routing Engine | Valhalla (pedestrian/walking) |
+| Spatial Database | PostGIS, pgRouting |
 | Vector Processing | GeoPandas, Shapely |
 | Raster Processing | Rasterio, rioxarray |
 | Frontend | Leaflet, HTML/JS |
@@ -81,10 +83,12 @@ cp .env.example .env
 # Edit .env and add your DEEPSEEK_API_KEY
 ```
 
-5. Start PostGIS database:
+5. Start PostGIS database and Valhalla routing engine:
 ```bash
-docker-compose up -d postgis
+docker-compose up -d postgis valhalla
 ```
+
+> **Note**: Valhalla will download Berlin OSM data (~130MB) on first start and build routing tiles (~3-5 minutes).
 
 6. Run the API:
 ```bash
@@ -356,6 +360,7 @@ docker-compose up -d
 
 This starts:
 - PostGIS database (port 5432)
+- Valhalla routing engine (port 8002)
 - FastAPI application (port 8000)
 
 ## Configuration
@@ -550,6 +555,7 @@ Focus: AI-driven geospatial data integration and analysis
 ## Acknowledgments
 
 - DeepSeek for LLM capabilities
+- [Valhalla](https://github.com/valhalla/valhalla) for open-source pedestrian routing engine
 - PostGIS for spatial database
 - FastAPI framework
 - Leaflet for mapping

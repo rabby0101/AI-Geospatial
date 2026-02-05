@@ -115,7 +115,7 @@ async def connect_features(request: Dict[str, Any]) -> Dict[str, Any]:
             "metadata": {
                 "execution_time_ms": round(execution_time_ms, 2),
                 "algorithm": "Dijkstra (pgRouting)",
-                "road_network": "Berlin Detailnetz",
+                "road_network": "Berlin Custom Roads",
                 "vertices_snapped": len(result.get("vertices_used", []))
             }
         }
@@ -198,8 +198,8 @@ async def compute_optimal_tour(request: Dict[str, Any]) -> Dict[str, Any]:
     """
     Compute optimal tour connecting selected features in best sequence.
 
-    Uses Nearest Neighbor TSP algorithm to find efficient route visiting all points.
-    Returns a closed tour (returns to starting point).
+    Uses Valhalla pedestrian routing for accurate walking times,
+    with fallback to pgRouting if Valhalla is unavailable.
 
     Request Body:
         {
@@ -218,24 +218,8 @@ async def compute_optimal_tour(request: Dict[str, Any]) -> Dict[str, Any]:
             "geometry": {GeoJSON LineString},
             "total_distance_m": 5234.5,
             "total_time_minutes": 12,
-            "waypoints": [
-                {"order": 1, "name": "Hospital A", "lat": 52.52, "lon": 13.405, "arrival_distance_m": 0},
-                {"order": 2, "name": "School B", "lat": 52.51, "lon": 13.42, "arrival_distance_m": 1200},
-                {"order": 3, "name": "Park C", "lat": 52.505, "lon": 13.415, "arrival_distance_m": 3450}
-            ],
-            "directions": [
-                {"step": 1, "instruction": "Start at Hospital A", "street": "", "distance_m": 0},
-                {"step": 2, "instruction": "Head north on Hauptstrasse for 1200m", "street": "Hauptstrasse", "distance_m": 1200},
-                ...
-            ],
-            "optimal_sequence": [0, 1, 2],
-            "layer_name": "Optimal Route: Hospital A → School B → Park C",
-            "metadata": {
-                "feature_count": 3,
-                "waypoint_count": 3,
-                "algorithm": "Nearest Neighbor TSP",
-                "road_network": "Berlin Detailnetz"
-            }
+            "routing_engine": "valhalla" or "pgrouting",
+            ...
         }
     """
     start_time = time.time()
@@ -263,7 +247,96 @@ async def compute_optimal_tour(request: Dict[str, Any]) -> Dict[str, Any]:
                 detail="Maximum 15 features supported for optimal tour"
             )
 
-        # Compute optimal tour
+        # Try Valhalla first for accurate pedestrian routing
+        valhalla_result = None
+        try:
+            from app.utils.valhalla_routing import valhalla_service
+            
+            health = valhalla_service.check_health()
+            if health.get("status") == "healthy":
+                # Extract coordinates from geometries
+                points = []
+                for geom in geometries:
+                    if geom.get("type") == "Point":
+                        coords = geom.get("coordinates", [])
+                        if len(coords) >= 2:
+                            points.append((coords[1], coords[0]))  # (lat, lon)
+                    elif geom.get("type") in ["Polygon", "MultiPolygon"]:
+                        # For polygons, use centroid
+                        from shapely.geometry import shape
+                        shapely_geom = shape(geom)
+                        centroid = shapely_geom.centroid
+                        points.append((centroid.y, centroid.x))  # (lat, lon)
+                
+                if len(points) >= 2:
+                    print(f"🚶 Using Valhalla for pedestrian route between {len(points)} points")
+                    
+                    # For 2 points, use simple route
+                    if len(points) == 2:
+                        route_result = valhalla_service.get_pedestrian_route(
+                            origin_lat=points[0][0],
+                            origin_lon=points[0][1],
+                            dest_lat=points[1][0],
+                            dest_lon=points[1][1]
+                        )
+                    else:
+                        # For 3+ points, use multi-point route
+                        route_result = valhalla_service.get_multi_point_route(points)
+                    
+                    if route_result.success:
+                        print(f"✅ Valhalla route: {route_result.distance_m:.0f}m, {route_result.duration_minutes:.1f} min")
+                        
+                        # Build waypoints
+                        waypoints = []
+                        for i, pt in enumerate(points):
+                            name = feature_names[i] if i < len(feature_names) else f"Stop {i+1}"
+                            waypoints.append({
+                                "order": i + 1,
+                                "name": name,
+                                "lat": pt[0],
+                                "lon": pt[1]
+                            })
+                        
+                        # Build layer name
+                        if feature_names:
+                            layer_name = "Route: " + " → ".join(feature_names[:5])
+                            if len(feature_names) > 5:
+                                layer_name += " ..."
+                        else:
+                            layer_name = f"Walking Route ({route_result.duration_minutes:.1f} min)"
+                        
+                        execution_time_ms = (time.time() - start_time) * 1000
+                        
+                        return {
+                            "success": True,
+                            "geometry": route_result.geometry,
+                            "total_distance_m": round(route_result.distance_m, 2),
+                            "total_time_minutes": round(route_result.duration_minutes, 1),
+                            "waypoints": waypoints,
+                            "directions": route_result.maneuvers,
+                            "optimal_sequence": list(range(len(points))),
+                            "layer_name": layer_name,
+                            "routing_engine": "valhalla",
+                            "metadata": {
+                                "feature_count": len(points),
+                                "waypoint_count": len(points),
+                                "algorithm": "Valhalla Pedestrian",
+                                "road_network": "OpenStreetMap Berlin",
+                                "walking_speed_kmh": 5.1
+                            },
+                            "execution_time_ms": round(execution_time_ms, 2)
+                        }
+                    else:
+                        print(f"⚠️ Valhalla failed: {route_result.error}. Falling back to pgRouting.")
+            else:
+                print("ℹ️ Valhalla not available, using pgRouting")
+                
+        except ImportError:
+            print("ℹ️ Valhalla module not available, using pgRouting")
+        except Exception as e:
+            print(f"⚠️ Valhalla error: {e}. Falling back to pgRouting.")
+        
+        # Fallback: Compute optimal tour using pgRouting
         result = db_manager.compute_optimal_tour(geometries, feature_names)
 
         if not result.get("success"):
@@ -285,6 +358,7 @@ async def compute_optimal_tour(request: Dict[str, Any]) -> Dict[str, Any]:
             "directions": result.get("directions", []),
             "optimal_sequence": result.get("optimal_sequence", []),
             "layer_name": result.get("layer_name"),
+            "routing_engine": "pgrouting",
             "metadata": result.get("metadata", {}),
             "execution_time_ms": round(execution_time_ms, 2)
         }
