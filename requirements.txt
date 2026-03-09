@@ -12,6 +12,7 @@ rasterio==1.3.9
 rioxarray==0.15.1
 pyproj==3.6.1
 fiona==1.9.5
+pyogrio
 
 # Database
 psycopg2-binary==2.9.9

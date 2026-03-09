@@ -1,9 +1,12 @@
 """
-Valhalla Routing Service for accurate pedestrian routing.
+Valhalla Routing Service for multi-mode routing.
 
 This module provides integration with the Valhalla routing engine,
-offering superior pedestrian routing compared to pgRouting with:
-- Proper walking speed calculation
+supporting multiple transport modes: pedestrian, bicycle, car (auto),
+truck, bus, motor_scooter, and motorcycle.
+
+Features:
+- Proper speed calculation per mode
 - Network-based isochrones
 - Elevation-aware routing (optional)
 - Turn-by-turn directions
@@ -26,6 +29,51 @@ VALHALLA_BASE_URL = f"http://{VALHALLA_HOST}:{VALHALLA_PORT}"
 # Walking speed constants (Valhalla uses ~5.1 km/h for pedestrian by default)
 WALKING_SPEED_KMH = 5.1
 WALKING_SPEED_M_PER_MIN = WALKING_SPEED_KMH * 1000 / 60  # ~85 m/min
+
+# Supported transport modes and their default costing options
+SUPPORTED_COSTINGS = {
+    "pedestrian", "bicycle", "auto", "truck", "bus",
+    "motor_scooter", "motorcycle"
+}
+
+DEFAULT_COSTING_OPTIONS = {
+    "pedestrian": {
+        "walking_speed": WALKING_SPEED_KMH,
+        "walkway_factor": 0.9,
+        "sidewalk_factor": 0.95,
+        "alley_factor": 1.2,
+        "driveway_factor": 1.3,
+        "step_penalty": 30,
+        "use_ferry": 0,
+        "use_living_streets": 0.8,
+        "use_tracks": 0.5
+    },
+    "bicycle": {
+        "bicycle_type": "Hybrid",
+        "cycling_speed": 20.0,
+        "use_roads": 0.5,
+        "use_hills": 0.5,
+        "use_ferry": 0,
+        "use_living_streets": 0.8
+    },
+    "auto": {},
+    "truck": {
+        "height": 4.11,
+        "width": 2.6,
+        "length": 21.64,
+        "weight": 21.77
+    },
+    "bus": {
+        "height": 4.11,
+        "width": 2.6,
+        "length": 12.0,
+        "weight": 15.0
+    },
+    "motor_scooter": {
+        "top_speed": 45
+    },
+    "motorcycle": {}
+}
 
 
 @dataclass
@@ -53,10 +101,9 @@ class ValhallaRoutingService:
     """
     Service for routing operations using Valhalla.
     
-    Valhalla provides accurate pedestrian routing with:
-    - Realistic walking times
-    - Preference for walkways and footpaths
-    - Avoidance of stairs and unpleasant paths
+    Supports multiple transport modes:
+    - pedestrian, bicycle, auto, truck, bus, motor_scooter, motorcycle
+    - Realistic travel times per mode
     - Native isochrone support
     """
     
@@ -75,49 +122,46 @@ class ValhallaRoutingService:
         """Convert (lat, lon) tuples to Valhalla location format."""
         return [{"lat": lat, "lon": lon} for lat, lon in points]
 
-    def get_pedestrian_route(
+    def get_route(
         self,
         origin_lat: float,
         origin_lon: float,
         dest_lat: float,
         dest_lon: float,
+        costing: str = "pedestrian",
         include_maneuvers: bool = True
     ) -> RouteResult:
         """
-        Get pedestrian route between two points.
+        Get route between two points using the specified transport mode.
         
         Args:
             origin_lat, origin_lon: Origin coordinates
             dest_lat, dest_lon: Destination coordinates
+            costing: Valhalla costing model – one of: pedestrian, bicycle,
+                     auto, truck, bus, motor_scooter, motorcycle
             include_maneuvers: Include turn-by-turn directions
             
         Returns:
             RouteResult with geometry, distance, duration, and directions
         """
+        if costing not in SUPPORTED_COSTINGS:
+            return RouteResult(
+                success=False, geometry=None, distance_m=0,
+                duration_seconds=0, duration_minutes=0, maneuvers=[],
+                error=f"Unsupported costing: {costing}. Supported: {SUPPORTED_COSTINGS}"
+            )
+
         try:
+            costing_opts = DEFAULT_COSTING_OPTIONS.get(costing, {})
             request_body = {
                 "locations": [
                     {"lat": origin_lat, "lon": origin_lon},
                     {"lat": dest_lat, "lon": dest_lon}
                 ],
-                "costing": "pedestrian",
-                "costing_options": {
-                    "pedestrian": {
-                        "walking_speed": WALKING_SPEED_KMH,
-                        "walkway_factor": 0.9,      # Prefer walkways
-                        "sidewalk_factor": 0.95,    # Prefer sidewalks
-                        "alley_factor": 1.2,        # Avoid alleys slightly
-                        "driveway_factor": 1.3,     # Avoid driveways more
-                        "step_penalty": 30,         # Penalize steps (seconds)
-                        "use_ferry": 0,             # Avoid ferries
-                        "use_living_streets": 0.8,  # Good for pedestrians
-                        "use_tracks": 0.5           # Allow tracks with penalty
-                    }
-                },
+                "costing": costing,
+                "costing_options": {costing: costing_opts} if costing_opts else {},
                 "units": "meters",
-                "directions_options": {
-                    "units": "meters"
-                }
+                "directions_options": {"units": "meters"}
             }
             
             response = self.client.post(
@@ -127,14 +171,10 @@ class ValhallaRoutingService:
             
             if response.status_code != 200:
                 error_msg = response.text
-                logger.error(f"Valhalla route error: {error_msg}")
+                logger.error(f"Valhalla {costing} route error: {error_msg}")
                 return RouteResult(
-                    success=False,
-                    geometry=None,
-                    distance_m=0,
-                    duration_seconds=0,
-                    duration_minutes=0,
-                    maneuvers=[],
+                    success=False, geometry=None, distance_m=0,
+                    duration_seconds=0, duration_minutes=0, maneuvers=[],
                     error=f"Valhalla error: {error_msg}"
                 )
             
@@ -144,16 +184,13 @@ class ValhallaRoutingService:
             leg = legs[0] if legs else {}
             summary = leg.get("summary", {})
             
-            # Extract geometry (encoded polyline) and decode to GeoJSON
             shape = trip.get("legs", [{}])[0].get("shape", "")
             geometry = self._decode_polyline_to_geojson(shape) if shape else None
             
-            # Extract distance and time
-            distance_m = summary.get("length", 0) * 1000  # Valhalla returns km
+            distance_m = summary.get("length", 0) * 1000
             duration_seconds = summary.get("time", 0)
             duration_minutes = duration_seconds / 60
             
-            # Extract maneuvers (turn-by-turn directions)
             maneuvers = []
             if include_maneuvers:
                 for maneuver in leg.get("maneuvers", []):
@@ -167,7 +204,7 @@ class ValhallaRoutingService:
                         "end_shape_index": maneuver.get("end_shape_index", 0)
                     })
             
-            logger.info(f"✅ Valhalla route: {distance_m:.0f}m, {duration_minutes:.1f} min")
+            logger.info(f"✅ Valhalla {costing} route: {distance_m:.0f}m, {duration_minutes:.1f} min")
             
             return RouteResult(
                 success=True,
@@ -182,27 +219,33 @@ class ValhallaRoutingService:
             error_msg = f"Cannot connect to Valhalla at {self.base_url}. Is Valhalla running?"
             logger.error(error_msg)
             return RouteResult(
-                success=False,
-                geometry=None,
-                distance_m=0,
-                duration_seconds=0,
-                duration_minutes=0,
-                maneuvers=[],
+                success=False, geometry=None, distance_m=0,
+                duration_seconds=0, duration_minutes=0, maneuvers=[],
                 error=error_msg
             )
         except Exception as e:
-            logger.error(f"Valhalla routing error: {e}")
+            logger.error(f"Valhalla {costing} routing error: {e}")
             import traceback
             traceback.print_exc()
             return RouteResult(
-                success=False,
-                geometry=None,
-                distance_m=0,
-                duration_seconds=0,
-                duration_minutes=0,
-                maneuvers=[],
+                success=False, geometry=None, distance_m=0,
+                duration_seconds=0, duration_minutes=0, maneuvers=[],
                 error=str(e)
             )
+
+    def get_pedestrian_route(
+        self,
+        origin_lat: float,
+        origin_lon: float,
+        dest_lat: float,
+        dest_lon: float,
+        include_maneuvers: bool = True
+    ) -> RouteResult:
+        """Convenience wrapper: pedestrian route between two points."""
+        return self.get_route(
+            origin_lat, origin_lon, dest_lat, dest_lon,
+            costing="pedestrian", include_maneuvers=include_maneuvers
+        )
 
     def get_walking_isochrone(
         self,
@@ -301,39 +344,39 @@ class ValhallaRoutingService:
 
     def get_multi_point_route(
         self,
-        points: List[Tuple[float, float]]
+        points: List[Tuple[float, float]],
+        costing: str = "pedestrian"
     ) -> RouteResult:
         """
-        Get pedestrian route through multiple waypoints.
+        Get route through multiple waypoints using the specified mode.
         
         Args:
             points: List of (lat, lon) tuples representing waypoints
+            costing: Valhalla costing model
             
         Returns:
             RouteResult with combined geometry
         """
         if len(points) < 2:
             return RouteResult(
-                success=False,
-                geometry=None,
-                distance_m=0,
-                duration_seconds=0,
-                duration_minutes=0,
-                maneuvers=[],
+                success=False, geometry=None, distance_m=0,
+                duration_seconds=0, duration_minutes=0, maneuvers=[],
                 error="At least 2 points required"
             )
-            
+
+        if costing not in SUPPORTED_COSTINGS:
+            return RouteResult(
+                success=False, geometry=None, distance_m=0,
+                duration_seconds=0, duration_minutes=0, maneuvers=[],
+                error=f"Unsupported costing: {costing}"
+            )
+
         try:
+            costing_opts = DEFAULT_COSTING_OPTIONS.get(costing, {})
             request_body = {
                 "locations": self._build_locations(points),
-                "costing": "pedestrian",
-                "costing_options": {
-                    "pedestrian": {
-                        "walking_speed": WALKING_SPEED_KMH,
-                        "walkway_factor": 0.9,
-                        "sidewalk_factor": 0.95
-                    }
-                },
+                "costing": costing,
+                "costing_options": {costing: costing_opts} if costing_opts else {},
                 "units": "meters"
             }
             
@@ -344,21 +387,16 @@ class ValhallaRoutingService:
             
             if response.status_code != 200:
                 error_msg = response.text
-                logger.error(f"Valhalla multi-route error: {error_msg}")
+                logger.error(f"Valhalla {costing} multi-route error: {error_msg}")
                 return RouteResult(
-                    success=False,
-                    geometry=None,
-                    distance_m=0,
-                    duration_seconds=0,
-                    duration_minutes=0,
-                    maneuvers=[],
+                    success=False, geometry=None, distance_m=0,
+                    duration_seconds=0, duration_minutes=0, maneuvers=[],
                     error=f"Valhalla error: {error_msg}"
                 )
             
             data = response.json()
             trip = data.get("trip", {})
             
-            # Combine all legs
             total_distance = 0
             total_time = 0
             all_maneuvers = []
@@ -369,13 +407,11 @@ class ValhallaRoutingService:
                 total_distance += summary.get("length", 0) * 1000
                 total_time += summary.get("time", 0)
                 
-                # Decode shape and add coordinates
                 shape = leg.get("shape", "")
                 if shape:
                     coords = self._decode_polyline(shape)
                     all_coordinates.extend(coords)
                     
-                # Add maneuvers
                 for m in leg.get("maneuvers", []):
                     all_maneuvers.append({
                         "instruction": m.get("instruction", ""),
@@ -384,7 +420,6 @@ class ValhallaRoutingService:
                         "time_seconds": m.get("time", 0)
                     })
             
-            # Create combined LineString geometry
             geometry = {
                 "type": "LineString",
                 "coordinates": all_coordinates
@@ -400,14 +435,10 @@ class ValhallaRoutingService:
             )
             
         except Exception as e:
-            logger.error(f"Valhalla multi-route error: {e}")
+            logger.error(f"Valhalla {costing} multi-route error: {e}")
             return RouteResult(
-                success=False,
-                geometry=None,
-                distance_m=0,
-                duration_seconds=0,
-                duration_minutes=0,
-                maneuvers=[],
+                success=False, geometry=None, distance_m=0,
+                duration_seconds=0, duration_minutes=0, maneuvers=[],
                 error=str(e)
             )
 

@@ -2,10 +2,15 @@
 Database schema and metadata management endpoints
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, UploadFile, File
+from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import Session
 import os
+import json
+import tempfile
+import shutil
+from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -572,4 +577,1263 @@ async def get_tables_with_metadata():
         }
     except Exception as e:
         logger.error(f"Error fetching tables with metadata: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# OSM UPDATE  –  PBF-based: download from Geofabrik, extract & ingest
+# ---------------------------------------------------------------------------
+
+import subprocess
+import requests as http_requests
+import geopandas as gpd
+import time as _time
+
+# Geofabrik PBF download URL for Berlin
+GEOFABRIK_PBF_URL = "https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf"
+PBF_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+PBF_FILE = PBF_DIR / "berlin-latest.osm.pbf"
+
+# Environment tweaks for GDAL OSM driver (set once at import time)
+OSM_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "osmconf.ini"
+os.environ["OSM_CONFIG_FILE"] = str(OSM_CONFIG_PATH)
+os.environ["OGR_INTERLEAVED_READING"] = "YES"
+os.environ["OSM_USE_CUSTOM_INDEXING"] = "NO"
+os.environ["GDAL_PAM_ENABLED"] = "NO"
+
+# ---------------------------------------------------------------------------
+# PBF extraction categories
+#
+# Each entry: (table_name_suffix, ogr_layer, sql_where, description, category)
+#
+# The 5 OGR layers in a PBF:
+#   points, lines, multilinestrings, multipolygons, other_relations
+# ---------------------------------------------------------------------------
+
+PBF_CATEGORIES = [
+    # ── Land Use / Land Cover / Natural (polygons) ──
+    ("landuse",        "multipolygons", "landuse IS NOT NULL",                     "Land use areas (residential, industrial, commercial …)",  "Land Use"),
+    ("natural",        "multipolygons", "natural IS NOT NULL",                     "Natural features (wood, scrub, grassland, water …)",      "Natural"),
+    ("buildings",      "multipolygons", "building IS NOT NULL",                    "Buildings",                                                "Buildings"),
+    ("water_areas",    "multipolygons", "natural = 'water' OR water IS NOT NULL OR waterway IS NOT NULL", "Water bodies (lakes, rivers, reservoirs)", "Water"),
+    ("leisure_areas",  "multipolygons", "leisure IS NOT NULL",                     "Leisure areas (parks, pitches, gardens …)",                "Leisure"),
+    ("amenity_areas",  "multipolygons", "amenity IS NOT NULL",                     "Amenity areas (parking, school grounds …)",                "Amenity"),
+    ("boundary",       "multipolygons", "boundary IS NOT NULL",                    "Administrative and other boundaries",                      "Boundary"),
+
+    # ── Roads & Transport (lines) ──
+    ("roads",          "lines",         "highway IS NOT NULL",                     "Roads and paths",                                          "Transport"),
+    ("railways",       "lines",         "railway IS NOT NULL",                     "Railways and tram lines",                                  "Transport"),
+    ("waterways",      "lines",         "waterway IS NOT NULL",                    "Waterways (rivers, streams, canals …)",                    "Water"),
+    ("cycleways",      "lines",         "highway = 'cycleway' OR bicycle = 'designated'", "Cycle paths",                                      "Transport"),
+
+    # ── Points of interest (points) ──
+    ("hospitals",      "points",        "amenity = 'hospital'",                    "Hospitals and medical centres",                            "Healthcare"),
+    ("clinics",        "points",        "amenity = 'clinic'",                      "Medical clinics",                                          "Healthcare"),
+    ("pharmacies",     "points",        "amenity = 'pharmacy'",                    "Pharmacies",                                               "Healthcare"),
+    ("dentists",       "points",        "amenity = 'dentist'",                     "Dental surgeries",                                         "Healthcare"),
+    ("doctors",        "points",        "amenity = 'doctors'",                     "Doctor offices",                                           "Healthcare"),
+    ("veterinary",     "points",        "amenity = 'veterinary'",                  "Veterinary clinics",                                       "Healthcare"),
+    ("fire_stations",  "points",        "amenity = 'fire_station'",                "Fire stations",                                            "Emergency"),
+    ("police_stations","points",        "amenity = 'police'",                      "Police stations",                                          "Emergency"),
+    ("toilets",        "points",        "amenity = 'toilets'",                     "Public toilets",                                           "Emergency"),
+    ("schools",        "points",        "amenity = 'school'",                      "Schools",                                                  "Education"),
+    ("universities",   "points",        "amenity = 'university'",                  "Universities",                                             "Education"),
+    ("kindergartens",  "points",        "amenity = 'kindergarten'",                "Kindergartens",                                             "Education"),
+    ("libraries",      "points",        "amenity = 'library'",                     "Libraries",                                                "Education"),
+    ("transport_stops","points",        "public_transport = 'stop_position' OR public_transport = 'platform' OR highway = 'bus_stop' OR railway = 'station' OR railway = 'halt'", "Public transport stops", "Transport"),
+    ("parking",        "points",        "amenity = 'parking'",                     "Parking facilities",                                       "Transport"),
+    ("fuel_stations",  "points",        "amenity = 'fuel'",                        "Fuel / petrol stations",                                   "Transport"),
+    ("bicycle_parking","points",        "amenity = 'bicycle_parking'",             "Bicycle parking",                                          "Transport"),
+    ("ev_charging",    "points",        "amenity = 'charging_station'",            "EV charging stations",                                     "Transport"),
+    ("restaurants",    "points",        "amenity = 'restaurant'",                  "Restaurants",                                               "Food & Drink"),
+    ("cafes",          "points",        "amenity = 'cafe'",                        "Cafés",                                                    "Food & Drink"),
+    ("bars",           "points",        "amenity = 'bar' OR amenity = 'pub'",      "Bars and pubs",                                            "Food & Drink"),
+    ("fast_food",      "points",        "amenity = 'fast_food'",                   "Fast-food restaurants",                                    "Food & Drink"),
+    ("supermarkets",   "points",        "shop = 'supermarket'",                    "Supermarkets",                                             "Shopping"),
+    ("marketplaces",   "points",        "amenity = 'marketplace'",                 "Marketplaces",                                             "Shopping"),
+    ("parks",          "points",        "leisure = 'park'",                        "Parks and gardens",                                         "Leisure"),
+    ("playgrounds",    "points",        "leisure = 'playground'",                  "Playgrounds",                                               "Leisure"),
+    ("sports_centres", "points",        "leisure = 'sports_centre'",               "Sports centres",                                            "Leisure"),
+    ("swimming_pools", "points",        "leisure = 'swimming_pool'",               "Swimming pools",                                            "Leisure"),
+    ("theatres",       "points",        "amenity = 'theatre'",                     "Theatres",                                                  "Leisure"),
+    ("cinemas",        "points",        "amenity = 'cinema'",                      "Cinemas",                                                   "Leisure"),
+    ("museums",        "points",        "tourism = 'museum'",                      "Museums",                                                   "Tourism"),
+    ("hotels",         "points",        "tourism = 'hotel'",                       "Hotels",                                                    "Tourism"),
+    ("hostels",        "points",        "tourism = 'hostel'",                      "Hostels",                                                   "Tourism"),
+    ("tourist_info",   "points",        "tourism = 'information'",                 "Tourist information",                                       "Tourism"),
+    ("viewpoints",     "points",        "tourism = 'viewpoint'",                   "Viewpoints",                                                "Tourism"),
+    ("places_of_worship","points",      "amenity = 'place_of_worship'",            "Places of worship",                                         "Community"),
+    ("community_centres","points",      "amenity = 'community_centre'",            "Community centres",                                         "Community"),
+    ("social_facilities","points",      "amenity = 'social_facility'",             "Social facilities",                                         "Community"),
+    ("post_offices",   "points",        "amenity = 'post_office'",                 "Post offices",                                              "Misc"),
+    ("banks",          "points",        "amenity = 'bank'",                        "Banks",                                                     "Misc"),
+    ("atms",           "points",        "amenity = 'atm'",                         "ATMs",                                                      "Misc"),
+    ("recycling",      "points",        "amenity = 'recycling'",                   "Recycling points",                                          "Misc"),
+    ("waste_disposal", "points",        "amenity = 'waste_disposal'",              "Waste disposal sites",                                      "Misc"),
+    ("benches",        "points",        "amenity = 'bench'",                       "Public benches",                                            "Misc"),
+    ("drinking_water", "points",        "amenity = 'drinking_water'",              "Drinking water fountains",                                  "Misc"),
+    ("shelters",       "points",        "amenity = 'shelter'",                     "Public shelters",                                           "Misc"),
+]
+
+# Module-level status tracker (shared between request and background task)
+osm_update_status: Dict = {
+    "running": False,
+    "phase": None,          # "downloading", "extracting", "done"
+    "progress": 0,
+    "total": len(PBF_CATEGORIES),
+    "current_category": None,
+    "download_progress": 0,  # bytes downloaded
+    "download_total": 0,     # total bytes (from Content-Length)
+    "log": [],
+    "last_run": None,
+    "error": None,
+}
+
+
+def _log_change(engine, table_name: str, action: str, details: dict, performed_by: str = "system"):
+    """Write an entry to metadata.data_change_log."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO metadata.data_change_log (table_name, action, details, performed_by)
+                    VALUES (:table_name, :action, :details, :performed_by)
+                """),
+                {
+                    "table_name": table_name,
+                    "action": action,
+                    "details": json.dumps(details),
+                    "performed_by": performed_by,
+                },
+            )
+            conn.commit()
+    except Exception as e:
+        logger.warning(f"Could not write change log: {e}")
+
+
+def _download_pbf() -> bool:
+    """Download Berlin PBF from Geofabrik with progress tracking."""
+    global osm_update_status
+
+    osm_update_status["phase"] = "downloading"
+    osm_update_status["log"].append("📥 Downloading Berlin PBF from Geofabrik...")
+    logger.info(f"Downloading PBF from {GEOFABRIK_PBF_URL}")
+
+    PBF_DIR.mkdir(parents=True, exist_ok=True)
+
+    try:
+        resp = http_requests.get(GEOFABRIK_PBF_URL, stream=True, timeout=600)
+        resp.raise_for_status()
+
+        total_size = int(resp.headers.get("content-length", 0))
+        osm_update_status["download_total"] = total_size
+
+        downloaded = 0
+        with open(PBF_FILE, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=256 * 1024):
+                f.write(chunk)
+                downloaded += len(chunk)
+                osm_update_status["download_progress"] = downloaded
+
+        size_mb = PBF_FILE.stat().st_size / (1024 * 1024)
+        msg = f"  ✅ PBF downloaded: {size_mb:.1f} MB"
+        osm_update_status["log"].append(msg)
+        logger.info(msg)
+        return True
+
+    except Exception as e:
+        msg = f"  ❌ PBF download failed: {str(e)[:200]}"
+        osm_update_status["log"].append(msg)
+        logger.error(msg)
+        return False
+
+
+def _run_osm_update():
+    """Background task: download PBF, extract all categories, ingest into PostGIS."""
+    global osm_update_status
+
+    osm_update_status["running"] = True
+    osm_update_status["phase"] = "downloading"
+    osm_update_status["progress"] = 0
+    osm_update_status["total"] = len(PBF_CATEGORIES)
+    osm_update_status["log"] = []
+    osm_update_status["error"] = None
+    osm_update_status["current_category"] = None
+    osm_update_status["download_progress"] = 0
+    osm_update_status["download_total"] = 0
+
+    engine = get_db_engine()
+    tmp_dir = None
+
+    try:
+        # ── Phase 1: Download PBF ──
+        if not _download_pbf():
+            osm_update_status["error"] = "PBF download failed"
+            return
+
+        # ── Phase 2 & 3: Extract + Ingest each category ──
+        osm_update_status["phase"] = "extracting"
+        tmp_dir = tempfile.mkdtemp(prefix="osm_extract_")
+        total = len(PBF_CATEGORIES)
+        successful = 0
+        failed = 0
+
+        for idx, (name, ogr_layer, sql_where, description, category) in enumerate(PBF_CATEGORIES):
+            osm_update_status["progress"] = idx
+            osm_update_status["current_category"] = name
+            table_name = f"osm_{name}"
+            msg = f"[{idx + 1}/{total}] Extracting {name} from {ogr_layer}..."
+            osm_update_status["log"].append(msg)
+            logger.info(msg)
+
+            try:
+                # Extract from PBF to temp GeoJSON using ogr2ogr
+                geojson_path = Path(tmp_dir) / f"{name}.geojson"
+                if geojson_path.exists():
+                    geojson_path.unlink()
+
+                cmd = [
+                    "ogr2ogr",
+                    "-f", "GeoJSON",
+                    "-t_srs", "EPSG:4326",
+                    "-where", sql_where,
+                    str(geojson_path),
+                    str(PBF_FILE),
+                    ogr_layer,
+                ]
+
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=300
+                )
+
+                if result.returncode != 0:
+                    logger.warning(f"ogr2ogr stderr for {name}: {result.stderr[:300]}")
+
+                if not geojson_path.exists() or geojson_path.stat().st_size < 50:
+                    msg = f"  ⚠️  {name}: no features extracted"
+                    osm_update_status["log"].append(msg)
+                    continue
+
+                # Load GeoJSON into GeoDataFrame
+                gdf = gpd.read_file(str(geojson_path))
+
+                # Ensure valid geometry and CRS
+                gdf = gdf[gdf.geometry.notna()]
+                if len(gdf) > 0:
+                    gdf = gdf[gdf.geometry.is_valid]
+                if gdf.crs is None:
+                    gdf = gdf.set_crs(epsg=4326)
+                elif str(gdf.crs) != "EPSG:4326":
+                    gdf = gdf.to_crs(epsg=4326)
+
+                # Lowercase column names
+                gdf = gdf.rename(columns=lambda c: c.lower())
+
+                if len(gdf) == 0:
+                    msg = f"  ⚠️  {name}: no valid features after cleanup"
+                    osm_update_status["log"].append(msg)
+                    continue
+
+                # Write to PostGIS (replace existing)
+                gdf.to_postgis(
+                    table_name,
+                    engine,
+                    schema="vector",
+                    if_exists="replace",
+                    index=False,
+                )
+
+                # Create spatial index on geometry (EPSG:4326)
+                try:
+                    with engine.connect() as conn:
+                        conn.execute(text(f"""
+                            CREATE INDEX IF NOT EXISTS idx_{table_name}_geom
+                            ON vector.{table_name} USING GIST(geometry)
+                        """))
+                        conn.commit()
+                except Exception:
+                    pass
+
+                # Add projected geom_25833 column for faster spatial queries
+                try:
+                    with engine.connect() as conn:
+                        conn.execute(text(f"""
+                            ALTER TABLE vector.{table_name}
+                            ADD COLUMN IF NOT EXISTS geom_25833 geometry(Geometry, 25833)
+                        """))
+                        conn.execute(text(f"""
+                            UPDATE vector.{table_name}
+                            SET geom_25833 = ST_Transform(geometry, 25833)
+                            WHERE geometry IS NOT NULL
+                        """))
+                        conn.execute(text(f"""
+                            CREATE INDEX IF NOT EXISTS idx_{table_name}_geom25833
+                            ON vector.{table_name} USING GIST(geom_25833)
+                        """))
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not create geom_25833 for {table_name}: {e}")
+
+                row_count = len(gdf)
+                successful += 1
+                msg = f"  ✅ {name}: {row_count:,} features"
+                osm_update_status["log"].append(msg)
+
+                # Log the change
+                _log_change(engine, table_name, "osm_update", {
+                    "rows": row_count,
+                    "description": description,
+                    "source": "Geofabrik PBF",
+                    "ogr_layer": ogr_layer,
+                })
+
+                # Upsert metadata.table_descriptions
+                with engine.connect() as conn:
+                    conn.execute(text("""
+                        INSERT INTO metadata.table_descriptions
+                            (table_name, description, category, source, row_count, updated_by)
+                        VALUES (:tn, :desc, :cat, 'Geofabrik PBF', :rc, 'osm_update')
+                        ON CONFLICT (table_name) DO UPDATE
+                            SET description = EXCLUDED.description,
+                                category     = EXCLUDED.category,
+                                row_count    = EXCLUDED.row_count,
+                                source       = EXCLUDED.source,
+                                updated_at   = CURRENT_TIMESTAMP
+                    """), {"tn": table_name, "desc": description, "cat": category, "rc": row_count})
+                    conn.commit()
+
+                # Auto-populate metadata.column_descriptions
+                try:
+                    with engine.connect() as conn:
+                        # Clear old column descriptions for this table
+                        conn.execute(text(
+                            "DELETE FROM metadata.column_descriptions WHERE table_name = :tn"
+                        ), {"tn": table_name})
+
+                        for col_name in gdf.columns:
+                            col_lower = col_name.lower()
+                            # Skip internal/geometry columns
+                            if col_lower in ('fid', 'ogc_fid'):
+                                continue
+
+                            # Determine data type
+                            dtype = str(gdf[col_name].dtype)
+                            if col_lower in ('geometry', 'geom_25833'):
+                                data_type = 'geometry'
+                            elif 'int' in dtype:
+                                data_type = 'integer'
+                            elif 'float' in dtype:
+                                data_type = 'real'
+                            else:
+                                data_type = 'text'
+
+                            # Get an example value (first non-null)
+                            example = None
+                            if col_lower not in ('geometry', 'geom_25833'):
+                                non_null = gdf[col_name].dropna()
+                                if len(non_null) > 0:
+                                    example = str(non_null.iloc[0])[:100]
+
+                            # Generate description
+                            col_desc = f"OSM '{col_lower}' attribute from {ogr_layer} layer"
+                            if col_lower == 'geometry':
+                                col_desc = "Geometry in EPSG:4326 (WGS 84)"
+                            elif col_lower == 'geom_25833':
+                                col_desc = "Projected geometry in EPSG:25833 (ETRS89 / UTM zone 33N)"
+                            elif col_lower == 'osm_id':
+                                col_desc = "OpenStreetMap feature ID"
+                            elif col_lower == 'name':
+                                col_desc = "Feature name"
+
+                            conn.execute(text("""
+                                INSERT INTO metadata.column_descriptions
+                                (table_name, column_name, description, english_name, example_value, is_german, data_type, updated_by)
+                                VALUES (:tn, :cn, :desc, :en, :ex, false, :dt, 'osm_update')
+                            """), {
+                                "tn": table_name,
+                                "cn": col_lower,
+                                "desc": col_desc,
+                                "en": col_lower,
+                                "ex": example,
+                                "dt": data_type,
+                            })
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not populate column_descriptions for {table_name}: {e}")
+
+            except Exception as e:
+                failed += 1
+                msg = f"  ❌ {name}: {str(e)[:120]}"
+                osm_update_status["log"].append(msg)
+                logger.error(f"OSM update – {name} failed: {e}")
+
+        osm_update_status["phase"] = "done"
+        summary = f"✅ OSM update complete – {successful} succeeded, {failed} failed out of {total}"
+        osm_update_status["log"].append(summary)
+        osm_update_status["last_run"] = datetime.utcnow().isoformat()
+
+        _log_change(engine, None, "osm_update_batch", {
+            "successful": successful,
+            "failed": failed,
+            "total": total,
+            "source": "Geofabrik PBF",
+        })
+
+    except Exception as e:
+        osm_update_status["error"] = str(e)
+        osm_update_status["log"].append(f"❌ Fatal error: {str(e)}")
+        logger.error(f"OSM update fatal error: {e}")
+    finally:
+        osm_update_status["running"] = False
+        osm_update_status["progress"] = osm_update_status["total"]
+        osm_update_status["current_category"] = None
+        # Clean up temp directory
+        if tmp_dir and os.path.isdir(tmp_dir):
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+@router.post("/osm-update")
+async def trigger_osm_update(background_tasks: BackgroundTasks):
+    """Start a background OSM data refresh via PBF download + extract."""
+    if osm_update_status["running"]:
+        raise HTTPException(status_code=409, detail="An OSM update is already running")
+
+    background_tasks.add_task(_run_osm_update)
+    return {"success": True, "message": "OSM PBF update started", "total_categories": len(PBF_CATEGORIES)}
+
+
+@router.get("/osm-update/status")
+async def get_osm_update_status():
+    """Poll the current OSM update progress."""
+    return {
+        "success": True,
+        "running": osm_update_status["running"],
+        "phase": osm_update_status["phase"],
+        "progress": osm_update_status["progress"],
+        "total": osm_update_status["total"],
+        "current_category": osm_update_status["current_category"],
+        "download_progress": osm_update_status["download_progress"],
+        "download_total": osm_update_status["download_total"],
+        "log": osm_update_status["log"],
+        "last_run": osm_update_status["last_run"],
+        "error": osm_update_status["error"],
+    }
+
+
+@router.post("/osm-update/supermarkets")
+async def download_osm_supermarkets():
+    """Download OSM supermarkets via Overpass API for Berlin and ingest into vector.osm_supermarkets."""
+    from app.utils.data_loaders.osm_loader import OSMLoader
+    import geopandas as gpd
+    
+    table_name = "osm_supermarkets"
+    bbox = (13.088, 52.338, 13.761, 52.675) # Berlin bbox
+    
+    try:
+        loader = OSMLoader()
+        gdf = loader.query_overpass(bbox, ['supermarket'])
+        
+        if gdf.empty or len(gdf) == 0:
+            return {"success": False, "message": "No supermarkets found for the specified bounding box."}
+        
+        # Ensure valid geometry and CRS
+        gdf = gdf[gdf.geometry.notna()]
+        if len(gdf) > 0:
+            gdf = gdf[gdf.geometry.is_valid]
+        if gdf.crs is None:
+            gdf = gdf.set_crs(epsg=4326)
+        elif str(gdf.crs) != "EPSG:4326":
+            gdf = gdf.to_crs(epsg=4326)
+            
+        # Clean and deduplicate column names
+        import re
+        new_cols = []
+        seen = set()
+        for c in gdf.columns:
+            if c == 'geometry':
+                new_cols.append('geometry')
+                seen.add('geometry')
+                continue
+            # Lowercase, replace non-alphanumeric with underscore
+            clean_c = re.sub(r'[^a-z0-9_]', '_', str(c).lower())
+            clean_c = re.sub(r'_+', '_', clean_c).strip('_')
+            if not clean_c:
+                clean_c = "col"
+            clean_c = clean_c[:60] # leave room for suffix
+            base_c = clean_c
+            counter = 1
+            while clean_c in seen:
+                clean_c = f"{base_c}_{counter}"
+                counter += 1
+            seen.add(clean_c)
+            new_cols.append(clean_c)
+        gdf.columns = new_cols
+        
+        engine = get_db_engine()
+        
+        # Write to PostGIS
+        gdf.to_postgis(
+            table_name,
+            engine,
+            schema="vector",
+            if_exists="replace",
+            index=False,
+        )
+        
+        row_count = len(gdf)
+        
+        # Create spatial index and geom_25833
+        with engine.connect() as conn:
+            conn.execute(text(f"""
+                CREATE INDEX IF NOT EXISTS idx_{table_name}_geom
+                ON vector.{table_name} USING GIST(geometry)
+            """))
+            # Add projected geom_25833 column
+            conn.execute(text(f"""
+                ALTER TABLE vector.{table_name}
+                ADD COLUMN IF NOT EXISTS geom_25833 geometry(Geometry, 25833)
+            """))
+            conn.execute(text(f"""
+                UPDATE vector.{table_name}
+                SET geom_25833 = ST_Transform(ST_SetSRID(geometry, 4326), 25833)
+                WHERE geometry IS NOT NULL
+            """))
+            conn.execute(text(f"""
+                CREATE INDEX IF NOT EXISTS idx_{table_name}_geom25833
+                ON vector.{table_name} USING GIST(geom_25833)
+            """))
+            conn.commit()
+            
+        description = "Supermarkets in Berlin fetched via Overpass API"
+        category = "Shopping"
+        source = "Overpass API"
+        
+        # Log the change
+        _log_change(engine, table_name, "osm_update_supermarkets", {
+            "rows": row_count,
+            "description": description,
+            "source": source,
+        })
+        
+        # Upsert table_descriptions
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO metadata.table_descriptions
+                    (table_name, description, category, source, row_count, updated_by)
+                VALUES (:tn, :desc, :cat, :src, :rc, 'osm_update_supermarkets')
+                ON CONFLICT (table_name) DO UPDATE
+                    SET description = EXCLUDED.description,
+                        category     = EXCLUDED.category,
+                        row_count    = EXCLUDED.row_count,
+                        source       = EXCLUDED.source,
+                        updated_at   = CURRENT_TIMESTAMP
+            """), {"tn": table_name, "desc": description, "cat": category, "src": source, "rc": row_count})
+            
+            # Auto-populate metadata.column_descriptions
+            conn.execute(text(
+                "DELETE FROM metadata.column_descriptions WHERE table_name = :tn"
+            ), {"tn": table_name})
+
+            for col_name in gdf.columns:
+                col_lower = str(col_name).lower()
+                # Skip internal/geometry columns
+                if col_lower in ('fid', 'ogc_fid'):
+                    continue
+
+                # Determine data type
+                dtype = str(gdf[col_name].dtype)
+                if col_lower in ('geometry', 'geom_25833'):
+                    data_type = 'geometry'
+                elif 'int' in dtype:
+                    data_type = 'integer'
+                elif 'float' in dtype:
+                    data_type = 'real'
+                else:
+                    data_type = 'text'
+
+                # Get an example value (first non-null)
+                example = None
+                if col_lower not in ('geometry', 'geom_25833'):
+                    non_null = gdf[col_name].dropna()
+                    if len(non_null) > 0:
+                        example = str(non_null.iloc[0])[:100]
+
+                # Generate description
+                col_desc = f"OSM '{col_lower}' attribute"
+                if col_lower == 'geometry':
+                    col_desc = "Geometry in EPSG:4326 (WGS 84)"
+                elif col_lower == 'geom_25833':
+                    col_desc = "Projected geometry in EPSG:25833 (ETRS89 / UTM zone 33N)"
+                elif col_lower == 'osm_id':
+                    col_desc = "OpenStreetMap feature ID"
+                elif col_lower == 'name':
+                    col_desc = "Feature name"
+
+                conn.execute(text("""
+                    INSERT INTO metadata.column_descriptions
+                    (table_name, column_name, description, english_name, example_value, is_german, data_type, updated_by)
+                    VALUES (:tn, :cn, :desc, :en, :ex, false, :dt, 'osm_update_supermarkets')
+                """), {
+                    "tn": table_name,
+                    "cn": col_lower,
+                    "desc": col_desc,
+                    "en": col_lower,
+                    "ex": example,
+                    "dt": data_type,
+                })
+            conn.commit()
+
+        return {"success": True, "message": f"Successfully updated {row_count} supermarkets via Overpass API.", "row_count": row_count}
+
+    except Exception as e:
+        logger.error(f"Error updating supermarkets via Overpass: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/osm-update/transport_stops")
+async def download_osm_transport_stops():
+    """Download OSM transport stops via Overpass API for Berlin and ingest into vector.osm_transport_stops."""
+    from app.utils.data_loaders.osm_loader import OSMLoader
+    import geopandas as gpd
+    
+    table_name = "osm_transport_stops"
+    bbox = (13.088, 52.338, 13.761, 52.675) # Berlin bbox
+    
+    try:
+        loader = OSMLoader()
+        gdf = loader.query_overpass(bbox, ['transport_stop'])
+        
+        if gdf.empty or len(gdf) == 0:
+            return {"success": False, "message": "No transport stops found for the specified bounding box."}
+        
+        # Ensure valid geometry and CRS
+        gdf = gdf[gdf.geometry.notna()]
+        if len(gdf) > 0:
+            gdf = gdf[gdf.geometry.is_valid]
+        if gdf.crs is None:
+            gdf = gdf.set_crs(epsg=4326)
+        elif str(gdf.crs) != "EPSG:4326":
+            gdf = gdf.to_crs(epsg=4326)
+            
+        # Clean and deduplicate column names
+        import re
+        new_cols = []
+        seen = set()
+        for c in gdf.columns:
+            if c == 'geometry':
+                new_cols.append('geometry')
+                seen.add('geometry')
+                continue
+            # Lowercase, replace non-alphanumeric with underscore
+            clean_c = re.sub(r'[^a-z0-9_]', '_', str(c).lower())
+            clean_c = re.sub(r'_+', '_', clean_c).strip('_')
+            if not clean_c:
+                clean_c = "col"
+            clean_c = clean_c[:60] # leave room for suffix
+            base_c = clean_c
+            counter = 1
+            while clean_c in seen:
+                clean_c = f"{base_c}_{counter}"
+                counter += 1
+            seen.add(clean_c)
+            new_cols.append(clean_c)
+        gdf.columns = new_cols
+        
+        engine = get_db_engine()
+        
+        # Write to PostGIS
+        gdf.to_postgis(
+            table_name,
+            engine,
+            schema="vector",
+            if_exists="replace",
+            index=False,
+        )
+        
+        row_count = len(gdf)
+        
+        # Create spatial index and geom_25833
+        with engine.connect() as conn:
+            conn.execute(text(f"""
+                CREATE INDEX IF NOT EXISTS idx_{table_name}_geom
+                ON vector.{table_name} USING GIST(geometry)
+            """))
+            # Add projected geom_25833 column
+            conn.execute(text(f"""
+                ALTER TABLE vector.{table_name}
+                ADD COLUMN IF NOT EXISTS geom_25833 geometry(Geometry, 25833)
+            """))
+            conn.execute(text(f"""
+                UPDATE vector.{table_name}
+                SET geom_25833 = ST_Transform(ST_SetSRID(geometry, 4326), 25833)
+                WHERE geometry IS NOT NULL
+            """))
+            conn.execute(text(f"""
+                CREATE INDEX IF NOT EXISTS idx_{table_name}_geom25833
+                ON vector.{table_name} USING GIST(geom_25833)
+            """))
+            conn.commit()
+            
+        description = "Public transport stops in Berlin fetched via Overpass API"
+        category = "Transport"
+        source = "Overpass API"
+        
+        # Log the change
+        _log_change(engine, table_name, "osm_update_transport_stops", {
+            "rows": row_count,
+            "description": description,
+            "source": source,
+        })
+        
+        # Upsert table_descriptions
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO metadata.table_descriptions
+                    (table_name, description, category, source, row_count, updated_by)
+                VALUES (:tn, :desc, :cat, :src, :rc, 'osm_update_transport_stops')
+                ON CONFLICT (table_name) DO UPDATE
+                    SET description = EXCLUDED.description,
+                        category     = EXCLUDED.category,
+                        row_count    = EXCLUDED.row_count,
+                        source       = EXCLUDED.source,
+                        updated_at   = CURRENT_TIMESTAMP
+            """), {"tn": table_name, "desc": description, "cat": category, "src": source, "rc": row_count})
+            
+            # Auto-populate metadata.column_descriptions
+            conn.execute(text(
+                "DELETE FROM metadata.column_descriptions WHERE table_name = :tn"
+            ), {"tn": table_name})
+
+            for col_name in gdf.columns:
+                col_lower = str(col_name).lower()
+                # Skip internal/geometry columns
+                if col_lower in ('fid', 'ogc_fid'):
+                    continue
+
+                # Determine data type
+                dtype = str(gdf[col_name].dtype)
+                if col_lower in ('geometry', 'geom_25833'):
+                    data_type = 'geometry'
+                elif 'int' in dtype:
+                    data_type = 'integer'
+                elif 'float' in dtype:
+                    data_type = 'real'
+                else:
+                    data_type = 'text'
+
+                # Get an example value (first non-null)
+                example = None
+                if col_lower not in ('geometry', 'geom_25833'):
+                    non_null = gdf[col_name].dropna()
+                    if len(non_null) > 0:
+                        example = str(non_null.iloc[0])[:100]
+
+                # Generate description
+                col_desc = f"OSM '{col_lower}' attribute"
+                if col_lower == 'geometry':
+                    col_desc = "Geometry in EPSG:4326 (WGS 84)"
+                elif col_lower == 'geom_25833':
+                    col_desc = "Projected geometry in EPSG:25833 (ETRS89 / UTM zone 33N)"
+                elif col_lower == 'osm_id':
+                    col_desc = "OpenStreetMap feature ID"
+                elif col_lower == 'name':
+                    col_desc = "Feature name"
+
+                conn.execute(text("""
+                    INSERT INTO metadata.column_descriptions
+                    (table_name, column_name, description, english_name, example_value, is_german, data_type, updated_by)
+                    VALUES (:tn, :cn, :desc, :en, :ex, false, :dt, 'osm_update_transport_stops')
+                """), {
+                    "tn": table_name,
+                    "cn": col_lower,
+                    "desc": col_desc,
+                    "en": col_lower,
+                    "ex": example,
+                    "dt": data_type,
+                })
+            conn.commit()
+
+        return {"success": True, "message": f"Successfully updated {row_count} transport stops via Overpass API.", "row_count": row_count}
+
+    except Exception as e:
+        logger.error(f"Error updating transport stops via Overpass: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/osm-update/categories")
+async def list_osm_categories():
+    """Return the full list of OSM categories that will be extracted from PBF."""
+    return {
+        "success": True,
+        "categories": [
+            {"name": name, "layer": layer, "description": desc, "category": cat}
+            for name, layer, _where, desc, cat in PBF_CATEGORIES
+        ],
+        "total": len(PBF_CATEGORIES),
+    }
+
+
+# ---------------------------------------------------------------------------
+# CHANGE LOG
+# ---------------------------------------------------------------------------
+
+@router.get("/changelog")
+async def get_changelog(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    action: Optional[str] = None,
+    table_name: Optional[str] = None,
+):
+    """Return paginated change log entries with optional filters."""
+    try:
+        engine = get_db_engine()
+        offset = (page - 1) * per_page
+
+        where_clauses = []
+        params: Dict = {"limit": per_page, "offset": offset}
+
+        if action:
+            where_clauses.append("action = :action")
+            params["action"] = action
+        if table_name:
+            where_clauses.append("table_name = :table_name")
+            params["table_name"] = table_name
+
+        where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+        with engine.connect() as conn:
+            # Total count
+            count_result = conn.execute(
+                text(f"SELECT COUNT(*) FROM metadata.data_change_log {where_sql}"), params
+            )
+            total = count_result.scalar() or 0
+
+            # Rows
+            result = conn.execute(
+                text(f"""
+                    SELECT id, table_name, action, details, performed_by, created_at
+                    FROM metadata.data_change_log
+                    {where_sql}
+                    ORDER BY created_at DESC
+                    LIMIT :limit OFFSET :offset
+                """),
+                params,
+            )
+
+            entries = []
+            for row in result.fetchall():
+                details = row[3]
+                if isinstance(details, str):
+                    try:
+                        details = json.loads(details)
+                    except Exception:
+                        pass
+                entries.append({
+                    "id": row[0],
+                    "table_name": row[1],
+                    "action": row[2],
+                    "details": details,
+                    "performed_by": row[4],
+                    "created_at": row[5].isoformat() if row[5] else None,
+                })
+
+        return {
+            "success": True,
+            "entries": entries,
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": (total + per_page - 1) // per_page,
+        }
+    except Exception as e:
+        logger.error(f"Error fetching changelog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# FILE UPLOAD  –  GeoJSON, Shapefile (.zip), CSV
+# ---------------------------------------------------------------------------
+
+@router.post("/upload")
+async def upload_dataset(
+    file: UploadFile = File(...),
+    table_name: Optional[str] = Query(None, description="Custom table name (auto-generated if empty)"),
+    uploaded_by: str = Query("api_user"),
+):
+    """Upload a GeoJSON, Shapefile (.zip), or CSV file and ingest into PostGIS."""
+    import geopandas as gpd
+    import pandas as pd
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    allowed = {"geojson", "json", "zip", "csv"}
+    if ext not in allowed:
+        raise HTTPException(status_code=400, detail=f"Unsupported format '.{ext}'. Allowed: {', '.join(allowed)}")
+
+    # Derive a clean table name
+    if not table_name:
+        base = file.filename.rsplit(".", 1)[0]
+        # PostgreSQL identifiers max 63 chars; to_postgis auto-creates
+        # idx_{table}_geometry, so keep table name ≤ 50 chars total.
+        table_name = "custom_" + "".join(c if c.isalnum() else "_" for c in base.lower()).strip("_")[:43]
+
+    # Ensure table name is safe
+    safe_name = "".join(c if c.isalnum() or c == "_" else "_" for c in table_name.lower()).strip("_")
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="Invalid table name")
+
+    tmpdir = None
+    try:
+        # Save uploaded file to a temp directory
+        tmpdir = tempfile.mkdtemp(prefix="geoupload_")
+        tmp_path = os.path.join(tmpdir, file.filename)
+        with open(tmp_path, "wb") as f_out:
+            content = await file.read()
+            f_out.write(content)
+
+        has_geometry = False
+        file_format = ext
+
+        if ext in ("geojson", "json"):
+            gdf = gpd.read_file(tmp_path)
+            has_geometry = True
+            file_format = "GeoJSON"
+        elif ext == "zip":
+            # Shapefile in zip
+            gdf = gpd.read_file(f"zip://{tmp_path}")
+            has_geometry = True
+            file_format = "Shapefile"
+        elif ext == "csv":
+            df = pd.read_csv(tmp_path)
+            # Try to detect lat/lon columns
+            lat_cols = [c for c in df.columns if c.lower() in ("lat", "latitude", "y")]
+            lon_cols = [c for c in df.columns if c.lower() in ("lon", "lng", "longitude", "x")]
+            if lat_cols and lon_cols:
+                from shapely.geometry import Point
+                geometry = [Point(xy) for xy in zip(df[lon_cols[0]], df[lat_cols[0]])]
+                gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:4326")
+                has_geometry = True
+            else:
+                gdf = gpd.GeoDataFrame(df)
+            file_format = "CSV"
+        else:
+            raise HTTPException(status_code=400, detail="Unrecognised format")
+
+        # Ensure CRS
+        if has_geometry:
+            if gdf.crs is None:
+                gdf = gdf.set_crs(epsg=4326)
+            elif str(gdf.crs) != "EPSG:4326":
+                gdf = gdf.to_crs(epsg=4326)
+
+        engine = get_db_engine()
+        row_count = len(gdf)
+        col_count = len(gdf.columns)
+
+        # Write to PostGIS
+        if has_geometry and "geometry" in gdf.columns:
+            gdf.to_postgis(safe_name, engine, schema="vector", if_exists="replace", index=False)
+
+            # Create spatial index on geometry column
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text(f"""
+                        CREATE INDEX IF NOT EXISTS idx_{safe_name}_geom
+                        ON vector."{safe_name}" USING GIST(geometry)
+                    """))
+                    conn.commit()
+            except Exception as e:
+                logger.warning(f"Could not create spatial index for {safe_name}: {e}")
+
+            # Add projected geom_25833 column for fast spatial queries
+            try:
+                with engine.connect() as conn:
+                    # 1. Add literal 25833 column
+                    conn.execute(text(f"""
+                        ALTER TABLE vector."{safe_name}"
+                        ADD COLUMN IF NOT EXISTS geom_25833 geometry(Geometry, 25833)
+                    """))
+                    # 2. Update via precise SRID transformation: Set source SRID explicitly then Transform
+                    conn.execute(text(f"""
+                        UPDATE vector."{safe_name}"
+                        SET geom_25833 = ST_Transform(ST_SetSRID(geometry, 4326), 25833)
+                        WHERE geometry IS NOT NULL
+                    """))
+                    # 3. Create index for performance
+                    conn.execute(text(f"""
+                        CREATE INDEX IF NOT EXISTS idx_{safe_name}_geom25833
+                        ON vector."{safe_name}" USING GIST(geom_25833)
+                    """))
+                    conn.commit()
+            except Exception as e:
+                logger.warning(f"Could not create geom_25833 for {safe_name}: {e}")
+        else:
+            gdf.to_sql(safe_name, engine, schema="vector", if_exists="replace", index=False)
+
+        # Register in custom_datasets
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO metadata.custom_datasets
+                    (table_name, original_filename, file_format, row_count, column_count, has_geometry, uploaded_by)
+                VALUES (:tn, :fn, :ff, :rc, :cc, :hg, :ub)
+                ON CONFLICT (table_name) DO UPDATE SET
+                    original_filename = EXCLUDED.original_filename,
+                    file_format       = EXCLUDED.file_format,
+                    row_count         = EXCLUDED.row_count,
+                    column_count      = EXCLUDED.column_count,
+                    has_geometry      = EXCLUDED.has_geometry,
+                    uploaded_at       = CURRENT_TIMESTAMP,
+                    uploaded_by       = EXCLUDED.uploaded_by
+            """), {
+                "tn": safe_name, "fn": file.filename, "ff": file_format,
+                "rc": row_count, "cc": col_count, "hg": has_geometry, "ub": uploaded_by,
+            })
+            conn.commit()
+
+        # Upsert table_descriptions
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO metadata.table_descriptions
+                    (table_name, description, category, source, row_count, updated_by)
+                VALUES (:tn, :desc, 'User Upload', :src, :rc, :ub)
+                ON CONFLICT (table_name) DO UPDATE SET
+                    description = EXCLUDED.description,
+                    row_count   = EXCLUDED.row_count,
+                    source      = EXCLUDED.source,
+                    updated_at  = CURRENT_TIMESTAMP
+            """), {
+                "tn": safe_name,
+                "desc": f"User-uploaded dataset from {file.filename}",
+                "src": file.filename,
+                "rc": row_count,
+                "ub": uploaded_by,
+            })
+            conn.commit()
+
+        _log_change(engine, safe_name, "upload", {
+            "filename": file.filename,
+            "format": file_format,
+            "rows": row_count,
+            "columns": col_count,
+            "has_geometry": has_geometry,
+        }, performed_by=uploaded_by)
+
+        return {
+            "success": True,
+            "table_name": safe_name,
+            "row_count": row_count,
+            "column_count": col_count,
+            "has_geometry": has_geometry,
+            "message": f"Uploaded {row_count:,} rows to vector.{safe_name}",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Upload error: {e}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+    finally:
+        if tmpdir and os.path.isdir(tmpdir):
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# RENAME TABLE
+# ---------------------------------------------------------------------------
+
+@router.put("/tables/{table_name}/rename")
+async def rename_table(table_name: str, new_name: str = Query(..., description="New table name")):
+    """Rename a table in the vector schema and update all metadata references."""
+    engine = get_db_engine()
+
+    # Validate old name
+    safe_old = "".join(c if c.isalnum() or c == "_" else "_" for c in table_name.lower()).strip("_")
+    if safe_old != table_name:
+        raise HTTPException(status_code=400, detail="Invalid current table name")
+
+    # Validate new name
+    safe_new = "".join(c if c.isalnum() or c == "_" else "_" for c in new_name.lower()).strip("_")
+    if safe_new != new_name or not new_name:
+        raise HTTPException(status_code=400, detail="Invalid new table name. Use only lowercase letters, numbers and underscores.")
+    if safe_new == safe_old:
+        return {"success": True, "message": "Name unchanged"}
+
+    # Check source table exists
+    insp = inspect(engine)
+    if not insp.has_table(table_name, schema="vector"):
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
+
+    # Check target name is free
+    if insp.has_table(new_name, schema="vector"):
+        raise HTTPException(status_code=409, detail=f"A table named '{new_name}' already exists")
+
+    with engine.connect() as conn:
+        try:
+            # Rename the actual table
+            conn.execute(text(f'ALTER TABLE vector."{table_name}" RENAME TO "{new_name}"'))
+
+            # Update metadata references
+            conn.execute(text("UPDATE metadata.table_descriptions SET table_name = :nn WHERE table_name = :on"), {"nn": new_name, "on": table_name})
+            conn.execute(text("UPDATE metadata.column_descriptions SET table_name = :nn WHERE table_name = :on"), {"nn": new_name, "on": table_name})
+            conn.execute(text("UPDATE metadata.custom_datasets SET table_name = :nn WHERE table_name = :on"), {"nn": new_name, "on": table_name})
+            conn.commit()
+        except Exception as e:
+            logger.error(f"Error renaming table: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    _log_change(engine, new_name, "rename", {"old_name": table_name, "new_name": new_name})
+
+    return {"success": True, "message": f"Table renamed from vector.{table_name} to vector.{new_name}"}
+
+
+# ---------------------------------------------------------------------------
+# DELETE TABLE
+# ---------------------------------------------------------------------------
+
+@router.delete("/tables/{table_name}")
+async def delete_any_table(table_name: str):
+    """Delete any dataset from the vector schema and clean up its metadata."""
+    engine = get_db_engine()
+
+    # Basic safety against SQL injection on the table name
+    safe_name = "".join(c if c.isalnum() or c == "_" else "_" for c in table_name.lower()).strip("_")
+    if safe_name != table_name:
+        raise HTTPException(status_code=400, detail="Invalid table name")
+
+    with engine.connect() as conn:
+        try:
+            # We allow deletion of ANY table in the vector schema
+            conn.execute(text(f'DROP TABLE IF EXISTS vector."{table_name}" CASCADE'))
+            
+            # Clean up all metadata references
+            conn.execute(text("DELETE FROM metadata.custom_datasets WHERE table_name = :tn"), {"tn": table_name})
+            conn.execute(text("DELETE FROM metadata.table_descriptions WHERE table_name = :tn"), {"tn": table_name})
+            conn.execute(text("DELETE FROM metadata.column_descriptions WHERE table_name = :tn"), {"tn": table_name})
+            conn.commit()
+        except Exception as e:
+            logger.error(f"Error deleting table: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    _log_change(engine, table_name, "delete", {"reason": "user_request"})
+
+    return {"success": True, "message": f"Table vector.{table_name} deleted"}
+
+
+# ---------------------------------------------------------------------------
+# ROW PREVIEW
+# ---------------------------------------------------------------------------
+
+@router.get("/tables/{table_name}/preview")
+async def preview_table(table_name: str, limit: int = Query(50, ge=1, le=500)):
+    """Return the first N rows of a table, with geometry converted to WKT."""
+    engine = get_db_engine()
+
+    # Validate table exists
+    inspector = inspect(engine)
+    if not inspector.has_table(table_name, schema="vector"):
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
+
+    try:
+        with engine.connect() as conn:
+            # Get column info to detect geometry columns
+            cols = inspector.get_columns(table_name, schema="vector")
+            select_parts = []
+            for col in cols:
+                col_type = str(col["type"]).lower()
+                if "geometry" in col_type:
+                    select_parts.append(f'ST_AsText("{col["name"]}") AS "{col["name"]}"')
+                else:
+                    select_parts.append(f'"{col["name"]}"')
+
+            select_sql = ", ".join(select_parts)
+            result = conn.execute(text(f'SELECT {select_sql} FROM vector."{table_name}" LIMIT :lim'), {"lim": limit})
+
+            columns = list(result.keys())
+            rows = [dict(zip(columns, row)) for row in result.fetchall()]
+
+            # JSON-serialise datetimes etc.
+            for row in rows:
+                for k, v in row.items():
+                    if isinstance(v, (datetime,)):
+                        row[k] = v.isoformat()
+                    elif v is not None and not isinstance(v, (str, int, float, bool)):
+                        row[k] = str(v)
+
+        return {"success": True, "table_name": table_name, "columns": columns, "rows": rows, "count": len(rows)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Preview error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# COLUMN STATS
+# ---------------------------------------------------------------------------
+
+@router.get("/tables/{table_name}/stats")
+async def table_stats(table_name: str):
+    """Return basic statistics for each column (count, distinct, nulls, min, max)."""
+    engine = get_db_engine()
+
+    inspector = inspect(engine)
+    if not inspector.has_table(table_name, schema="vector"):
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
+
+    try:
+        cols = inspector.get_columns(table_name, schema="vector")
+        stats = []
+
+        with engine.connect() as conn:
+            total_result = conn.execute(text(f'SELECT COUNT(*) FROM vector."{table_name}"'))
+            total_rows = total_result.scalar() or 0
+
+            for col in cols:
+                col_type = str(col["type"]).lower()
+                if "geometry" in col_type:
+                    stats.append({"column": col["name"], "type": col_type, "is_geometry": True})
+                    continue
+
+                try:
+                    result = conn.execute(text(f"""
+                        SELECT
+                            COUNT("{col['name']}") AS non_null,
+                            COUNT(DISTINCT "{col['name']}") AS distinct_count
+                        FROM vector."{table_name}"
+                    """))
+                    r = result.fetchone()
+                    stat = {
+                        "column": col["name"],
+                        "type": col_type,
+                        "non_null": r[0],
+                        "null_count": total_rows - r[0],
+                        "distinct": r[1],
+                    }
+
+                    # Try min/max for numeric and text
+                    if any(t in col_type for t in ("int", "float", "double", "numeric", "decimal", "real")):
+                        mm = conn.execute(text(f"""
+                            SELECT MIN("{col['name']}"), MAX("{col['name']}"), AVG("{col['name']}"::numeric)
+                            FROM vector."{table_name}"
+                        """)).fetchone()
+                        stat["min"] = float(mm[0]) if mm[0] is not None else None
+                        stat["max"] = float(mm[1]) if mm[1] is not None else None
+                        stat["avg"] = round(float(mm[2]), 4) if mm[2] is not None else None
+                    elif "char" in col_type or "text" in col_type:
+                        sample = conn.execute(text(f"""
+                            SELECT "{col['name']}" FROM vector."{table_name}"
+                            WHERE "{col['name']}" IS NOT NULL LIMIT 3
+                        """)).fetchall()
+                        stat["samples"] = [str(s[0]) for s in sample]
+
+                    stats.append(stat)
+                except Exception:
+                    stats.append({"column": col["name"], "type": col_type, "error": "Could not compute stats"})
+
+        return {"success": True, "table_name": table_name, "total_rows": total_rows, "columns": stats}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Stats error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

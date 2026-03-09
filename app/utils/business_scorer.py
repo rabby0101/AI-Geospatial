@@ -642,7 +642,12 @@ class BusinessScorer:
                         where_conditions.append(f"{table_alias}.cuisine ILIKE '{cuisine_filter}'")
                 
                 if building_filter and 'buildings' in table:
-                    where_conditions.append(f"'{building_filter}' = ANY({table_alias}.use)")
+                    if building_filter == 'COMMERCIAL':
+                        where_conditions.append(f"{table_alias}.building IN ('commercial', 'retail', 'office')")
+                    elif building_filter == 'RESIDENTIAL':
+                        where_conditions.append(f"{table_alias}.building IN ('residential', 'apartments', 'house', 'detached')")
+                    else:
+                        where_conditions.append(f"'{building_filter}' = {table_alias}.building")
                 
                 where_clause = " AND ".join(where_conditions)
                 
@@ -701,7 +706,7 @@ WITH scored AS (
         {', '.join(all_columns)}
     FROM vector.osm_buildings b
     {district_join}
-    WHERE 'COMMERCIAL' = ANY(b.use)
+    WHERE b.building IN ('commercial', 'retail', 'office')
     {district_where}
 )
 SELECT 

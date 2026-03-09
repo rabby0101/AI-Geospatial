@@ -13,6 +13,7 @@ from app.routes.routing import router as routing_router
 from app.routes.safety import router as safety_router
 from app.routes.semantic import router as semantic_router
 from app.routes.gdi_berlin import router as gdi_berlin_router
+from app.routes.walking_distance import router as walking_distance_router
 from app.utils.database import db_manager
 from app.utils.auto_discovery import auto_discovery
 
@@ -86,6 +87,7 @@ app.include_router(routing_router)  # Road routing and connectivity endpoints
 app.include_router(safety_router)  # Safety analysis endpoints
 app.include_router(semantic_router)  # Semantic/Knowledge Graph endpoints
 app.include_router(gdi_berlin_router)  # GDI Berlin WFS import endpoints
+app.include_router(walking_distance_router)  # Walking distance analysis endpoints
 
 
 # Serve static files (dashboards, assets)

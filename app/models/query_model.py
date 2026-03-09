@@ -20,6 +20,9 @@ class OperationType(str, Enum):
     SORT = "sort"
     RETURN = "return"
 
+    NEAREST_BY_ROAD = "nearest_by_road"  # Find nearest POI using road network distance
+    WALKING_TIME = "walking_time"  # Find POIs within walking time using road network
+
 
 class GeospatialOperation(BaseModel):
     """Represents a single geospatial operation"""
@@ -46,6 +49,10 @@ class NLQuery(BaseModel):
     drawn_geometry: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Geometry drawn by user (GeoJSON geometry format) - used as spatial context for LLM"
+    )
+    llm_provider: Optional[str] = Field(
+        default=None,
+        description="LLM provider to use: 'deepseek', 'gemini', or 'gemma3'"
     )
 
     class Config:

@@ -42,10 +42,7 @@ class SpatialEngine:
             if routing_op:
                 return self._execute_routing_operation(routing_op, plan)
 
-            # Check for local isochrone operations
-            isochrone_op = next((op for op in plan.operations if op.operation == "local_isochrone"), None)
-            if isochrone_op:
-                return self._execute_local_isochrone_operation(isochrone_op, plan)
+
 
             # Check for nearest by road operations
             nearest_road_op = next((op for op in plan.operations if op.operation == "nearest_by_road"), None)
@@ -367,66 +364,18 @@ class SpatialEngine:
                                     "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
                                 }
                             else:
-                                logger.warning(f"Valhalla routing failed: {route_result.error}. Falling back to pgRouting.")
+                                logger.warning(f"Valhalla routing failed: {route_result.error}")
                     else:
-                        logger.info("Valhalla not available, using pgRouting")
+                        logger.warning("Valhalla not available for optimal tour routing")
                         
                 except ImportError:
-                    logger.info("Valhalla module not available, using pgRouting")
+                    logger.error("Valhalla module not available")
                 except Exception as e:
-                    logger.warning(f"Valhalla error: {e}. Falling back to pgRouting.")
+                    logger.error(f"Valhalla error: {e}")
                 
-                # Fallback: Compute optimal tour using pgRouting
-                result = db_manager.compute_optimal_tour(geometries, feature_names)
-
-                if not result.get("success"):
-                    return {
-                        "success": False,
-                        "error": result.get("error", "Optimal tour computation failed"),
-                        "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
-                    }
-
-                # Convert result to GeoJSON with waypoints and directions
-                feature = {
-                    "type": "Feature",
-                    "geometry": result.get("geometry"),
-                    "properties": {
-                        "route_type": "optimal_tour",
-                        "total_distance_m": result.get("total_distance_m", 0),
-                        "total_distance_km": round(result.get("total_distance_m", 0) / 1000, 2),
-                        "total_time_minutes": result.get("total_time_minutes"),
-                        "waypoint_count": len(result.get("waypoints", [])),
-                        "algorithm": "Nearest Neighbor TSP (pgRouting)",
-                        "road_network": "Berlin Custom Roads"
-                    }
-                }
-
-                geojson = {
-                    "type": "FeatureCollection",
-                    "features": [feature]
-                }
-
-                # Include waypoints and directions in metadata
-                metadata = {
-                    "algorithm": "Nearest Neighbor TSP (pgRouting)",
-                    "road_network": "Berlin Custom Roads",
-                    "routing_engine": "pgrouting",
-                    "total_distance_m": round(result.get("total_distance_m", 0), 2),
-                    "total_distance_km": round(result.get("total_distance_m", 0) / 1000, 2),
-                    "total_time_minutes": result.get("total_time_minutes"),
-                    "waypoints": result.get("waypoints", []),
-                    "directions": result.get("directions", []),
-                    "optimal_sequence": result.get("optimal_sequence", []),
-                    "feature_count": result.get("metadata", {}).get("feature_count", 0),
-                    "waypoint_count": result.get("metadata", {}).get("waypoint_count", 0)
-                }
-
                 return {
-                    "success": True,
-                    "result_type": "routing",
-                    "data": geojson,
-                    "layer_name": result.get("layer_name", "optimal_route"),
-                    "metadata": metadata,
+                    "success": False,
+                    "error": "Valhalla routing service is required but not available",
                     "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
                 }
 
@@ -524,66 +473,18 @@ class SpatialEngine:
                                     "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
                                 }
                             else:
-                                logger.warning(f"Valhalla routing failed: {route_result.error}. Falling back to pgRouting.")
+                                logger.warning(f"Valhalla routing failed: {route_result.error}")
                     else:
-                        logger.info("Valhalla not available, using pgRouting for pairwise routing")
+                        logger.warning("Valhalla not available for pairwise routing")
                         
                 except ImportError:
-                    logger.info("Valhalla module not available, using pgRouting")
+                    logger.error("Valhalla module not available")
                 except Exception as e:
-                    logger.warning(f"Valhalla error: {e}. Falling back to pgRouting.")
+                    logger.error(f"Valhalla error: {e}")
                 
-                # Fallback: Compute pairwise shortest paths using pgRouting
-                result = db_manager.compute_pairwise_shortest_paths(geometries)
-
-                if not result.get("success"):
-                    return {
-                        "success": False,
-                        "error": result.get("error", "Routing computation failed"),
-                        "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
-                    }
-
-                # Convert routes to GeoJSON FeatureCollection
-                routes = result.get("routes", [])
-                features = []
-
-                for route_idx, route in enumerate(routes):
-                    feature = {
-                        "type": "Feature",
-                        "geometry": route.get("route_geometry"),
-                        "properties": {
-                            "route_id": route_idx + 1,
-                            "from_name": route.get("from_name", f"Item {route.get('from_index', 0) + 1}"),
-                            "to_name": route.get("to_name", f"Item {route.get('to_index', 1) + 1}"),
-                            "from_index": route.get("from_index"),
-                            "to_index": route.get("to_index"),
-                            "distance_m": round(route.get("distance_m", 0), 2),
-                            "distance_km": round(route.get("distance_m", 0) / 1000, 2)
-                        }
-                    }
-                    features.append(feature)
-
-                geojson = {
-                    "type": "FeatureCollection",
-                    "features": features
-                }
-
-                metadata = {
-                    "count": len(features),
-                    "total_distance_m": round(result.get("total_distance_m", 0), 2),
-                    "total_distance_km": round(result.get("total_distance_m", 0) / 1000, 2),
-                    "route_count": result.get("route_count", 0),
-                    "feature_count": result.get("feature_count", 0),
-                    "algorithm": "Dijkstra (pgRouting)",
-                    "routing_engine": "pgrouting",
-                    "road_network": "Berlin Custom Roads (~450,000 segments)"
-                }
-
                 return {
-                    "success": True,
-                    "result_type": "routing",
-                    "data": geojson,
-                    "metadata": metadata,
+                    "success": False,
+                    "error": "Valhalla routing service is required but not available",
                     "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
                 }
 
@@ -597,124 +498,7 @@ class SpatialEngine:
                 "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
             }
 
-    def _execute_local_isochrone_operation(self, isochrone_op, plan: OperationPlan) -> Dict[str, Any]:
-        """
-        Execute local isochrone generation using pgRouting.
-        """
-        try:
-            from app.utils.local_isochrone import local_isochrone_service
-            
-            params = isochrone_op.parameters
-            # Extract parameters
-            location = params.get("location") or {}  # Handle None
-            lat = location.get("lat")
-            lon = location.get("lon")
-            mode = params.get("mode", "walk")
-            limit = params.get("limit", 300) # Default 5 mins
-            limit_type = params.get("limit_type", "time")
-            
-            # Fallback 1: Check if user_location is in the plan context (NLQuery)
-            # But plan doesn't have direct access to NLQuery context unless passed?
-            # 'plan' is OperationPlan. We might need to look at 'selected_feature' if user selected something.
-            # But here we are deep in execution.
-            
-            # Fallback 2: Check if 'center' or 'coordinates' was passed differently
-            if not lat or not lon:
-                # If parameters are empty, maybe user context has it?
-                 return {
-                    "success": False,
-                    "error": "Missing start location for isochrone. Please specify a location or select a feature."
-                 }
 
-            # Convert Time to Distance (Meters)
-            # The custom graph uses 'cost' in meters (length).
-            converted_limit = limit
-            if limit_type == 'time':
-                # limit is in seconds
-                if mode == 'walk':
-                    speed = 1.4  # m/s (~5 km/h)
-                elif mode == 'bike':
-                    speed = 4.1  # m/s (~15 km/h)
-                elif mode == 'drive':
-                    speed = 8.3  # m/s (~30 km/h city average)
-                else:
-                    speed = 1.4
-                
-                converted_limit = limit * speed
-                logger.info(f"Converted {limit}s {mode} to {converted_limit}m")
-
-            result = local_isochrone_service.get_isochrone(lat, lon, mode, converted_limit)
-            
-            if not result.get("success"):
-                 return {
-                    "success": False, 
-                    "error": result.get("error", "Isochrone generation failed"),
-                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
-                 }
-                 
-            # If the plan has subsequent spatial queries using this isochrone
-            # We need to save this isochrone as a temporary table for the next operations
-            # Use `db_manager.create_temp_layer` to make it available for SQL
-            from app.utils.database import db_manager
-            from sqlalchemy import text  # Fixed: Import text
-            
-            # The result['data'] is a GeoJSON FeatureCollection
-            features = result.get("data", {}).get("features", [])
-            if features:
-                geom = features[0]['geometry'] 
-                
-                # Create table 'temp.isochrone_result' mapping to prompt expectations
-                from shapely.geometry import shape
-                geom_shape = shape(geom)
-                gdf = gpd.GeoDataFrame({'id': [1]}, geometry=[geom_shape], crs="EPSG:4326")
-                
-                # Ensure schema exists and write table
-                try:
-                    with db_manager.engine.connect() as conn:
-                        conn.execute(text("CREATE SCHEMA IF NOT EXISTS temp"))
-                        conn.commit()
-                    gdf.to_postgis("isochrone_result", db_manager.engine, schema="temp", if_exists="replace")
-                    logger.info("Created temp.isochrone_result for subsequent queries")
-                except Exception as e:
-                    logger.error(f"Failed to create temp table: {e}")
-                    return {
-                        "success": False,
-                        "error": f"Failed to create temp table for isochrone: {str(e)}",
-                        "reasoning": "Database error during temp table creation"
-                    }
-            
-            # Check if there are other operations (spatial_query) in the plan
-            sql_ops = [op for op in plan.operations if op.operation == "spatial_query"]
-            if sql_ops:
-                # If there are subsequent SQL operations, we execute them!
-                # Create a NEW plan with just the SQL ops to avoid recursion loop
-                new_plan = OperationPlan(
-                    operations=sql_ops,
-                    reasoning=plan.reasoning
-                )
-                from app.utils.sql_generator import sql_generator
-                result_gdf = sql_generator.execute_plan(new_plan)
-                return self._format_result(result_gdf, plan)
-            
-            return {
-                "success": True,
-                "result_type": "geojson",
-                "data": result["data"],
-                "metadata": {
-                    "mode": mode,
-                    "limit": limit
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"Error in _execute_local_isochrone_operation: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "success": False,
-                "error": str(e),
-                "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
-            }
 
     def _execute_nearest_by_road_operation(self, nearest_op, plan: OperationPlan) -> Dict[str, Any]:
         """
@@ -740,6 +524,7 @@ class SpatialEngine:
             max_radius_m = params.get("max_radius_m", 5000)
             session_id = params.get("session_id")
             location_name = params.get("location_name")  # e.g., "Wedding", "Mitte"
+            where_clause = params.get("where_clause")  # e.g., "brand ILIKE '%Netto%'"
             
             # If no coordinates provided, try to extract from selected feature
             if (not origin_lon or not origin_lat) and session_id:
@@ -829,7 +614,13 @@ class SpatialEngine:
                     "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
                 }
             
+            # Ensure table has schema prefix (LLM sometimes omits it)
+            if '.' not in target_table:
+                target_table = f"vector.{target_table}"
+            
             logger.info(f"Finding nearest from ({origin_lon}, {origin_lat}) in {target_table}")
+            if where_clause:
+                logger.info(f"📋 With filter: {where_clause}")
             
             # Call the database function
             result = db_manager.find_nearest_by_road_distance(
@@ -837,7 +628,8 @@ class SpatialEngine:
                 origin_lat=origin_lat,
                 target_table=target_table,
                 max_candidates=max_candidates,
-                max_radius_m=max_radius_m
+                max_radius_m=max_radius_m,
+                where_clause=where_clause
             )
             
             if not result.get("success"):
@@ -934,6 +726,7 @@ class SpatialEngine:
             lon = location.get("lon")
             time_minutes = params.get("time_minutes", 10)
             target_table = params.get("target_table", "osm_buildings")
+            building_filter = params.get("building_filter")  # e.g., "building IN ('commercial', 'retail')"
             buffer_m = params.get("buffer_m", 30)
             limit = params.get("limit", 5000)
             session_id = params.get("session_id")
@@ -1024,13 +817,16 @@ class SpatialEngine:
                 }
             
             logger.info(f"🚶 Finding {target_table} within {time_minutes} min walk of ({lon}, {lat})")
+            if building_filter:
+                logger.info(f"📋 With filter: {building_filter}")
             
             # Call walking distance service - uses Valhalla if available, falls back to pgRouting
-            result = walking_distance_service.find_buildings_within_walking_time_valhalla(
+            result = walking_distance_service.find_buildings_within_walking_time(
                 lat=lat,
                 lon=lon,
                 time_minutes=time_minutes,
                 building_table=target_table,
+                building_filter=building_filter,
                 limit=limit
             )
             
@@ -1359,6 +1155,20 @@ class SpatialEngine:
         ndvi_t2 = self.data_dir / params['ndvi_t2']
         threshold = params.get('threshold', -0.2)
 
+        # Check if raster files exist
+        if not ndvi_t1.exists():
+            return {
+                "success": False,
+                "error": f"NDVI raster file not found: {ndvi_t1}. Please download Sentinel-2 NDVI data to data/raster/ndvi_timeseries/",
+                "result_type": "error"
+            }
+        if not ndvi_t2.exists():
+            return {
+                "success": False,
+                "error": f"NDVI raster file not found: {ndvi_t2}. Please download Sentinel-2 NDVI data to data/raster/ndvi_timeseries/",
+                "result_type": "error"
+            }
+
         # Compute difference
         diff = self.raster_ops.ndvi_difference(ndvi_t1, ndvi_t2)
 
@@ -1392,6 +1202,20 @@ class SpatialEngine:
         ndvi_t1 = self.data_dir / params['ndvi_t1']
         ndvi_t2 = self.data_dir / params['ndvi_t2']
         threshold = params.get('threshold', -0.2)
+
+        # Check if raster files exist
+        if not ndvi_t1.exists():
+            return {
+                "success": False,
+                "error": f"NDVI raster file not found: {ndvi_t1}. Please download Sentinel-2 NDVI data to data/raster/ndvi_timeseries/",
+                "result_type": "error"
+            }
+        if not ndvi_t2.exists():
+            return {
+                "success": False,
+                "error": f"NDVI raster file not found: {ndvi_t2}. Please download Sentinel-2 NDVI data to data/raster/ndvi_timeseries/",
+                "result_type": "error"
+            }
 
         # Compute difference and save to temp file
         diff_path = self.data_dir / "temp" / "ndvi_diff_temp.tif"

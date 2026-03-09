@@ -81,42 +81,53 @@ async def connect_features(request: Dict[str, Any]) -> Dict[str, Any]:
                 detail="Maximum 15 features supported (would create 105 routes)"
             )
 
-        # Compute pairwise shortest paths
-        result = db_manager.compute_pairwise_shortest_paths(geometries)
-
-        if not result.get("success"):
+        # Use Valhalla for routing
+        from app.utils.valhalla_routing import valhalla_service
+        from shapely.geometry import shape
+        
+        # Extract coordinates from geometries
+        points = []
+        for geom in geometries:
+            geom_shape = shape(geom)
+            centroid = geom_shape.centroid
+            points.append((centroid.y, centroid.x))  # (lat, lon)
+        
+        # Use Valhalla multi-point route
+        route_result = valhalla_service.get_multi_point_route(points, costing="pedestrian")
+        
+        if not route_result.success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result.get("error", "Failed to compute shortest paths")
+                detail=f"Routing failed: {route_result.error}"
             )
-
-        # Enhance routes with feature names if provided
-        routes = result.get("routes", [])
-        if feature_names:
-            for route in routes:
-                from_idx = route.get("from_index", 0)
-                to_idx = route.get("to_index", 1)
-
-                if from_idx < len(feature_names):
-                    route["from_name"] = feature_names[from_idx]
-                if to_idx < len(feature_names):
-                    route["to_name"] = feature_names[to_idx]
-
+        
+        # Build route response
+        route = {
+            "from_index": 0,
+            "to_index": len(points) - 1,
+            "from_geometry": geometries[0],
+            "to_geometry": geometries[-1],
+            "route_geometry": route_result.geometry,
+            "distance_m": round(route_result.distance_m, 2),
+            "from_name": feature_names[0] if feature_names else "Item 1",
+            "to_name": feature_names[-1] if feature_names else f"Item {len(geometries)}"
+        }
+        
         # Calculate execution time
         execution_time_ms = (time.time() - start_time) * 1000
 
         # Build response
         response = {
             "success": True,
-            "routes": routes,
-            "total_distance_m": result.get("total_distance_m", 0),
-            "route_count": result.get("route_count", 0),
-            "feature_count": result.get("feature_count", 0),
+            "routes": [route],
+            "total_distance_m": round(route_result.distance_m, 2),
+            "route_count": 1,
+            "feature_count": len(geometries),
             "metadata": {
                 "execution_time_ms": round(execution_time_ms, 2),
-                "algorithm": "Dijkstra (pgRouting)",
-                "road_network": "Berlin Custom Roads",
-                "vertices_snapped": len(result.get("vertices_used", []))
+                "algorithm": "Valhalla Pedestrian",
+                "road_network": "OpenStreetMap Berlin",
+                "routing_engine": "valhalla"
             }
         }
 
@@ -139,58 +150,14 @@ async def connect_features(request: Dict[str, Any]) -> Dict[str, Any]:
 @router.post("/nearest-vertex")
 async def find_nearest_vertex(request: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Find the nearest pgRouting vertex to a given point.
-
-    Useful for debugging and understanding vertex snapping.
-
-    Request Body:
-        {
-            "lon": 13.405,
-            "lat": 52.52
-        }
-
-    Returns:
-        {
-            "success": true,
-            "vertex_id": 15234,
-            "x": 13.4051,
-            "y": 52.5201,
-            "distance_m": 12.5,
-            "message": "Vertex snapped 12.5m from input point"
-        }
+    Deprecated: pgRouting vertices are no longer used.
+    Valhalla handles all routing directly.
     """
-    try:
-        lon = request.get("lon")
-        lat = request.get("lat")
-
-        if lon is None or lat is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="'lon' and 'lat' are required"
-            )
-
-        # Find nearest vertex
-        vertex_info = db_manager.find_nearest_vertex_to_point(lon, lat)
-
-        if vertex_info:
-            return {
-                "success": True,
-                **vertex_info,
-                "message": f"Vertex snapped {vertex_info['distance_m']:.1f}m from input point"
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Could not find vertex for the given coordinates"
-            )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Vertex lookup failed: {str(e)}"
-        )
+    return {
+        "success": False,
+        "error": "This endpoint is deprecated. Routing now uses Valhalla exclusively.",
+        "message": "Use /api/routing/optimal-tour or /api/routing/connect-features instead."
+    }
 
 
 @router.post("/optimal-tour")
@@ -209,6 +176,7 @@ async def compute_optimal_tour(request: Dict[str, Any]) -> Dict[str, Any]:
                 {"type": "Point", "coordinates": [13.415, 52.505]}
             ],
             "feature_names": ["Hospital A", "School B", "Park C"],  # Optional
+            "costing": "pedestrian",  # Optional, default: pedestrian
             "session_id": "unique_session_id"  # Optional
         }
 
@@ -228,6 +196,7 @@ async def compute_optimal_tour(request: Dict[str, Any]) -> Dict[str, Any]:
         # Validate input
         geometries = request.get("geometries")
         feature_names = request.get("feature_names", [])
+        costing = request.get("costing", "pedestrian")
 
         if not geometries or not isinstance(geometries, list):
             raise HTTPException(
@@ -269,19 +238,20 @@ async def compute_optimal_tour(request: Dict[str, Any]) -> Dict[str, Any]:
                         points.append((centroid.y, centroid.x))  # (lat, lon)
                 
                 if len(points) >= 2:
-                    print(f"🚶 Using Valhalla for pedestrian route between {len(points)} points")
+                    print(f"🚶 Using Valhalla ({costing}) for route between {len(points)} points")
                     
                     # For 2 points, use simple route
                     if len(points) == 2:
-                        route_result = valhalla_service.get_pedestrian_route(
+                        route_result = valhalla_service.get_route(
                             origin_lat=points[0][0],
                             origin_lon=points[0][1],
                             dest_lat=points[1][0],
-                            dest_lon=points[1][1]
+                            dest_lon=points[1][1],
+                            costing=costing
                         )
                     else:
                         # For 3+ points, use multi-point route
-                        route_result = valhalla_service.get_multi_point_route(points)
+                        route_result = valhalla_service.get_multi_point_route(points, costing=costing)
                     
                     if route_result.success:
                         print(f"✅ Valhalla route: {route_result.distance_m:.0f}m, {route_result.duration_minutes:.1f} min")
@@ -317,53 +287,40 @@ async def compute_optimal_tour(request: Dict[str, Any]) -> Dict[str, Any]:
                             "optimal_sequence": list(range(len(points))),
                             "layer_name": layer_name,
                             "routing_engine": "valhalla",
+                            "costing": costing,
                             "metadata": {
                                 "feature_count": len(points),
                                 "waypoint_count": len(points),
-                                "algorithm": "Valhalla Pedestrian",
+                                "algorithm": f"Valhalla {costing.replace('_', ' ').title()}",
                                 "road_network": "OpenStreetMap Berlin",
-                                "walking_speed_kmh": 5.1
+                                "costing": costing
                             },
                             "execution_time_ms": round(execution_time_ms, 2)
                         }
                     else:
-                        print(f"⚠️ Valhalla failed: {route_result.error}. Falling back to pgRouting.")
+                        print(f"⚠️ Valhalla failed: {route_result.error}")
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Valhalla routing failed: {route_result.error}"
+                        )
             else:
-                print("ℹ️ Valhalla not available, using pgRouting")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Valhalla routing service is not available"
+                )
                 
+        except HTTPException:
+            raise
         except ImportError:
-            print("ℹ️ Valhalla module not available, using pgRouting")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Valhalla routing module not available"
+            )
         except Exception as e:
-            print(f"⚠️ Valhalla error: {e}. Falling back to pgRouting.")
-        
-        # Fallback: Compute optimal tour using pgRouting
-        result = db_manager.compute_optimal_tour(geometries, feature_names)
-
-        if not result.get("success"):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result.get("error", "Failed to compute optimal tour")
+                detail=f"Routing error: {str(e)}"
             )
-
-        # Calculate execution time
-        execution_time_ms = (time.time() - start_time) * 1000
-
-        # Build response
-        response = {
-            "success": True,
-            "geometry": result.get("geometry"),
-            "total_distance_m": result.get("total_distance_m", 0),
-            "total_time_minutes": result.get("total_time_minutes"),
-            "waypoints": result.get("waypoints", []),
-            "directions": result.get("directions", []),
-            "optimal_sequence": result.get("optimal_sequence", []),
-            "layer_name": result.get("layer_name"),
-            "routing_engine": "pgrouting",
-            "metadata": result.get("metadata", {}),
-            "execution_time_ms": round(execution_time_ms, 2)
-        }
-
-        return response
 
     except HTTPException:
         raise
@@ -382,32 +339,31 @@ async def compute_optimal_tour(request: Dict[str, Any]) -> Dict[str, Any]:
 @router.get("/health")
 async def routing_health() -> Dict[str, Any]:
     """
-    Check if pgRouting topology is available and ready.
+    Check if Valhalla routing service is available and ready.
 
     Returns routing infrastructure status.
     """
     try:
-        # Test by finding a vertex
-        test_vertex = db_manager.find_nearest_vertex_to_point(13.405, 52.52)
-
-        if test_vertex:
+        from app.utils.valhalla_routing import valhalla_service
+        
+        health = valhalla_service.check_health()
+        
+        if health.get("status") == "healthy":
             return {
                 "status": "healthy",
-                "pgRouting": "available",
-                "topology": "routing.ways and routing.ways_vertices_pgr",
-                "test_vertex": test_vertex["vertex_id"],
-                "message": "pgRouting infrastructure is ready"
+                "routing_engine": "valhalla",
+                "message": "Valhalla routing service is ready"
             }
         else:
             return {
                 "status": "unhealthy",
-                "pgRouting": "unavailable",
-                "error": "Could not find vertices in routing topology"
+                "routing_engine": "valhalla",
+                "error": health.get("error", "Valhalla service not responding")
             }
 
     except Exception as e:
         return {
             "status": "unhealthy",
-            "pgRouting": "error",
+            "routing_engine": "valhalla",
             "error": str(e)
         }

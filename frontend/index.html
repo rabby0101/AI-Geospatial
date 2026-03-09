@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="geospatial">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -43,7 +43,7 @@
             daisyui: {
                 themes: [
                     {
-                        geospatial: {
+                        dark: {
                             "primary": "#FFB162",
                             "primary-content": "#1B2632",
                             "secondary": "#A35139",
@@ -65,6 +65,24 @@
                             "error": "#dc3545",
                             "error-content": "#ffffff",
                         },
+                        light: {
+                            "primary": "#FFB162",
+                            "primary-content": "#2C3B4D",
+                            "secondary": "#A35139",
+                            "secondary-content": "#ffffff",
+                            "accent": "#2C3B4D",
+                            "accent-content": "#ffffff",
+                            "neutral": "#EEE9DF",
+                            "neutral-content": "#2C3B4D",
+                            "base-100": "#F8F9FA",
+                            "base-200": "#EEE9DF",
+                            "base-300": "#E2E8F0",
+                            "base-content": "#1B2632",
+                            "info": "#3b82f6",
+                            "success": "#28a745",
+                            "warning": "#ffc107",
+                            "error": "#dc3545",
+                        }
                     },
                 ],
             },
@@ -90,17 +108,20 @@
             --accent-secondary: var(--color-truffle-trouble);
             --accent-blue: var(--color-blue-fantastic);
 
-            /* Semantic Colors - Backgrounds */
+            /* Semantic Colors - Backgrounds (Dark Default) */
             --bg-dark: var(--color-abyssal-blue);
             --bg-darker: #0f0d1a;
             --bg-darkest: #1a1825;
             --bg-panel: rgba(26, 24, 37, 0.95);
             --bg-panel-light: rgba(26, 24, 37, 0.5);
 
-            /* Semantic Colors - Text */
+            /* Semantic Colors - Text (Dark Default) */
             --text-primary: #f5f5f5;
             --text-secondary: #C4C3E3;
             --text-muted: #999;
+
+            /* Body Gradient */
+            --body-gradient: linear-gradient(135deg, var(--color-abyssal-blue) 0%, #1f2d3d 50%, var(--color-blue-fantastic) 100%);
 
             /* Accent Color Opacity Variants */
             --accent-primary-rgb: 255, 177, 98;
@@ -111,6 +132,72 @@
             --color-success: #28a745;
             --color-error: #dc3545;
             --color-warning: #ffc107;
+        }
+
+        /* Light Theme Overrides */
+        [data-theme='light'] {
+            /* Semantic Colors - Backgrounds (Light) */
+            --bg-dark: #F8F9FA;
+            --bg-darker: #EEE9DF;
+            --bg-darkest: #E2E8F0;
+            --bg-panel: rgba(255, 255, 255, 0.95);
+            --bg-panel-light: rgba(255, 255, 255, 0.85);
+
+            /* Semantic Colors - Text (Light) */
+            --text-primary: #1B2632;
+            --text-secondary: #4A5568;
+            --text-muted: #718096;
+
+            /* Body Gradient */
+            --body-gradient: linear-gradient(135deg, #F8F9FA 0%, #EEE9DF 100%);
+        }
+
+        /* Explicit Light Theme Overrides for Components */
+        [data-theme='light'] .layers-panel,
+        [data-theme='light'] .operations-panel {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-right: 1.5px solid rgba(255, 255, 255, 0.35);
+            border-left: 1.5px solid rgba(255, 255, 255, 0.35);
+        }
+
+        [data-theme='light'] .panel-header,
+        [data-theme='light'] .operations-header {
+            background: rgba(240, 240, 240, 0.8);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            color: var(--text-primary);
+        }
+
+        [data-theme='light'] .layer-item {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: var(--text-primary);
+        }
+
+        [data-theme='light'] .layer-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: var(--accent-primary);
+        }
+
+        [data-theme='light'] .leaflet-popup-content-wrapper,
+        [data-theme='light'] .leaflet-popup-tip {
+            background: rgba(255, 255, 255, 0.95);
+            color: #1B2632;
+            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
+        }
+
+        [data-theme='light'] .panel-action-btn,
+        [data-theme='light'] .panel-toggle-btn {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: var(--text-primary);
+        }
+
+        [data-theme='light'] .panel-action-btn:hover,
+        [data-theme='light'] .panel-toggle-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--accent-primary);
         }
 
         * {
@@ -124,10 +211,11 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background: linear-gradient(135deg, var(--color-abyssal-blue) 0%, #1f2d3d 50%, var(--color-blue-fantastic) 100%);
+            background: var(--body-gradient);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             color: var(--text-primary);
+            transition: background 0.5s ease, color 0.3s ease;
         }
 
         /* Top Search Bar */
@@ -135,8 +223,13 @@
             background: var(--bg-panel);
             border-bottom: 1.5px solid rgba(196, 195, 227, 0.2);
             padding: 1rem 1.5rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             z-index: 1000;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        [data-theme='light'] .search-header {
+            border-bottom: 1.5px solid rgba(0, 0, 0, 0.1);
         }
 
         .search-container {
@@ -148,6 +241,37 @@
             gap: 1.2rem;
             justify-content: flex-start;
             padding: 0 1.5rem;
+            position: relative;
+            /* For positioning theme toggle */
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: auto;
+            /* Push to right */
+        }
+
+        [data-theme='light'] .theme-toggle-btn {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-toggle-btn:hover {
+            transform: rotate(30deg);
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
         }
 
         .logo {
@@ -462,8 +586,11 @@
         .layers-panel {
             width: 320px;
             height: 100vh;
-            background: rgba(50, 50, 50, 1.0);
-            border-right: 1.5px solid rgba(196, 195, 227, 0.2);
+            background: rgba(26, 24, 37, 0.25);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-right: 1.5px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 8px 0 32px rgba(0, 0, 0, 0.15);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -474,9 +601,9 @@
 
         .panel-header {
             padding: 1rem 1.5rem;
-            background: rgba(37, 32, 53, 0.4);
-            backdrop-filter: blur(15px);
-            border-bottom: 1.5px solid rgba(196, 195, 227, 0.15);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.1);
             font-weight: 600;
             color: var(--text-primary);
             font-size: 0.95rem;
@@ -872,6 +999,19 @@
         }
 
         .chat-overlay-bottom>* {
+            pointer-events: auto;
+        }
+
+        /* Ensure dropdown menus are clickable when they pop up outside parent bounds */
+        .chat-overlay-bottom .dropdown-content {
+            pointer-events: auto;
+        }
+
+        /* Ensure all dropdown elements can receive pointer events */
+        .chat-overlay-bottom .dropdown,
+        .chat-overlay-bottom .dropdown>*,
+        .chat-overlay-bottom .dropdown-content,
+        .chat-overlay-bottom .dropdown-content * {
             pointer-events: auto;
         }
 
@@ -1607,15 +1747,16 @@
         .operations-panel {
             width: 320px;
             height: 100vh;
-            background: rgba(26, 24, 37, 0.4);
-            backdrop-filter: blur(25px) saturate(180%);
-            border-left: 2px solid rgba(196, 195, 227, 0.35);
+            background: rgba(26, 24, 37, 0.25);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-left: 1.5px solid rgba(255, 255, 255, 0.12);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             position: absolute;
             right: 0;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
             z-index: 500;
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -1901,9 +2042,7 @@
 
         }
 
-        .leaflet-control-attribution a {
-            /
-        }
+        /* .leaflet-control-attribution a - no styles needed */
 
         .leaflet-control-attribution a:hover {
             color: #FCDD9D !important;
@@ -2664,6 +2803,256 @@
             background: rgba(var(--accent-primary-rgb), 0.6);
         }
 
+        /* Coordinate Display Control - Bottom Right */
+        .coordinate-display {
+            background: rgba(37, 32, 53, 0.85);
+            border: 1px solid rgba(196, 195, 227, 0.25);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px);
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            color: var(--text-primary);
+            white-space: nowrap;
+            pointer-events: none;
+            letter-spacing: 0.3px;
+        }
+
+        .coordinate-display .coord-label {
+            color: rgba(var(--accent-primary-rgb), 0.8);
+            font-weight: 600;
+            margin-right: 2px;
+        }
+
+        .coordinate-display .coord-separator {
+            color: rgba(196, 195, 227, 0.4);
+            margin: 0 6px;
+        }
+
+        [data-theme='light'] .coordinate-display {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme='light'] .coordinate-display .coord-separator {
+            color: rgba(0, 0, 0, 0.3);
+        }
+
+        /* ===== Comprehensive Light Theme Overrides ===== */
+
+        /* Map Controls: North Arrow */
+        [data-theme='light'] .leaflet-control.north-arrow {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Map Controls: Theme Toggle */
+        [data-theme='light'] .leaflet-control.theme-toggle {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Map Controls: Zoom Buttons */
+        [data-theme='light'] .leaflet-control-zoom-in,
+        [data-theme='light'] .leaflet-control-zoom-out {
+            color: var(--text-primary) !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(0, 0, 0, 0.12) !important;
+        }
+
+        [data-theme='light'] .leaflet-control-zoom-in:hover,
+        [data-theme='light'] .leaflet-control-zoom-out:hover {
+            background: rgba(240, 240, 240, 0.95) !important;
+            border-color: rgba(0, 0, 0, 0.2) !important;
+        }
+
+        /* Panel Toggle Buttons (collapse/expand) */
+        [data-theme='light'] .panel-toggle-btn {
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme='light'] .panel-toggle-btn:hover {
+            background: rgba(var(--accent-primary-rgb), 0.8);
+        }
+
+        /* Operations Panel (Right) */
+        [data-theme='light'] .operations-panel {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-left: 1.5px solid rgba(255, 255, 255, 0.35);
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Locate Me Button */
+        [data-theme='light'] .locate-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.12);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme='light'] .locate-btn:hover {
+            background: rgba(240, 240, 240, 0.95);
+        }
+
+        /* Notification Toast */
+        [data-theme='light'] .notification {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Location Button & LLM Selector in Header */
+        [data-theme='light'] .location-btn {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        [data-theme='light'] .location-btn:hover:not(:disabled) {
+            background: rgba(240, 240, 240, 0.95);
+        }
+
+        [data-theme='light'] .llm-selector {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        [data-theme='light'] .llm-selector:hover {
+            background: rgba(240, 240, 240, 0.95);
+        }
+
+        [data-theme='light'] .llm-selector-label {
+            color: var(--text-secondary);
+        }
+
+        /* Layer Dropdown Menu */
+        [data-theme='light'] .layer-dropdown-menu {
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        [data-theme='light'] .layer-dropdown-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        /* Dataset Modal */
+        [data-theme='light'] .dataset-modal {
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        [data-theme='light'] .dataset-modal-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme='light'] .dataset-item {
+            background: rgba(240, 240, 240, 0.5);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme='light'] .dataset-item:hover {
+            background: rgba(240, 240, 240, 0.8);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+        }
+
+        /* Chat Tab Pills */
+        [data-theme='light'] .chat-tab-pill {
+            background: rgba(255, 255, 255, 0.7);
+            border-color: rgba(0, 0, 0, 0.12);
+            color: var(--text-primary);
+        }
+
+        [data-theme='light'] .chat-tab-pill:hover:not(.chat-tab-disabled) {
+            background: rgba(0, 0, 0, 0.06);
+            border-color: rgba(0, 0, 0, 0.2);
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme='light'] .chat-tab-pill:hover:not(.chat-tab-disabled) svg {
+            color: var(--text-primary);
+        }
+
+        [data-theme='light'] .chat-tab-pill.chat-tab-active {
+            background: rgba(var(--accent-primary-rgb), 0.15);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            color: var(--text-primary);
+        }
+
+        /* Draw Dropdown Menu */
+        [data-theme='light'] .draw-dropdown-menu {
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        [data-theme='light'] .draw-menu-item {
+            color: var(--text-primary);
+        }
+
+        [data-theme='light'] .draw-menu-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text-primary);
+        }
+
+        /* Selected Feature Pill */
+        [data-theme='light'] .selected-feature-pill {
+            background: rgba(var(--accent-secondary-rgb), 0.12);
+            border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
+        }
+
+        [data-theme='light'] .pill-text {
+            color: var(--text-primary);
+        }
+
+        /* Leaflet Popups */
+        [data-theme='light'] .leaflet-popup {
+            filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.15));
+        }
+
+        /* Empty State Text */
+        [data-theme='light'] .empty-state {
+            color: var(--text-muted);
+        }
+
+        /* Layer Info & Time */
+        [data-theme='light'] .layer-info {
+            border-top-color: rgba(0, 0, 0, 0.08);
+            color: var(--text-secondary);
+        }
+
+        [data-theme='light'] .layer-time {
+            color: var(--text-muted);
+        }
+
+        /* Search Input */
+        [data-theme='light'] .search-input {
+            background: rgba(0, 0, 0, 0.04);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: var(--text-primary);
+        }
+
+        [data-theme='light'] .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Panel Legend Container */
+        [data-theme='light'] .panel-legend-container {
+            background: rgba(240, 240, 240, 0.5);
+            border-top-color: rgba(0, 0, 0, 0.08);
+        }
+
         /* Basemap Selector Control - Bottom Right */
         .leaflet-bottom.leaflet-right {
             bottom: 1rem;
@@ -2677,118 +3066,15 @@
             right: 1rem;
         }
 
-        .leaflet-control.basemap-control {
-            background: rgba(37, 32, 53, 0.9);
-            border: 1px solid rgba(196, 195, 227, 0.25);
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            -webkit-backdrop-filter: blur(15px);
-            backdrop-filter: blur(15px);
-            padding: 0;
-            margin: 0 !important;
-            position: relative;
-        }
-
-        .basemap-toggle-btn {
-            padding: 8px 12px;
-            background: rgba(var(--accent-secondary-rgb), 0.3);
-            border: none;
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            white-space: nowrap;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            min-width: 120px;
-        }
-
-        .basemap-toggle-btn:hover {
-            background: rgba(var(--accent-secondary-rgb), 0.5);
-        }
-
-        .basemap-toggle-btn svg {
-            width: 14px;
-            height: 14px;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .basemap-control.expanded .basemap-toggle-btn svg {
-            transform: rotate(180deg);
-        }
-
-        .basemap-dropdown {
-            position: absolute;
-            bottom: 100%;
-            right: 0;
-            margin-bottom: 8px;
-            background: rgba(37, 32, 53, 0.95);
-            border: 1px solid rgba(196, 195, 227, 0.25);
-            border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-            -webkit-backdrop-filter: blur(20px);
-            backdrop-filter: blur(20px);
-            padding: 6px;
-            display: none;
-            flex-direction: column;
-            gap: 4px;
-            min-width: 120px;
-        }
-
-        .basemap-control.expanded .basemap-dropdown {
-            display: flex;
-        }
-
-        .basemap-option {
-            padding: 8px 12px;
-            background: rgba(var(--accent-secondary-rgb), 0.3);
-            border: 1px solid rgba(196, 195, 227, 0.15);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-            font-weight: 500;
-            text-align: left;
-        }
-
-        .basemap-option:hover {
-            background: rgba(var(--accent-secondary-rgb), 0.5);
-            border-color: rgba(var(--accent-primary-rgb), 0.4);
-            box-shadow: 0 2px 8px rgba(var(--accent-primary-rgb), 0.1);
-        }
-
-        .basemap-option.active {
-            background: rgba(var(--accent-primary-rgb), 0.6);
-            border-color: rgba(var(--accent-primary-rgb), 0.8);
-            box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.3);
-            color: white;
-        }
-
-        @media (max-width: 768px) {
-            .leaflet-bottom.leaflet-right {
-                right: 0.5rem;
-                bottom: 0.5rem;
-            }
-
-            .basemap-toggle-btn,
-            .basemap-option {
-                padding: 6px 10px;
-                font-size: 0.75rem;
-                min-width: 100px;
-            }
-        }
 
         /* North Arrow Control - Top Right */
         .leaflet-top.leaflet-right {
             top: 1rem;
             right: calc(320px + 1rem);
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .leaflet-control.north-arrow {
@@ -2814,11 +3100,40 @@
             box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.15);
         }
 
-        .north-arrow-svg {
+        /* Theme Toggle Control - Below North Arrow */
+        .leaflet-control.theme-toggle {
+            background: rgba(37, 32, 53, 0.85);
+            border: 1px solid rgba(196, 195, 227, 0.25);
+            border-radius: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px);
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 8px !important;
+        }
+
+        .leaflet-control.theme-toggle:hover {
+            background: rgba(var(--accent-secondary-rgb), 0.8);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.15);
+        }
+
+        .theme-toggle-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--text-primary);
+        }
+
+        .north-arrow-icon {
             width: 22px;
             height: 22px;
-            fill: #dc3545 !important;
-            stroke: #ffffff !important;
+            color: var(--text-primary);
         }
 
         @media (max-width: 768px) {
@@ -2832,10 +3147,9 @@
                 height: 36px;
             }
 
-            .north-arrow-svg {
+            .north-arrow-icon {
                 width: 18px;
                 height: 18px;
-                fill: #dc3545 !important;
             }
         }
 
@@ -2944,6 +3258,114 @@
                 opacity: 1;
             }
         }
+
+        /* ──── Transport Mode Modal ──── */
+        .transport-mode-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            transition: background 0.15s ease;
+        }
+
+        .transport-mode-row:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .transport-mode-row .mode-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .transport-mode-row .mode-icon {
+            font-size: 1.4rem;
+            width: 36px;
+            text-align: center;
+        }
+
+        .transport-mode-row .mode-label {
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .transport-mode-row .mode-color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ──── Route Group Styling ──── */
+        .route-group {
+            margin-bottom: 0.5rem;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(241, 100, 46, 0.2);
+            background: rgba(241, 100, 46, 0.04);
+        }
+
+        .route-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            cursor: pointer;
+            background: rgba(241, 100, 46, 0.08);
+            transition: background 0.15s ease;
+            user-select: none;
+        }
+
+        .route-group-header:hover {
+            background: rgba(241, 100, 46, 0.14);
+        }
+
+        .route-group-header .group-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            min-width: 0;
+        }
+
+        .route-group-header .group-title span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .route-group-header .group-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .route-group-header .group-chevron {
+            transition: transform 0.2s ease;
+        }
+
+        .route-group.collapsed .group-chevron {
+            transform: rotate(-90deg);
+        }
+
+        .route-group-children {
+            padding: 4px 6px 6px 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .route-group.collapsed .route-group-children {
+            display: none;
+        }
+
+        .route-group-children .card {
+            margin-bottom: 0 !important;
+        }
     </style>
     <link rel="stylesheet" href="/static/css/safety-styles.css">
 </head>
@@ -2980,6 +3402,16 @@
                     <div class="empty-state-text">No layers yet<br>Search to add results as layers</div>
                 </div>
             </div>
+
+            <!-- Legend Section (bottom of layers panel) -->
+            <div id="panelLegendContainer"
+                style="display: none; flex-shrink: 0; border-top: 1.5px solid rgba(196, 195, 227, 0.15); padding: 0.75rem; background: rgba(37, 32, 53, 0.5);">
+                <div
+                    style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+                    <i data-lucide="palette" style="width: 14px; height: 14px;"></i> Legend
+                </div>
+                <div id="panelLegendContent"></div>
+            </div>
         </div>
 
         <!-- Left Panel Toggle Button -->
@@ -3002,9 +3434,9 @@
                 <!-- Chat Interface Overlay (Bottom) -->
                 <div class="chat-overlay-bottom">
                     <!-- Main Chat Bar (Refactored) -->
-                    <div class="w-full max-w-3xl mx-auto px-4 pb-6">
+                    <div class="w-full max-w-3xl mx-auto px-4 pb-6 relative z-50">
                         <div
-                            class="bg-base-100/90 backdrop-blur-xl border border-base-content/10 rounded-2xl shadow-2xl p-4 transition-all hover:bg-base-100 hover:shadow-3xl ring-1 ring-base-content/5 focus-within:ring-primary/50">
+                            class="bg-base-100/20 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-4 transition-all hover:bg-base-100/30 hover:shadow-3xl focus-within:bg-base-100/40 focus-within:ring-1 focus-within:ring-white/30 focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
                             <div class="flex flex-col gap-3">
                                 <!-- Input Area -->
                                 <textarea id="searchInput"
@@ -3042,18 +3474,26 @@
 
                                     <!-- Right: Submit & Model -->
                                     <div class="flex items-center gap-2">
-                                        <div class="dropdown dropdown-end">
+
+                                        <div class="dropdown dropdown-top dropdown-end">
                                             <label tabindex="0"
                                                 class="btn btn-ghost btn-sm gap-2 normal-case font-normal opacity-80 hover:opacity-100">
                                                 <span class="text-xs font-medium opacity-70">Model:</span>
-                                                <span class="text-sm">DeepSeek</span>
-                                                <i data-lucide="chevron-down" class="w-3 h-3 opacity-50"></i>
+                                                <span class="text-sm" id="selectedModelLabel">Gemini 3 Flash</span>
+                                                <i data-lucide="chevron-up" class="w-3 h-3 opacity-50"></i>
                                             </label>
                                             <ul tabindex="0"
-                                                class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-200 rounded-box w-40 mt-2 border border-base-content/10">
-                                                <li><a>DeepSeek</a></li>
-                                                <li><a>GPT-4</a></li>
-                                                <li><a>Claude 3</a></li>
+                                                class="dropdown-content z-[100] menu p-2 shadow-[0_8px_32px_rgba(0,0,0,0.2)] bg-base-100/30 backdrop-blur-2xl rounded-box w-48 mb-2 border border-white/20 dark:border-white/10">
+                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('deepseek', 'DeepSeek')"
+                                                        class="flex items-center gap-2">
+                                                        <span
+                                                            class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
+                                                        DeepSeek</a></li>
+                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('gemini', 'Gemini 3 Flash')"
+                                                        class="flex items-center gap-2">
+                                                        <span
+                                                            class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+                                                        Gemini 3 Flash</a></li>
                                             </ul>
                                         </div>
 
@@ -3068,70 +3508,85 @@
                         </div>
                     </div>
 
-                    <!-- Chat Action Pills -->
-                    <div class="flex flex-wrap gap-2 justify-center mt-4 pb-4">
-                        <!-- Draw Dropdown -->
-                        <div class="dropdown dropdown-top dropdown-end">
-                            <label tabindex="0"
-                                class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/20 hover:bg-base-content/10 hover:border-base-content/30 text-base-content/70 hover:text-base-content">
-                                <i data-lucide="pen-tool" class="w-4 h-4"></i>
-                                Draw
-                                <span id="drawActiveIndicator" class="w-2 h-2 rounded-full bg-error ml-1 hidden"
-                                    title="Shape drawn"></span>
-                            </label>
-                            <ul tabindex="0"
-                                class="dropdown-content z-[50] menu p-2 shadow-xl bg-base-200 rounded-box w-52 mb-2 border border-base-content/10">
-                                <li><a onclick="activateDrawing('point')"><i data-lucide="map-pin" class="w-4 h-4"></i>
-                                        Point</a></li>
-                                <li><a onclick="activateDrawing('line')"><i data-lucide="minus" class="w-4 h-4"></i>
-                                        Line</a></li>
-                                <li><a onclick="activateDrawing('polygon')"><i data-lucide="pentagon"
-                                            class="w-4 h-4"></i> Polygon</a></li>
-                                <div class="divider my-1"></div>
-                                <li><a onclick="clearDrawing(event)" class="text-error"><i data-lucide="trash-2"
-                                            class="w-4 h-4"></i> Clear Drawing</a></li>
-                            </ul>
+                    <!-- Tab Pills Row (Below Main Bar) -->
+                    <div class="chat-tabs-row relative z-[60]">
+                        <div class="chat-tab-pill" id="drawTab" onclick="toggleDrawMenu()" title="Draw shapes on map">
+                            <i data-lucide="pen-tool" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Draw</span>
+                            <span id="drawActiveIndicator"
+                                style="display: none; width: 8px; height: 8px; background: #F1642E; border-radius: 50%; margin-left: 6px;"
+                                title="Shape drawn"></span>
+                            <!-- Draw Dropdown Menu -->
+                            <div class="draw-dropdown-menu" id="drawDropdownMenu" style="display: none;">
+                                <div class="draw-menu-item" onclick="activateDrawing('point')">
+                                    <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                                    <span>Point</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="activateDrawing('line')">
+                                    <i data-lucide="minus" style="width: 18px; height: 18px;"></i>
+                                    <span>Line</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="activateDrawing('polygon')">
+                                    <i data-lucide="pentagon" style="width: 18px; height: 18px;"></i>
+                                    <span>Polygon</span>
+                                </div>
+                                <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 4px 0;"></div>
+                                <div class="draw-menu-item" onclick="clearDrawing(event)" id="clearDrawingBtn">
+                                    <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+                                    <span>Clear Drawing</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Disabled Features -->
-                        <button
-                            class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/10 text-base-content/40 cursor-not-allowed"
-                            disabled title="Coming soon">
-                            <i data-lucide="graduation-cap" class="w-4 h-4"></i> Learn
-                        </button>
-                        <button
-                            class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/10 text-base-content/40 cursor-not-allowed"
-                            disabled title="Coming soon">
-                            <i data-lucide="code" class="w-4 h-4"></i> Code
-                        </button>
-                        <button
-                            class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/10 text-base-content/40 cursor-not-allowed"
-                            disabled title="Coming soon">
-                            <i data-lucide="coffee" class="w-4 h-4"></i> Life stuff
-                        </button>
-
-                        <!-- Basemap Dropdown -->
-                        <div class="dropdown dropdown-top dropdown-end">
-                            <label tabindex="0"
-                                class="btn btn-sm btn-outline rounded-full gap-2 normal-case font-normal border-base-content/20 hover:bg-base-content/10 hover:border-base-content/30 text-base-content/70 hover:text-base-content">
-                                <i data-lucide="layers" class="w-4 h-4"></i>
-                                <span id="basemapTabName">Satellite</span>
-                            </label>
-                            <ul tabindex="0"
-                                class="dropdown-content z-[50] menu p-2 shadow-xl bg-base-200 rounded-box w-52 mb-2 border border-base-content/10 max-h-60 overflow-y-auto">
-                                <li><a onclick="switchBasemap('Satellite')"><i data-lucide="satellite"
-                                            class="w-4 h-4"></i> Satellite</a></li>
-                                <li><a onclick="switchBasemap('Liberty (Vector)')"><i data-lucide="map"
-                                            class="w-4 h-4"></i> Liberty (Vector)</a></li>
-                                <li><a onclick="switchBasemap('Bright (Vector)')"><i data-lucide="sun"
-                                            class="w-4 h-4"></i> Bright (Vector)</a></li>
-                                <li><a onclick="switchBasemap('Dark (Vector)')"><i data-lucide="moon"
-                                            class="w-4 h-4"></i> Dark (Vector)</a></li>
-                                <li><a onclick="switchBasemap('Dark')"><i data-lucide="moon-star" class="w-4 h-4"></i>
-                                        Dark (Raster)</a></li>
-                                <li><a onclick="switchBasemap('Light')"><i data-lucide="sun-medium" class="w-4 h-4"></i>
-                                        Light</a></li>
-                            </ul>
+                        <div class="chat-tab-pill chat-tab-disabled" id="directionsTab" onclick="executeDirections()"
+                            title="Get directions between 2 selected features">
+                            <i data-lucide="route"
+                                style="width: 18px; height: 18px; margin-right: 4px; cursor: pointer;"
+                                onclick="event.stopPropagation(); openTransportModeModal()"
+                                title="Select transport modes"></i>
+                            <span>Directions</span>
+                            <span id="directionsCount"
+                                style="display: none; background: #F1642E; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-left: 6px;">0</span>
+                        </div>
+                        <div class="chat-tab-pill chat-tab-disabled" title="Code (coming soon)">
+                            <i data-lucide="code" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Code</span>
+                        </div>
+                        <div class="chat-tab-pill chat-tab-disabled" title="Life stuff (coming soon)">
+                            <i data-lucide="coffee" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Life stuff</span>
+                        </div>
+                        <div class="chat-tab-pill" id="basemapTab" onclick="toggleBasemapMenu(event)"
+                            title="Change basemap">
+                            <i data-lucide="layers" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span id="basemapTabName">Satellite</span>
+                            <!-- Basemap Dropdown Menu -->
+                            <div class="draw-dropdown-menu" id="basemapDropdownMenu" style="display: none;">
+                                <div class="draw-menu-item" onclick="switchBasemap('Satellite', event)">
+                                    <i data-lucide="satellite" style="width: 18px; height: 18px;"></i>
+                                    <span>Satellite</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Liberty (Vector)', event)">
+                                    <i data-lucide="map" style="width: 18px; height: 18px;"></i>
+                                    <span>Liberty (Vector)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Light (Vector)', event)">
+                                    <i data-lucide="map" style="width: 16px; height: 16px;"></i>
+                                    <span>Light (Vector)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Dark (Vector)', event)">
+                                    <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+                                    <span>Dark (Vector)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Dark', event)">
+                                    <i data-lucide="moon-star" style="width: 18px; height: 18px;"></i>
+                                    <span>Dark (Raster)</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Light', event)">
+                                    <i data-lucide="sun-medium" style="width: 18px; height: 18px;"></i>
+                                    <span>Light (Raster)</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3173,6 +3628,26 @@
             <div class="modal-action">
                 <button class="btn btn-ghost" onclick="declineSaveDrawing()">No, Keep as Temporary</button>
                 <button class="btn btn-primary" onclick="confirmSaveDrawing()">Yes, Save as Layer</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <!-- Transport Mode Selection Modal -->
+    <dialog id="transportModeModal" class="modal">
+        <div class="modal-box bg-base-200" style="max-width: 400px;">
+            <h3 class="font-bold text-lg flex items-center gap-2 mb-2">
+                <i data-lucide="route" class="w-5 h-5 text-primary"></i>
+                Transport Modes
+            </h3>
+            <p class="text-sm opacity-60 mb-4">Toggle which transport modes to compare when getting directions.</p>
+            <div id="transportModeList" class="flex flex-col gap-2"></div>
+            <div class="modal-action">
+                <form method="dialog">
+                    <button class="btn btn-primary">Done</button>
+                </form>
             </div>
         </div>
         <form method="dialog" class="modal-backdrop">
@@ -3775,13 +4250,13 @@ LIMIT 10</textarea>
                 style: 'https://tiles.openfreemap.org/styles/liberty',
                 attribution: '© OpenStreetMap contributors'
             }),
-            'Bright (Vector)': L.maplibreGL({
-                style: 'https://tiles.openfreemap.org/styles/bright',
-                attribution: '© OpenStreetMap contributors'
+            'Light (Vector)': L.maplibreGL({
+                style: 'https://api.maptiler.com/maps/019c0f2c-8b89-70e5-9ae5-d3be4032c66d/style.json?key=bhEdp4p4rIXWG6w033k0',
+                attribution: '© <a href="https://www.maptiler.com/copyright/">MapTiler</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }),
             'Dark (Vector)': L.maplibreGL({
-                style: 'https://tiles.openfreemap.org/styles/dark',
-                attribution: '© OpenStreetMap contributors'
+                style: 'https://api.maptiler.com/maps/019c1f90-e089-76f6-8573-fd7f4d3947f3/style.json?key=bhEdp4p4rIXWG6w033k0',
+                attribution: '© <a href="https://www.maptiler.com/copyright/">MapTiler</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }),
 
             // Raster tile layers (existing)
@@ -3807,81 +4282,19 @@ LIMIT 10</textarea>
             })
         };
 
-        // Add default basemap (Satellite)
-        let currentBasemap = window.currentBasemap = basemaps['Satellite'];
+        // Add default basemap based on current theme
+        const currentThemeForBasemap = document.documentElement.getAttribute('data-theme') || 'dark';
+        let initialBasemapKey = currentThemeForBasemap === 'light' ? 'Light (Vector)' : 'Dark (Vector)';
+        let currentBasemap = window.currentBasemap = basemaps[initialBasemapKey];
         currentBasemap.addTo(map);
 
-        // Create custom basemap selector control (dropdown)
-        L.Control.BasemapControl = L.Control.extend({
-            onAdd: function (map) {
-                const container = L.DomUtil.create('div', 'leaflet-control basemap-control');
-                let currentBasemapName = 'Satellite';
+        // Update UI Text safely
+        const basemapTabName = document.getElementById('basemapTabName');
+        if (basemapTabName) {
+            // Map internal keys to friendly display names if needed
+            basemapTabName.textContent = initialBasemapKey;
+        }
 
-                // Create toggle button
-                const toggleBtn = L.DomUtil.create('button', 'basemap-toggle-btn', container);
-                toggleBtn.setAttribute('type', 'button');
-                toggleBtn.innerHTML = `
-                    <span class="basemap-current-name">${currentBasemapName}</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                `;
-
-                // Create dropdown menu
-                const dropdown = L.DomUtil.create('div', 'basemap-dropdown', container);
-
-                Object.keys(basemaps).forEach(name => {
-                    const option = L.DomUtil.create('div', 'basemap-option', dropdown);
-                    option.textContent = name;
-                    option.setAttribute('data-basemap', name);
-
-                    if (name === 'Dark') {
-                        option.classList.add('active');
-                    }
-
-                    option.addEventListener('click', function (e) {
-                        L.DomEvent.stopPropagation(e);
-
-                        // Use global function
-                        switchBasemap(name);
-
-                        // Update local UI
-                        currentBasemapName = name;
-                        toggleBtn.querySelector('.basemap-current-name').textContent = name;
-
-                        // Update active states
-                        dropdown.querySelectorAll('.basemap-option').forEach(opt => {
-                            opt.classList.remove('active');
-                        });
-                        option.classList.add('active');
-
-                        // Close dropdown
-                        container.classList.remove('expanded');
-                    });
-                });
-
-                // Toggle dropdown on button click
-                toggleBtn.addEventListener('click', function (e) {
-                    L.DomEvent.stopPropagation(e);
-                    container.classList.toggle('expanded');
-                });
-
-                // Close dropdown when clicking outside
-                L.DomEvent.on(document, 'click', function () {
-                    container.classList.remove('expanded');
-                });
-
-                // Prevent map interactions when clicking on control
-                L.DomEvent.disableClickPropagation(container);
-                L.DomEvent.disableScrollPropagation(container);
-
-                return container;
-            }
-        });
-
-        // Add basemap control to map (bottom-right corner, compact)
-        // Basemap selector now in pill tab AND bottom right
-        new L.Control.BasemapControl({ position: 'bottomright' }).addTo(map);
 
         // Initialize Lucide icons when popups are opened
         map.on('popupopen', function (e) {
@@ -3898,30 +4311,25 @@ LIMIT 10</textarea>
                 const container = L.DomUtil.create('div', 'leaflet-control north-arrow');
                 container.setAttribute('title', 'North direction');
 
-                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.setAttribute('viewBox', '0 0 30 30');
-                svg.setAttribute('class', 'north-arrow-svg');
-                svg.setAttribute('fill', 'none');
-                svg.setAttribute('stroke', '#F1642E');
-                svg.setAttribute('stroke-width', '2');
-                svg.setAttribute('stroke-linecap', 'round');
-                svg.setAttribute('stroke-linejoin', 'round');
-
-                // Create north arrow shape (triangle pointing up)
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                path.setAttribute('d', 'M 15 2 L 22 20 L 15 17 L 8 20 Z');
-                path.setAttribute('fill', 'none');
-
-                svg.appendChild(path);
-                container.appendChild(svg);
+                // Use Lucide arrow-big-up icon
+                const icon = document.createElement('i');
+                icon.setAttribute('data-lucide', 'arrow-big-up');
+                icon.className = 'north-arrow-icon';
+                container.appendChild(icon);
 
                 container.addEventListener('click', function (e) {
                     L.DomEvent.stopPropagation(e);
-                    // Reset map rotation/bearing if applicable
                     if (map.bearingControl) {
                         map.setBearing(0);
                     }
                 });
+
+                // Initialize Lucide icon after adding to DOM
+                setTimeout(() => {
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                }, 50);
 
                 return container;
             }
@@ -3930,6 +4338,60 @@ LIMIT 10</textarea>
         // Add north arrow control to map (top-right corner)
         new L.Control.NorthArrow({ position: 'topright' }).addTo(map);
 
+        // Create custom theme toggle control
+        L.Control.ThemeToggle = L.Control.extend({
+            onAdd: function (map) {
+                const container = L.DomUtil.create('div', 'leaflet-control theme-toggle');
+                container.setAttribute('title', 'Toggle Light/Dark Mode');
+                container.setAttribute('id', 'themeToggleControl');
+
+                // Create icon container
+                const sunIcon = document.createElement('i');
+                sunIcon.setAttribute('data-lucide', 'sun');
+                sunIcon.setAttribute('id', 'sunIcon');
+                sunIcon.className = 'theme-toggle-icon';
+                sunIcon.style.display = 'none';
+
+                const moonIcon = document.createElement('i');
+                moonIcon.setAttribute('data-lucide', 'moon');
+                moonIcon.setAttribute('id', 'moonIcon');
+                moonIcon.className = 'theme-toggle-icon';
+
+                container.appendChild(sunIcon);
+                container.appendChild(moonIcon);
+
+                container.addEventListener('click', function (e) {
+                    L.DomEvent.stopPropagation(e);
+                    toggleTheme();
+                });
+
+                // Initialize icons after adding to DOM
+                setTimeout(() => {
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                    // Update icon visibility based on current theme
+                    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+                    const sun = document.getElementById('sunIcon');
+                    const moon = document.getElementById('moonIcon');
+                    if (sun && moon) {
+                        if (currentTheme === 'light') {
+                            sun.style.display = 'none';
+                            moon.style.display = 'block';
+                        } else {
+                            sun.style.display = 'block';
+                            moon.style.display = 'none';
+                        }
+                    }
+                }, 100);
+
+                return container;
+            }
+        });
+
+        // Add theme toggle control to map (below north arrow)
+        new L.Control.ThemeToggle({ position: 'topright' }).addTo(map);
+
         // Add scale control to map (bottom-left)
         L.control.scale({
             position: 'bottomleft',
@@ -3937,6 +4399,24 @@ LIMIT 10</textarea>
             imperial: true,
             updateWhenIdle: true
         }).addTo(map);
+
+        // Add coordinate display control (bottom-right)
+        L.Control.CoordinateDisplay = L.Control.extend({
+            onAdd: function (map) {
+                this._container = L.DomUtil.create('div', 'leaflet-control coordinate-display');
+                this._container.innerHTML = '<span class="coord-label">Lat:</span> 52.520000 <span class="coord-separator">|</span> <span class="coord-label">Lng:</span> 13.405000';
+                return this._container;
+            },
+            updateCoordinates: function (lat, lng) {
+                this._container.innerHTML = '<span class="coord-label">Lat:</span> ' + lat.toFixed(6) + ' <span class="coord-separator">|</span> <span class="coord-label">Lng:</span> ' + lng.toFixed(6);
+            }
+        });
+        const coordDisplay = new L.Control.CoordinateDisplay({ position: 'bottomright' });
+        coordDisplay.addTo(map);
+
+        map.on('mousemove', function (e) {
+            coordDisplay.updateCoordinates(e.latlng.lat, e.latlng.lng);
+        });
 
         // Smart popup zoom handler - automatically zoom in when popup is too large for viewport
         map.on('popupopen', function (e) {
@@ -4012,6 +4492,52 @@ LIMIT 10</textarea>
 
         // Feature selection state for context-aware queries (multi-select support)
         let selectedFeatures = [];  // Array of {geometry, properties, type}
+
+        // ──── Transport Mode Configuration ────
+        const transportModes = {
+            pedestrian: { enabled: true, label: 'Pedestrian', icon: '🚶', color: '#F1642E' },
+            bicycle: { enabled: false, label: 'Bicycle', icon: '🚲', color: '#3B82F6' },
+            auto: { enabled: false, label: 'Car', icon: '🚗', color: '#10B981' },
+            truck: { enabled: false, label: 'Truck', icon: '🚛', color: '#8B5CF6' },
+            bus: { enabled: false, label: 'Bus', icon: '🚌', color: '#F59E0B' },
+            motor_scooter: { enabled: false, label: 'Motor Scooter', icon: '🛵', color: '#EC4899' },
+            motorcycle: { enabled: false, label: 'Motorcycle', icon: '🏍️', color: '#06B6D4' }
+        };
+
+        function openTransportModeModal() {
+            const list = document.getElementById('transportModeList');
+            list.innerHTML = '';
+            for (const [key, mode] of Object.entries(transportModes)) {
+                const row = document.createElement('div');
+                row.className = 'transport-mode-row';
+                row.innerHTML = `
+                    <div class="mode-info">
+                        <span class="mode-icon">${mode.icon}</span>
+                        <span class="mode-label">${mode.label}</span>
+                        <span class="mode-color-dot" style="background: ${mode.color};"></span>
+                    </div>
+                    <input type="checkbox" class="toggle toggle-primary toggle-sm" data-mode="${key}" ${mode.enabled ? 'checked' : ''} />
+                `;
+                row.querySelector('input').addEventListener('change', (e) => {
+                    transportModes[key].enabled = e.target.checked;
+                    updateDirectionsActiveCount();
+                });
+                list.appendChild(row);
+            }
+            document.getElementById('transportModeModal').showModal();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function updateDirectionsActiveCount() {
+            const count = Object.values(transportModes).filter(m => m.enabled).length;
+            const pill = document.getElementById('directionsTab');
+            if (!pill) return;
+            const badge = pill.querySelector('.transport-badge');
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'inline-block' : 'none';
+            }
+        }
         let selectedFeatureLayers = [];  // Array of references to selected layers
         let selectedFeatureGeometries = [];  // Array of WKT format geometries for API
         let contextMode = false;  // Whether in context-aware query mode
@@ -4021,8 +4547,37 @@ LIMIT 10</textarea>
         let currentDrawingMode = null;  // 'point', 'line', 'polygon'
         let drawnLayer = null;
         let drawnGeometry = null;
+        let currentDrawHandler = null;  // Reference to active draw handler
         const drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
+
+        // Initialize Leaflet.Draw control (hidden - we use custom UI)
+        // This is needed to properly initialize the draw handlers
+        const drawControl = new L.Control.Draw({
+            position: 'topleft',
+            draw: {
+                polygon: false,
+                polyline: false,
+                rectangle: false,
+                circle: false,
+                circlemarker: false,
+                marker: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: false,
+                edit: false
+            }
+        });
+        // Add then immediately remove to initialize without showing
+        map.addControl(drawControl);
+        // Hide the control via DOM manipulation
+        setTimeout(() => {
+            const drawContainer = document.querySelector('.leaflet-draw');
+            if (drawContainer) {
+                drawContainer.style.display = 'none';
+            }
+        }, 100);
 
         // ===== DRAWING TOOL FUNCTIONS =====
 
@@ -4105,10 +4660,13 @@ LIMIT 10</textarea>
 
         // Activate drawing mode for a specific type
         function activateDrawing(type) {
-            // Close dropdown by blurring active element
-            if (document.activeElement && document.activeElement.blur) {
-                document.activeElement.blur();
-            }
+            // Close DaisyUI dropdown by blurring the dropdown trigger
+            // Use setTimeout to ensure the click event completes first
+            setTimeout(() => {
+                if (document.activeElement && document.activeElement.blur) {
+                    document.activeElement.blur();
+                }
+            }, 0);
 
             // Clear any previous drawings
             drawnItems.clearLayers();
@@ -4150,12 +4708,15 @@ LIMIT 10</textarea>
                     break;
             }
 
-            // Enable drawing
+            // Enable drawing handler
             if (drawHandler) {
                 drawHandler.enable();
+                console.log(`Drawing handler enabled for ${type}`);
 
                 // Show notification
                 showNotification(`Drawing ${type} mode activated. Click on the map to draw.`, 'info');
+            } else {
+                console.error(`Failed to create draw handler for type: ${type}`);
             }
         }
 
@@ -4803,7 +5364,7 @@ LIMIT 10</textarea>
             // Generate color for this layer (new palette)
             const colors = ['#FFB162', '#A35139', '#2C3B4D', '#1B2632',
                 '#C9A462', '#7A6B5D', '#FFD89B', '#E8A87C'];
-            const layerColor = colors[numericId % colors.length];
+            let layerColor = (metadata && metadata.routeColor) ? metadata.routeColor : colors[numericId % colors.length];
 
             // Default style configuration
             const defaultStyle = {
@@ -5115,7 +5676,7 @@ LIMIT 10</textarea>
             };
 
             const excludeKeys = new Set([
-                'geometry', 'description', 'description_de', 'note', 'name', 'amenity', 'shop',
+                'geometry', 'geom_25833', 'description', 'description_de', 'note', 'name', 'amenity', 'shop',
                 'tourism', 'highway', 'building', 'type', 'operator', 'brand', 'market_count', 'count',
                 'area_sq_km', 'area_ha', 'area', 'oteil', 'bezirk', 'title'
             ]);
@@ -5245,78 +5806,152 @@ LIMIT 10</textarea>
 
             layersList.innerHTML = '';
 
-            // Reverse order to show newest first
-            [...layers].reverse().forEach(layerInfo => {
-                const layerItem = document.createElement('div');
-                // Base classes
-                layerItem.className = 'card shadow-sm mb-2 hover:bg-base-200 transition-colors border-l-4';
+            // Group route layers by routeGroupId
+            const reversedLayers = [...layers].reverse();
+            const routeGroups = {};
+            const orderedItems = [];  // mixed: either a layer or a group placeholder
+            const processedGroupIds = new Set();
 
-                // Get the actual color used on the map
-                const style = layerInfo.style || {};
-                const fillColor = style.fillColor || layerInfo.color || '#F1642E';
-
-                // Apply dynamic coloring if visible
-                if (layerInfo.visible) {
-                    // Use color-mix for background tint (modern CSS) to handle hex, rgb, or named colors
-                    layerItem.style.background = `color-mix(in srgb, ${fillColor}, transparent 85%)`;
-                    layerItem.style.borderLeftColor = fillColor;
+            for (const layerInfo of reversedLayers) {
+                const gid = layerInfo.metadata?.routeGroupId;
+                if (gid) {
+                    if (!routeGroups[gid]) routeGroups[gid] = [];
+                    routeGroups[gid].push(layerInfo);
+                    if (!processedGroupIds.has(gid)) {
+                        processedGroupIds.add(gid);
+                        orderedItems.push({ type: 'group', groupId: gid });
+                    }
                 } else {
-                    layerItem.classList.add('bg-base-300', 'border-transparent');
+                    orderedItems.push({ type: 'layer', layerInfo });
                 }
+            }
 
-                const timeAgo = getTimeAgo(layerInfo.timestamp);
+            for (const item of orderedItems) {
+                if (item.type === 'group') {
+                    const groupLayers = routeGroups[item.groupId];
+                    const label = groupLayers[0]?.metadata?.routeGroupLabel || 'Route';
+                    const groupEl = document.createElement('div');
+                    groupEl.className = 'route-group';
+                    groupEl.dataset.groupId = item.groupId;
 
-                layerItem.innerHTML = `
-                    <div class="card-body p-3">
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-semibold text-sm truncate pr-2" title="${layerInfo.name}">${layerInfo.name}</h3>
-                            <div class="flex items-center gap-1">
-                                <input type="checkbox" class="toggle toggle-xs toggle-primary" ${layerInfo.visible ? 'checked' : ''} onclick="toggleLayer(${layerInfo.id})" />
-                                
-                                <div class="dropdown dropdown-end">
-                                    <label tabindex="0" class="btn btn-ghost btn-xs btn-circle" onclick="event.stopPropagation()">
-                                        <i data-lucide="more-vertical" class="w-4 h-4"></i>
-                                    </label>
-                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32 border border-base-content/10">
-                                        <li><a onclick="openStyleDialog(event, ${layerInfo.id})"><i data-lucide="palette" class="w-3 h-3"></i> Style</a></li>
-                                        <li><a onclick="openExportDialog(${layerInfo.id}, event)"><i data-lucide="download" class="w-3 h-3"></i> Export</a></li>
-                                    </ul>
-                                </div>
-                                
-                                <button class="btn btn-ghost btn-xs btn-circle text-error" onclick="removeLayer(${layerInfo.id}); event.stopPropagation()">
-                                    <i data-lucide="x" class="w-4 h-4"></i>
-                                </button>
-                            </div>
+                    // Header
+                    const header = document.createElement('div');
+                    header.className = 'route-group-header';
+                    header.innerHTML = `
+                        <div class="group-title">
+                            <i data-lucide="route" class="w-4 h-4 group-chevron"></i>
+                            <span title="${label}">🗺️ ${label}</span>
+                            <span style="font-size: 0.7rem; opacity: 0.6;">${groupLayers.length} modes</span>
                         </div>
-                        
-                        <div class="flex justify-between items-center text-xs opacity-70">
-                            <div class="flex items-center gap-1">
-                                <i data-lucide="map-pin" class="w-3 h-3"></i>
-                                <span>${layerInfo.featureCount} features</span>
+                        <div class="group-controls">
+                            <button class="btn btn-ghost btn-xs btn-circle text-error" title="Remove all routes in group">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                    // Toggle collapse on header click
+                    header.addEventListener('click', (e) => {
+                        if (e.target.closest('.group-controls')) return;
+                        groupEl.classList.toggle('collapsed');
+                    });
+                    // Remove-all button
+                    header.querySelector('.group-controls button').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        [...groupLayers].forEach(l => removeLayer(l.id));
+                    });
+                    groupEl.appendChild(header);
+
+                    // Children container
+                    const childrenEl = document.createElement('div');
+                    childrenEl.className = 'route-group-children';
+
+                    for (const layerInfo of groupLayers) {
+                        childrenEl.appendChild(createLayerCard(layerInfo));
+                    }
+                    groupEl.appendChild(childrenEl);
+                    layersList.appendChild(groupEl);
+                } else {
+                    layersList.appendChild(createLayerCard(item.layerInfo));
+                }
+            }
+
+            // Refresh Lucide icons for newly created DOM elements
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        // Create a single layer card element (extracted for reuse in groups)
+        function createLayerCard(layerInfo) {
+            const layerItem = document.createElement('div');
+            layerItem.className = 'card shadow-sm mb-2 hover:bg-base-200 transition-colors border-l-4';
+
+            const style = layerInfo.style || {};
+            const fillColor = style.fillColor || layerInfo.color || '#F1642E';
+
+            if (layerInfo.visible) {
+                layerItem.style.background = `color-mix(in srgb, ${fillColor}, transparent 85%)`;
+                layerItem.style.borderLeftColor = fillColor;
+            } else {
+                layerItem.classList.add('bg-base-300', 'border-transparent');
+            }
+
+            const timeAgo = getTimeAgo(layerInfo.timestamp);
+
+            // For route layers, show distance/time instead of feature count
+            const meta = layerInfo.metadata || {};
+            let infoHtml;
+            if (meta.type === 'route' && meta.distance_m) {
+                const km = (meta.distance_m / 1000).toFixed(2);
+                const mins = meta.time_minutes?.toFixed(1) || '?';
+                infoHtml = `<span>${km} km · ~${mins} min</span>`;
+            } else {
+                infoHtml = `<i data-lucide="map-pin" class="w-3 h-3"></i><span>${layerInfo.featureCount} features</span>`;
+            }
+
+            layerItem.innerHTML = `
+                <div class="card-body p-3">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-semibold text-sm truncate pr-2" title="${layerInfo.name}">${layerInfo.name}</h3>
+                        <div class="flex items-center gap-1">
+                            <input type="checkbox" class="toggle toggle-xs toggle-primary" ${layerInfo.visible ? 'checked' : ''} onclick="toggleLayer(${layerInfo.id})" />
+                            
+                            <div class="dropdown dropdown-end">
+                                <label tabindex="0" class="btn btn-ghost btn-xs btn-circle" onclick="event.stopPropagation()">
+                                    <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                                </label>
+                                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32 border border-base-content/10">
+                                    <li><a onclick="openStyleDialog(event, ${layerInfo.id})"><i data-lucide="palette" class="w-3 h-3"></i> Style</a></li>
+                                    <li><a onclick="openExportDialog(${layerInfo.id}, event)"><i data-lucide="download" class="w-3 h-3"></i> Export</a></li>
+                                </ul>
                             </div>
-                            <span>${timeAgo}</span>
+                            
+                            <button class="btn btn-ghost btn-xs btn-circle text-error" onclick="removeLayer(${layerInfo.id}); event.stopPropagation()">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
                         </div>
                     </div>
-                `;
+                    
+                    <div class="flex justify-between items-center text-xs opacity-70">
+                        <div class="flex items-center gap-1">
+                            ${infoHtml}
+                        </div>
+                        <span>${timeAgo}</span>
+                    </div>
+                </div>
+            `;
 
-                layerItem.onclick = (e) => {
-                    // Don't zoom if clicking controls
-                    if (e.target.closest('.toggle') ||
-                        e.target.closest('.btn') ||
-                        e.target.closest('.dropdown') ||
-                        e.target.closest('a')) {
-                        return;
-                    }
-                    // Display operations when layer is clicked
-                    displayLayerOperations(layerInfo.id);
-                    // Update map legend for this layer
-                    createMapLegend(layerInfo);
-                    // Zoom to layer
-                    zoomToLayer(layerInfo.id);
-                };
+            layerItem.onclick = (e) => {
+                if (e.target.closest('.toggle') ||
+                    e.target.closest('.btn') ||
+                    e.target.closest('.dropdown') ||
+                    e.target.closest('a')) {
+                    return;
+                }
+                displayLayerOperations(layerInfo.id);
+                createMapLegend(layerInfo);
+                zoomToLayer(layerInfo.id);
+            };
 
-                layersList.appendChild(layerItem);
-            });
+            return layerItem;
         }
 
         // Get time ago string
@@ -5806,11 +6441,8 @@ LIMIT 10</textarea>
             map.removeLayer(layerInfo.layer);
             layers = layers.filter(l => l.id !== layerId);
 
-            // Remove map legend if this was the active layer
-            if (currentLegendControl) {
-                map.removeControl(currentLegendControl);
-                currentLegendControl = null;
-            }
+            // Remove legend if this was the active layer
+            clearPanelLegend();
 
             updateLayersPanel();
 
@@ -7121,8 +7753,12 @@ LIMIT 10</textarea>
         // Store map legend control reference
         let currentLegendControl = null;
 
-        // Create and add Leaflet map legend
+        // Create legend in the left panel's bottom section
         function createMapLegend(layerInfo) {
+            const container = document.getElementById('panelLegendContainer');
+            const content = document.getElementById('panelLegendContent');
+            if (!container || !content) return;
+
             if (!layerInfo.geojsonData || !layerInfo.geojsonData.features) return;
 
             const features = layerInfo.geojsonData.features;
@@ -7137,76 +7773,75 @@ LIMIT 10</textarea>
                 return;
             }
 
-            // Remove existing legend
+            // Remove old floating Leaflet legend if any
             if (currentLegendControl) {
                 map.removeControl(currentLegendControl);
+                currentLegendControl = null;
             }
 
-            // Create custom Leaflet control - GRADIENT BAR WITH LABELS
-            const LegendControl = L.Control.extend({
-                options: {
-                    position: 'bottomleft'
-                },
-                onAdd: function (map) {
-                    const div = L.DomUtil.create('div', 'map-legend');
+            let html = '';
 
-                    // Build legend HTML - GRADIENT BAR with appropriate labels
-                    let html = '';
+            if (layerInfo.style && layerInfo.style.isGradient && layerInfo.style.gradientProperty && layerInfo.style.gradientRange) {
+                const style = layerInfo.style;
+                const isCompositeScore = style.gradientProperty === 'composite_score';
 
-                    if (layerInfo.style && layerInfo.style.isGradient && layerInfo.style.gradientProperty && layerInfo.style.gradientRange) {
-                        const style = layerInfo.style;
-                        const isCompositeScore = style.gradientProperty === 'composite_score';
-
-                        // Generate gradient color bar
-                        const colors = [];
-                        for (let i = 0; i <= 10; i++) {
-                            const normalized = i / 10;
-                            const color = interpolateColor(normalized, style.gradientScheme || 'viridis');
-                            colors.push(color);
-                        }
-                        const gradientBarStyle = 'linear-gradient(to right, ' + colors.join(', ') + ')';
-
-                        // Get label text based on property type
-                        let minLabel = style.gradientRange.min?.toFixed(2) || '0';
-                        let maxLabel = style.gradientRange.max?.toFixed(2) || '10';
-                        let legendTitle = 'Gradient Legend';
-                        let legendUnit = '';
-
-                        if (isCompositeScore) {
-                            minLabel = '0.0';
-                            maxLabel = '1.0';
-                            legendTitle = 'Suitability Score';
-                            legendUnit = '(0=Poor, 1=Excellent)';
-                        } else if (style.gradientProperty === 'amenities_per_km2' || style.gradientProperty === 'density_per_sq_km') {
-                            legendTitle = 'Density (amenities/km²)';
-                        }
-
-                        html = `
-                            <div style="background: rgba(26, 24, 37, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(var(--accent-primary-rgb), 0.3); border-radius: 6px; padding: 10px 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
-                                ${legendTitle ? `<div style="font-size: 0.75rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); margin-bottom: 6px;">${legendTitle}</div>` : ''}
-                                <div style="width: 140px; height: 20px; background: ${gradientBarStyle}; border-radius: 2px; border: 1px solid rgba(255, 255, 255, 0.2); margin-bottom: 4px;"></div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: rgba(255, 255, 255, 0.7); margin-bottom: ${legendUnit ? '4px' : '0'};">
-                                    <span>${minLabel}</span>
-                                    <span>${maxLabel}</span>
-                                </div>
-                                ${legendUnit ? `<div style="font-size: 0.6rem; color: rgba(255, 255, 255, 0.6); text-align: center;">${legendUnit}</div>` : ''}
-                            </div>
-                        `;
-                    }
-
-                    div.innerHTML = html;
-
-                    // Prevent click propagation to map
-                    L.DomEvent.disableClickPropagation(div);
-                    L.DomEvent.disableScrollPropagation(div);
-
-                    return div;
+                // Generate gradient color bar
+                const colors = [];
+                for (let i = 0; i <= 10; i++) {
+                    const normalized = i / 10;
+                    const color = interpolateColor(normalized, style.gradientScheme || 'viridis');
+                    colors.push(color);
                 }
-            });
+                const gradientBarStyle = 'linear-gradient(to right, ' + colors.join(', ') + ')';
 
-            // Add legend to map
-            currentLegendControl = new LegendControl();
-            currentLegendControl.addTo(map);
+                // Get label text based on property type
+                let minLabel = style.gradientRange.min?.toFixed(2) || '0';
+                let maxLabel = style.gradientRange.max?.toFixed(2) || '10';
+                let legendTitle = 'Gradient Legend';
+                let legendUnit = '';
+
+                if (isCompositeScore) {
+                    minLabel = '0.0';
+                    maxLabel = '1.0';
+                    legendTitle = 'Suitability Score';
+                    legendUnit = '(0=Poor, 1=Excellent)';
+                } else if (style.gradientProperty === 'amenities_per_km2' || style.gradientProperty === 'density_per_sq_km') {
+                    legendTitle = 'Density (amenities/km²)';
+                }
+
+                const layerName = layerInfo.name || 'Active Layer';
+
+                html = `
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 6px;">${layerName}</div>
+                    ${legendTitle ? `<div style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">${legendTitle}</div>` : ''}
+                    <div style="width: 100%; height: 16px; background: ${gradientBarStyle}; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.15); margin-bottom: 4px;"></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: ${legendUnit ? '4px' : '0'};">
+                        <span>${minLabel}</span>
+                        <span>${maxLabel}</span>
+                    </div>
+                    ${legendUnit ? `<div style="font-size: 0.65rem; color: var(--text-muted); text-align: center;">${legendUnit}</div>` : ''}
+                `;
+            }
+
+            if (html) {
+                content.innerHTML = html;
+                container.style.display = 'block';
+                // Re-init Lucide icons
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        }
+
+        // Clear panel legend
+        function clearPanelLegend() {
+            const container = document.getElementById('panelLegendContainer');
+            const content = document.getElementById('panelLegendContent');
+            if (container) container.style.display = 'none';
+            if (content) content.innerHTML = '';
+            // Also remove old floating Leaflet legend if any
+            if (currentLegendControl) {
+                map.removeControl(currentLegendControl);
+                currentLegendControl = null;
+            }
         }
 
         // Get gradient colors for a scheme (used for legend display)
@@ -7660,6 +8295,10 @@ LIMIT 10</textarea>
             // Recreate temp layer with all selected geometries
             if (selectedFeatures.length > 0) {
                 try {
+                    // Ensure session_id is set and consistent
+                    if (!window.sessionId) {
+                        window.sessionId = `session_${Date.now()}`;
+                    }
                     const tempLayerResponse = await fetch(`${API_URL}/create-temp-layer`, {
                         method: 'POST',
                         headers: {
@@ -7667,7 +8306,7 @@ LIMIT 10</textarea>
                         },
                         body: JSON.stringify({
                             geometries: selectedFeatures.map(f => f.geometry),
-                            session_id: window.sessionId || `session_${Date.now()}`
+                            session_id: window.sessionId
                         })
                     });
 
@@ -7769,6 +8408,201 @@ LIMIT 10</textarea>
                 pill.style.display = 'none';
                 pill.title = '';
             }
+
+            // Update Directions button state based on selection count
+            updateDirectionsButton();
+        }
+
+        // Update the Directions button based on selection count
+        function updateDirectionsButton() {
+            const directionsTab = document.getElementById('directionsTab');
+            const directionsCount = document.getElementById('directionsCount');
+
+            if (!directionsTab) return;
+
+            const count = selectedFeatures.length;
+
+            // Show/update count badge
+            if (directionsCount) {
+                if (count > 0) {
+                    directionsCount.textContent = count;
+                    directionsCount.style.display = 'inline-block';
+                } else {
+                    directionsCount.style.display = 'none';
+                }
+            }
+
+            // Enable button only when exactly 2 features are selected
+            if (count === 2) {
+                directionsTab.classList.remove('chat-tab-disabled');
+                directionsTab.style.cursor = 'pointer';
+                directionsTab.title = 'Get walking directions between the 2 selected features';
+            } else {
+                directionsTab.classList.add('chat-tab-disabled');
+                directionsTab.style.cursor = 'not-allowed';
+                if (count === 0) {
+                    directionsTab.title = 'Select 2 features on the map to get directions';
+                } else if (count === 1) {
+                    directionsTab.title = 'Select 1 more feature to get directions';
+                } else {
+                    directionsTab.title = `${count} features selected - select exactly 2 for directions`;
+                }
+            }
+        }
+
+        // Execute directions between 2 selected features (multi-mode)
+        async function executeDirections() {
+            if (selectedFeatures.length !== 2) {
+                if (selectedFeatures.length < 2) {
+                    showNotification('Please select 2 features on the map first', 'warning');
+                } else {
+                    showNotification('Please select exactly 2 features for directions', 'warning');
+                }
+                return;
+            }
+
+            // Collect enabled modes
+            const enabledModes = Object.entries(transportModes).filter(([, m]) => m.enabled);
+            if (enabledModes.length === 0) {
+                showNotification('No transport modes selected. Click the route icon to choose modes.', 'warning');
+                return;
+            }
+
+            const directionsTab = document.getElementById('directionsTab');
+
+            try {
+                // Show loading state
+                directionsTab.innerHTML = `
+                    <span class="loading loading-spinner loading-sm"></span>
+                    <span>Calculating ${enabledModes.length} route${enabledModes.length > 1 ? 's' : ''}...</span>
+                `;
+
+                console.log(`🗺️ Getting directions for ${enabledModes.length} transport mode(s)`);
+
+                const featureNames = selectedFeatures.map((f, i) =>
+                    f.properties?.name ||
+                    f.properties?.amenity ||
+                    f.properties?.type ||
+                    `Point ${i + 1}`
+                );
+
+                // Fire parallel requests for each enabled mode
+                const requests = enabledModes.map(([costing]) =>
+                    fetch(`${API_URL}/routing/optimal-tour`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            geometries: selectedFeatures.map(f => f.geometry),
+                            feature_names: featureNames,
+                            costing: costing,
+                            session_id: window.sessionId
+                        })
+                    }).then(r => r.json()).then(result => ({ costing, result }))
+                        .catch(err => ({ costing, result: { success: false, error: err.message } }))
+                );
+
+                const responses = await Promise.all(requests);
+
+                // Process results and add routes to map
+                let anySuccess = false;
+                let combinedBounds = null;
+                const routeSummaries = [];
+                const routeGroupId = `route_${Date.now()}`;
+                const routeGroupLabel = `${featureNames[0]} → ${featureNames[1]}`;
+
+                for (const { costing, result } of responses) {
+                    const mode = transportModes[costing];
+                    if (!result.success || !result.geometry) {
+                        console.warn(`⚠️ ${mode.label} route failed: ${result.error || 'no geometry'}`);
+                        routeSummaries.push(`${mode.icon} ${mode.label}: failed`);
+                        continue;
+                    }
+
+                    anySuccess = true;
+                    const distanceKm = (result.total_distance_m / 1000).toFixed(2);
+                    const time = result.total_time_minutes?.toFixed(1) || 'N/A';
+
+                    // Create a temp Leaflet layer to get bounds, then remove
+                    const tempLayer = L.geoJSON(result.geometry);
+                    const routeBounds = tempLayer.getBounds();
+                    if (!combinedBounds) {
+                        combinedBounds = L.latLngBounds(routeBounds.getSouthWest(), routeBounds.getNorthEast());
+                    } else {
+                        combinedBounds.extend(routeBounds);
+                    }
+
+                    const layerName = `${mode.icon} ${mode.label}: ${featureNames[0]} → ${featureNames[1]}`;
+
+                    const routeGeoJSON = {
+                        type: 'FeatureCollection',
+                        features: [{
+                            type: 'Feature',
+                            properties: {
+                                name: layerName,
+                                distance_m: result.total_distance_m,
+                                time_minutes: result.total_time_minutes,
+                                routing_engine: result.routing_engine || 'valhalla',
+                                costing: costing,
+                                mode_label: mode.label
+                            },
+                            geometry: result.geometry
+                        }]
+                    };
+
+                    // Add to layers panel with mode-specific color
+                    addLayer(
+                        layerName,
+                        routeGeoJSON,
+                        `${mode.label} route: ${featureNames[0]} → ${featureNames[1]}`,
+                        null,
+                        `${mode.label} route via ${result.routing_engine || 'valhalla'}`,
+                        null,
+                        {
+                            type: 'route',
+                            distance_m: result.total_distance_m,
+                            time_minutes: result.total_time_minutes,
+                            routing_engine: result.routing_engine || 'valhalla',
+                            costing: costing,
+                            routeColor: mode.color,
+                            routeGroupId: routeGroupId,
+                            routeGroupLabel: routeGroupLabel
+                        }
+                    );
+
+                    // Override the color of the just-added layer
+                    const lastLayer = layers[layers.length - 1];
+                    if (lastLayer && lastLayer.layer && lastLayer.layer.setStyle) {
+                        lastLayer.layer.setStyle({ color: mode.color, weight: 5, opacity: 0.8 });
+                    }
+
+                    routeSummaries.push(`${mode.icon} ${mode.label}: ${distanceKm}km, ~${time}min`);
+                }
+
+                if (anySuccess && combinedBounds) {
+                    map.fitBounds(combinedBounds, { padding: [50, 50] });
+                }
+
+                if (anySuccess) {
+                    showNotification(routeSummaries.join(' | '), 'success');
+                } else {
+                    showNotification('All route calculations failed', 'error');
+                }
+
+            } catch (error) {
+                console.error('Directions error:', error);
+                showNotification('Failed to get directions: ' + error.message, 'error');
+            } finally {
+                // Restore button
+                directionsTab.innerHTML = `
+                    <i data-lucide="route" style="width: 18px; height: 18px; margin-right: 4px; cursor: pointer;"
+                        onclick="event.stopPropagation(); openTransportModeModal()"
+                        title="Select transport modes"></i>
+                    <span>Directions</span>
+                    <span id="directionsCount" style="${selectedFeatures.length > 0 ? '' : 'display: none;'} background: #F1642E; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-left: 6px;">${selectedFeatures.length}</span>
+                `;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                updateDirectionsButton();
+            }
         }
 
         // Clear all feature selections (button callback)
@@ -7867,10 +8701,22 @@ LIMIT 10</textarea>
             }
         }
 
+        // Global LLM provider selection (default: gemini)
+        window.selectedLLMProvider = 'gemini';
+
+        // Set active LLM provider from dropdown
+        function selectLLMProvider(provider, displayName) {
+            window.selectedLLMProvider = provider;
+            const label = document.getElementById('selectedModelLabel');
+            if (label) label.textContent = displayName;
+            // Close the DaisyUI dropdown
+            document.activeElement?.blur();
+            console.log(`🧠 LLM provider switched to: ${provider} (${displayName})`);
+        }
+
         // Get selected LLM provider
         function getSelectedLLMProvider() {
-            const selected = document.querySelector('input[name="llmProvider"]:checked');
-            return selected ? selected.value : 'deepseek';
+            return window.selectedLLMProvider || 'gemini';
         }
 
         // Check provider health and update UI
@@ -9024,7 +9870,6 @@ LIMIT 10</textarea>
         }
 
         async function loadDatasetTable(tableName) {
-            // const modal = document.getElementById('datasetModalOverlay'); // Not needed if already open
             const browseBtn = document.getElementById('browseBtn');
 
             // Update modal to show loading
@@ -9038,7 +9883,7 @@ LIMIT 10</textarea>
 
             // Show main loading indicator
             setLoading(true, `Loading ${tableName}...`);
-            browseBtn.disabled = true;
+            if (browseBtn) browseBtn.disabled = true;
 
             try {
                 // Fetch table data
@@ -9103,7 +9948,7 @@ LIMIT 10</textarea>
                 openDatasetBrowser();
             } finally {
                 setLoading(false);
-                browseBtn.disabled = false;
+                if (browseBtn) browseBtn.disabled = false;
             }
         }
 
@@ -9401,6 +10246,62 @@ ORDER BY ?title`
         window.openGdiBerlinModal = openGdiBerlinModal;
         window.openDatasetBrowserModal = openDatasetBrowserModal;
         window.openKnowledgeGraphModal = openKnowledgeGraphModal;
+
+        // Theme Switcher Logic
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            setTheme(newTheme);
+        }
+
+        function setTheme(theme) {
+            const html = document.documentElement;
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+
+            // Update Icon visibility
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+
+            if (sunIcon && moonIcon) {
+                if (theme === 'light') {
+                    sunIcon.style.display = 'none';
+                    moonIcon.style.display = 'block';
+                } else {
+                    sunIcon.style.display = 'block';
+                    moonIcon.style.display = 'none';
+                }
+            }
+
+            // Update Map Basemap if map is ready
+            if (typeof switchBasemap === 'function' && typeof basemaps !== 'undefined') {
+                if (theme === 'light') {
+                    switchBasemap('Light (Vector)');
+                } else {
+                    switchBasemap('Dark (Vector)');
+                }
+            }
+        }
+
+        // Initialize Theme on Load
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                setTheme(savedTheme);
+            } else {
+                // Default to system preference
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                setTheme(prefersDark ? 'dark' : 'light');
+            }
+        }
+
+        // Expose to window
+        window.toggleTheme = toggleTheme;
+
+        // Initialize immediately
+        initializeTheme();
 
         // Initialize icons on load
         document.addEventListener('DOMContentLoaded', () => {

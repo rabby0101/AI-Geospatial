@@ -2,7 +2,7 @@ import time
 from fastapi import APIRouter, HTTPException, status
 from typing import Dict, Any
 from app.models.query_model import NLQuery, QueryResponse, DatasetInfo
-from app.utils.deepseek import parse_geospatial_query, get_available_datasets, clear_query_cache
+from app.utils.deepseek import parse_geospatial_query, get_available_datasets, clear_query_cache, query_gemini
 from app.utils.spatial_engine import SpatialEngine
 from app.utils.database import db_manager
 
@@ -28,13 +28,66 @@ async def geospatial_query(request: NLQuery) -> QueryResponse:
     start_time = time.time()
 
     try:
-        # Parse the query using DeepSeek
+        # Debug: Log incoming request
+        print(f"📥 Query request received:")
+        print(f"   - question: {request.question}")
+        print(f"   - context: {request.context}")
+        print(f"   - drawn_geometry: {request.drawn_geometry}")
+        
+        # Handle drawn geometry - create temp layer BEFORE parsing query
+        if request.drawn_geometry:
+            session_id = request.context.get("session_id") if request.context else None
+            print(f"   - session_id extracted: {session_id}")
+            if session_id:
+                try:
+                    # Create temp table for the drawn geometry so SQL can reference it
+                    # Table name will be: temp.temp_selected_{session_id}
+                    table_name = db_manager.create_temp_layer(request.drawn_geometry, session_id, schema="temp")
+                    print(f"✅ Created temp layer for drawn geometry: {table_name}")
+                except Exception as e:
+                    print(f"⚠️ Failed to create temp layer for drawn geometry: {e}")
+                    import traceback
+                    traceback.print_exc()
+        else:
+            print("   - No drawn_geometry in request")
+        
+        # Handle selected feature - create temp layer for selected map features
+        if request.selected_feature:
+            session_id = request.context.get("session_id") if request.context else None
+            print(f"   - selected_feature detected, session_id: {session_id}")
+            if session_id:
+                try:
+                    # Extract geometry from selected feature
+                    selected_geom = request.selected_feature
+                    if isinstance(selected_geom, dict):
+                        # Handle GeoJSON Feature or FeatureCollection
+                        if selected_geom.get("type") == "Feature":
+                            geom = selected_geom.get("geometry")
+                        elif selected_geom.get("type") == "FeatureCollection":
+                            geom = selected_geom.get("features", [{}])[0].get("geometry")
+                        elif selected_geom.get("type") in ["Point", "Polygon", "MultiPolygon", "LineString"]:
+                            geom = selected_geom
+                        else:
+                            geom = selected_geom.get("geometry", selected_geom)
+                        
+                        if geom:
+                            table_name = db_manager.create_temp_layer(geom, session_id, schema="temp")
+                            print(f"✅ Created temp layer for selected feature: {table_name}")
+                except Exception as e:
+                    print(f"⚠️ Failed to create temp layer for selected feature: {e}")
+                    import traceback
+                    traceback.print_exc()
+        else:
+            print("   - No selected_feature in request")
+
+        # Parse the query using the selected LLM provider
         operation_plan = parse_geospatial_query(
             question=request.question,
             context=request.context,
             user_location=request.user_location,
             selected_feature=request.selected_feature,
-            drawn_geometry=request.drawn_geometry
+            drawn_geometry=request.drawn_geometry,
+            llm_provider=request.llm_provider
         )
 
         # Execute the operation plan
@@ -46,13 +99,23 @@ async def geospatial_query(request: NLQuery) -> QueryResponse:
 
         # Check if execution was successful
         if not result.get("success", False):
+            # Include operations/reasoning even on error for debugging
+            error_operations = [
+                {"operation": op.operation, "parameters": op.parameters, "description": op.description}
+                for op in (operation_plan.operations or [])
+            ] if operation_plan else None
             return QueryResponse(
                 success=False,
                 query=request.question,
                 result_type="error",
                 data={},
                 error=result.get("error", "Unknown error occurred"),
-                execution_time=execution_time
+                execution_time=execution_time,
+                operations=error_operations,
+                reasoning=operation_plan.reasoning if operation_plan else None,
+                datasets_used=operation_plan.datasets_required if operation_plan else None,
+                system_prompt=operation_plan.system_prompt if operation_plan else None,
+                user_prompt=operation_plan.user_prompt if operation_plan else None
             )
 
         # Extract layer name, operations, reasoning, and datasets from operation plan
@@ -115,13 +178,14 @@ async def geospatial_stats_query(request: NLQuery) -> QueryResponse:
     start_time = time.time()
 
     try:
-        # Parse the query using DeepSeek
+        # Parse the query using the selected LLM provider
         operation_plan = parse_geospatial_query(
             question=request.question,
             context=request.context,
             user_location=request.user_location,
-            query_type="stats",  # Signal DeepSeek this is a stats query
-            drawn_geometry=request.drawn_geometry
+            query_type="stats",  # Signal LLM this is a stats query
+            drawn_geometry=request.drawn_geometry,
+            llm_provider=request.llm_provider
         )
 
         # Execute the operation plan with stats executor
