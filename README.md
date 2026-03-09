@@ -9,7 +9,7 @@ An LLM-Integrated RESTful API for Interactive Geospatial Reasoning and Querying
 
 ## Overview
 
-The Cognitive Geospatial Assistant API allows users to query and analyze geospatial datasets using natural language. It integrates **DeepSeek LLM** to translate natural-language questions into spatial operations and returns GeoJSON results.
+The Cognitive Geospatial Assistant API allows users to query and analyze geospatial datasets using natural language. It integrates **DeepSeek and Google Gemini LLMs** alongside a **Semantic Knowledge Graph** to translate natural-language questions into spatial operations and returns GeoJSON results.
 
 ### Example Query
 
@@ -24,8 +24,9 @@ The system will:
 ## Features
 
 - **Natural Language Queries**: Ask geospatial questions in plain English
-- **LLM-Powered Reasoning**: DeepSeek translates queries to spatial operations
-- **Valhalla Pedestrian Routing**: Accurate walking distance and isochrone calculations
+- **LLM-Powered Reasoning**: DeepSeek and Gemini Google AI models translate queries to spatial operations
+- **Semantic Knowledge Graph**: Context-aware queries powered by an RDF/OWL ontology matching intents to tables
+- **Valhalla Routing**: Accurate pedestrian/cycling/auto routing, walking distances, and shortest path calculations
 - **Intelligent Site Selection**: Find optimal business locations with distance decay scoring
 - **Multiple Data Sources**: Vector (PostGIS, GeoJSON) and raster (GeoTIFF) support
 - **Interactive Map Viewer**: Leaflet-based frontend for visualization
@@ -43,8 +44,9 @@ User → FastAPI → DeepSeek Reasoning → Spatial Engine → Result (GeoJSON)
 | Component | Technology |
 |-----------|------------|
 | API Framework | FastAPI |
-| LLM | DeepSeek API |
-| Routing Engine | Valhalla (pedestrian/walking) |
+| LLMs | DeepSeek API, Google Gemini (2.5 Flash) |
+| Knowledge Graph | RDFLib, SHACL, SPARQL |
+| Routing Engine | Valhalla |
 | Spatial Database | PostGIS, pgRouting |
 | Vector Processing | GeoPandas, Shapely |
 | Raster Processing | Rasterio, rioxarray |
@@ -55,8 +57,8 @@ User → FastAPI → DeepSeek Reasoning → Spatial Engine → Result (GeoJSON)
 ### Prerequisites
 
 - Python 3.11+
-- Docker & Docker Compose (for PostGIS)
-- DeepSeek API Key
+- Docker & Docker Compose (for PostGIS and Valhalla)
+- DeepSeek API Key (and optionally Google Gemini API Key)
 
 ### Installation
 
@@ -80,7 +82,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and add your DEEPSEEK_API_KEY
+# Edit .env and add your DEEPSEEK_API_KEY and GEMINI_API_KEY
 ```
 
 5. Start PostGIS database and Valhalla routing engine:
@@ -209,6 +211,20 @@ The system uses **sophisticated scoring algorithms** for business site selection
 2. **Normalized scores**: All results have a `composite_score` from 0-1 for easy comparison
 3. **Business-specific profiles**: Different weights for restaurants, pharmacies, supermarkets, etc.
 4. **Area/size filters**: Can filter by building area requirements
+
+## Semantic Knowledge Graph
+
+The system features an RDF/OWL Semantic Knowledge Graph that maps user intents to specific PostGIS datasets:
+- **Intelligent LLM Context**: Enhances LLM prompts by matching queries (e.g., "accessible", "emergency") to relevant backend tables via SPARQL.
+- **Dataset Ontology**: Standardizes vector and raster concepts into structured namespaces (`geoassist.ai/ontology`).
+- **Data Validation**: Enforces SHACL shapes during catalog ingestion to ensure clean data capabilities.
+
+## Routing Engine (Valhalla)
+
+Queries requesting "routes", "directions", "nearest by road", or "walking distance" leverage the Valhalla engine:
+- Connects directly to the spatial database.
+- Provides optimized Nearest Neighbor (TSP) routing for multi-point itineraries.
+- Maps generated routes directly onto the frontend interface as GeoJSON LineStrings.
 
 ## Project Structure
 
