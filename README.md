@@ -7,6 +7,13 @@ An LLM-Integrated RESTful API for Interactive Geospatial Reasoning and Querying
 ![PostGIS](https://img.shields.io/badge/PostGIS-3.3-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
+## Demo
+
+[![Watch the demo](https://img.youtube.com/vi/NA19nn7qcLs/maxresdefault.jpg)](https://www.youtube.com/watch?v=NA19nn7qcLs)
+
+> Ask in plain English. Get walking routes, distances, restaurants, hospitals & more — instantly.
+> No dropdowns. No filters. Just answers. Export results as GeoJSON for deeper GIS analysis.
+
 ## Overview
 
 The Cognitive Geospatial Assistant API allows users to query and analyze geospatial datasets using natural language. It integrates **DeepSeek and Google Gemini LLMs** alongside a **Semantic Knowledge Graph** to translate natural-language questions into spatial operations and returns GeoJSON results.
