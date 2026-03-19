@@ -42,6 +42,18 @@ class SpatialEngine:
             if routing_op:
                 return self._execute_routing_operation(routing_op, plan)
 
+
+
+            # Check for nearest by road operations
+            nearest_road_op = next((op for op in plan.operations if op.operation == "nearest_by_road"), None)
+            if nearest_road_op:
+                return self._execute_nearest_by_road_operation(nearest_road_op, plan)
+
+            # Check for walking time operations (find POIs within walking time)
+            walking_time_op = next((op for op in plan.operations if op.operation == "walking_time"), None)
+            if walking_time_op:
+                return self._execute_walking_time_operation(walking_time_op, plan)
+
             # Execute SQL operations via sql_generator
             result_gdf = sql_generator.execute_plan(plan)
 
@@ -284,110 +296,195 @@ class SpatialEngine:
 
             # Route computation based on mode
             if mode == "optimal_tour":
-                # Compute optimal tour (single route visiting all points)
-                result = db_manager.compute_optimal_tour(geometries, feature_names)
-
-                if not result.get("success"):
-                    return {
-                        "success": False,
-                        "error": result.get("error", "Optimal tour computation failed"),
-                        "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
-                    }
-
-                # Convert result to GeoJSON with waypoints and directions
-                feature = {
-                    "type": "Feature",
-                    "geometry": result.get("geometry"),
-                    "properties": {
-                        "route_type": "optimal_tour",
-                        "total_distance_m": result.get("total_distance_m", 0),
-                        "total_distance_km": round(result.get("total_distance_m", 0) / 1000, 2),
-                        "total_time_minutes": result.get("total_time_minutes"),
-                        "waypoint_count": len(result.get("waypoints", [])),
-                        "algorithm": "Nearest Neighbor TSP",
-                        "road_network": "Berlin Detailnetz"
-                    }
-                }
-
-                geojson = {
-                    "type": "FeatureCollection",
-                    "features": [feature]
-                }
-
-                # Include waypoints and directions in metadata
-                metadata = {
-                    "algorithm": "Nearest Neighbor TSP",
-                    "road_network": "Berlin Detailnetz",
-                    "total_distance_m": round(result.get("total_distance_m", 0), 2),
-                    "total_distance_km": round(result.get("total_distance_m", 0) / 1000, 2),
-                    "total_time_minutes": result.get("total_time_minutes"),
-                    "waypoints": result.get("waypoints", []),
-                    "directions": result.get("directions", []),
-                    "optimal_sequence": result.get("optimal_sequence", []),
-                    "feature_count": result.get("metadata", {}).get("feature_count", 0),
-                    "waypoint_count": result.get("metadata", {}).get("waypoint_count", 0)
-                }
-
+                # Try Valhalla first for more accurate pedestrian routing
+                try:
+                    from app.utils.valhalla_routing import valhalla_service
+                    
+                    health = valhalla_service.check_health()
+                    if health.get("status") == "healthy":
+                        logger.info("🛣️  Using Valhalla for optimal tour routing")
+                        
+                        # Extract coordinates from geometries
+                        points = []
+                        for geom in geometries:
+                            if geom.get("type") == "Point":
+                                coords = geom.get("coordinates", [])
+                                if len(coords) >= 2:
+                                    points.append((coords[1], coords[0]))  # (lat, lon)
+                        
+                        if len(points) >= 2:
+                            route_result = valhalla_service.get_multi_point_route(points)
+                            
+                            if route_result.success:
+                                feature = {
+                                    "type": "Feature",
+                                    "geometry": route_result.geometry,
+                                    "properties": {
+                                        "route_type": "optimal_tour",
+                                        "total_distance_m": route_result.distance_m,
+                                        "total_distance_km": round(route_result.distance_m / 1000, 2),
+                                        "total_time_minutes": round(route_result.duration_minutes, 1),
+                                        "waypoint_count": len(points),
+                                        "algorithm": "Valhalla Pedestrian",
+                                        "road_network": "OpenStreetMap Berlin"
+                                    }
+                                }
+                                
+                                geojson = {
+                                    "type": "FeatureCollection",
+                                    "features": [feature]
+                                }
+                                
+                                # Build layer name from feature names
+                                if feature_names:
+                                    layer_name = "Route: " + " → ".join(feature_names[:5])
+                                    if len(feature_names) > 5:
+                                        layer_name += " ..."
+                                else:
+                                    layer_name = f"optimal_tour_{len(points)}_stops"
+                                
+                                metadata = {
+                                    "algorithm": "Valhalla Pedestrian",
+                                    "road_network": "OpenStreetMap Berlin",
+                                    "routing_engine": "valhalla",
+                                    "total_distance_m": round(route_result.distance_m, 2),
+                                    "total_distance_km": round(route_result.distance_m / 1000, 2),
+                                    "total_time_minutes": round(route_result.duration_minutes, 1),
+                                    "directions": route_result.maneuvers,
+                                    "feature_count": len(points),
+                                    "waypoint_count": len(points)
+                                }
+                                
+                                return {
+                                    "success": True,
+                                    "result_type": "routing",
+                                    "data": geojson,
+                                    "layer_name": layer_name,
+                                    "metadata": metadata,
+                                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                                }
+                            else:
+                                logger.warning(f"Valhalla routing failed: {route_result.error}")
+                    else:
+                        logger.warning("Valhalla not available for optimal tour routing")
+                        
+                except ImportError:
+                    logger.error("Valhalla module not available")
+                except Exception as e:
+                    logger.error(f"Valhalla error: {e}")
+                
                 return {
-                    "success": True,
-                    "result_type": "routing",
-                    "data": geojson,
-                    "layer_name": result.get("layer_name", "optimal_route"),
-                    "metadata": metadata,
+                    "success": False,
+                    "error": "Valhalla routing service is required but not available",
                     "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
                 }
 
-            else:  # pairwise mode (default)
-                # Compute pairwise shortest paths
-                result = db_manager.compute_pairwise_shortest_paths(geometries)
-
-                if not result.get("success"):
-                    return {
-                        "success": False,
-                        "error": result.get("error", "Routing computation failed"),
-                        "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
-                    }
-
-                # Convert routes to GeoJSON FeatureCollection
-                routes = result.get("routes", [])
-                features = []
-
-                for route_idx, route in enumerate(routes):
-                    feature = {
-                        "type": "Feature",
-                        "geometry": route.get("route_geometry"),
-                        "properties": {
-                            "route_id": route_idx + 1,
-                            "from_name": route.get("from_name", f"Item {route.get('from_index', 0) + 1}"),
-                            "to_name": route.get("to_name", f"Item {route.get('to_index', 1) + 1}"),
-                            "from_index": route.get("from_index"),
-                            "to_index": route.get("to_index"),
-                            "distance_m": round(route.get("distance_m", 0), 2),
-                            "distance_km": round(route.get("distance_m", 0) / 1000, 2)
-                        }
-                    }
-                    features.append(feature)
-
-                geojson = {
-                    "type": "FeatureCollection",
-                    "features": features
-                }
-
-                metadata = {
-                    "count": len(features),
-                    "total_distance_m": round(result.get("total_distance_m", 0), 2),
-                    "total_distance_km": round(result.get("total_distance_m", 0) / 1000, 2),
-                    "route_count": result.get("route_count", 0),
-                    "feature_count": result.get("feature_count", 0),
-                    "algorithm": "Dijkstra (pgRouting)",
-                    "road_network": "Berlin Detailnetz (43,420 segments, 30,922 vertices)"
-                }
-
+            else:  # pairwise mode (default) - for 2+ point routing
+                # Try Valhalla first for simple routes (especially 2-point)
+                try:
+                    from app.utils.valhalla_routing import valhalla_service
+                    
+                    health = valhalla_service.check_health()
+                    if health.get("status") == "healthy":
+                        # Extract coordinates from geometries
+                        points = []
+                        for geom in geometries:
+                            if geom.get("type") == "Point":
+                                coords = geom.get("coordinates", [])
+                                if len(coords) >= 2:
+                                    points.append((coords[1], coords[0]))  # (lat, lon)
+                            elif geom.get("type") in ["Polygon", "MultiPolygon"]:
+                                # For polygons, use centroid
+                                from shapely.geometry import shape
+                                shapely_geom = shape(geom)
+                                centroid = shapely_geom.centroid
+                                points.append((centroid.y, centroid.x))  # (lat, lon)
+                        
+                        if len(points) >= 2:
+                            logger.info(f"🚶 Using Valhalla for pedestrian route between {len(points)} points")
+                            
+                            # For 2 points, use simple route
+                            if len(points) == 2:
+                                route_result = valhalla_service.get_pedestrian_route(
+                                    origin_lat=points[0][0],
+                                    origin_lon=points[0][1],
+                                    dest_lat=points[1][0],
+                                    dest_lon=points[1][1]
+                                )
+                            else:
+                                # For 3+ points, use multi-point route
+                                route_result = valhalla_service.get_multi_point_route(points)
+                            
+                            if route_result.success:
+                                feature = {
+                                    "type": "Feature",
+                                    "geometry": route_result.geometry,
+                                    "properties": {
+                                        "route_type": "pedestrian",
+                                        "from_index": 0,
+                                        "to_index": len(points) - 1,
+                                        "distance_m": round(route_result.distance_m, 2),
+                                        "distance_km": round(route_result.distance_m / 1000, 2),
+                                        "duration_minutes": round(route_result.duration_minutes, 1),
+                                        "walking_time_min": round(route_result.duration_minutes, 1),
+                                        "algorithm": "Valhalla Pedestrian",
+                                        "road_network": "OpenStreetMap Berlin"
+                                    }
+                                }
+                                
+                                # Add feature names if available
+                                if feature_names:
+                                    if len(feature_names) > 0:
+                                        feature["properties"]["from_name"] = feature_names[0]
+                                    if len(feature_names) > 1:
+                                        feature["properties"]["to_name"] = feature_names[-1]
+                                
+                                geojson = {
+                                    "type": "FeatureCollection",
+                                    "features": [feature]
+                                }
+                                
+                                # Build descriptive layer name
+                                if feature_names and len(feature_names) >= 2:
+                                    layer_name = f"Route: {feature_names[0]} → {feature_names[-1]}"
+                                else:
+                                    layer_name = f"Walking Route ({route_result.duration_minutes:.1f} min)"
+                                
+                                metadata = {
+                                    "algorithm": "Valhalla Pedestrian",
+                                    "routing_engine": "valhalla",
+                                    "road_network": "OpenStreetMap Berlin",
+                                    "total_distance_m": round(route_result.distance_m, 2),
+                                    "total_distance_km": round(route_result.distance_m / 1000, 2),
+                                    "total_time_minutes": round(route_result.duration_minutes, 1),
+                                    "walking_speed_kmh": 5.1,
+                                    "directions": route_result.maneuvers,
+                                    "feature_count": len(points)
+                                }
+                                
+                                logger.info(f"✅ Valhalla route: {route_result.distance_m:.0f}m, {route_result.duration_minutes:.1f} min")
+                                
+                                return {
+                                    "success": True,
+                                    "result_type": "routing",
+                                    "data": geojson,
+                                    "layer_name": layer_name,
+                                    "metadata": metadata,
+                                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                                }
+                            else:
+                                logger.warning(f"Valhalla routing failed: {route_result.error}")
+                    else:
+                        logger.warning("Valhalla not available for pairwise routing")
+                        
+                except ImportError:
+                    logger.error("Valhalla module not available")
+                except Exception as e:
+                    logger.error(f"Valhalla error: {e}")
+                
                 return {
-                    "success": True,
-                    "result_type": "routing",
-                    "data": geojson,
-                    "metadata": metadata,
+                    "success": False,
+                    "error": "Valhalla routing service is required but not available",
                     "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
                 }
 
@@ -401,6 +498,407 @@ class SpatialEngine:
                 "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
             }
 
+
+
+    def _execute_nearest_by_road_operation(self, nearest_op, plan: OperationPlan) -> Dict[str, Any]:
+        """
+        Execute nearest by road operation - find nearest POI using road network distance.
+        
+        Parameters expected:
+            - origin_lon, origin_lat: Origin point coordinates (OR session_id to extract from selected)
+            - target_table: Table to search (e.g., 'vector.osm_supermarkets')
+            - max_candidates: Optional max candidates to check (default 15)
+            - max_radius_m: Optional pre-filter radius in meters (default 5000)
+            - session_id: Optional session ID to extract coordinates from selected feature
+        """
+        try:
+            from app.utils.database import db_manager
+            from shapely.geometry import shape, mapping
+            from sqlalchemy import text
+            
+            params = nearest_op.parameters
+            origin_lon = params.get("origin_lon")
+            origin_lat = params.get("origin_lat")
+            target_table = params.get("target_table")
+            max_candidates = params.get("max_candidates", 15)
+            max_radius_m = params.get("max_radius_m", 5000)
+            session_id = params.get("session_id")
+            location_name = params.get("location_name")  # e.g., "Wedding", "Mitte"
+            where_clause = params.get("where_clause")  # e.g., "brand ILIKE '%Netto%'"
+            
+            # If no coordinates provided, try to extract from selected feature
+            if (not origin_lon or not origin_lat) and session_id:
+                logger.info(f"Extracting coordinates from selected feature (session: {session_id})")
+                try:
+                    # First check if the temp table exists
+                    temp_table = f"temp.temp_selected_{session_id}"
+                    check_query = f"""
+                        SELECT EXISTS (
+                            SELECT 1 FROM information_schema.tables 
+                            WHERE table_schema = 'temp' 
+                            AND table_name = 'temp_selected_{session_id}'
+                        ) as table_exists
+                    """
+                    db_manager.initialize()
+                    with db_manager.engine.connect() as conn:
+                        check_result = conn.execute(text(check_query))
+                        exists = check_result.fetchone()[0]
+                        
+                        if exists:
+                            coord_query = f"""
+                                SELECT 
+                                    ST_X(ST_Centroid(ST_Union(geometry))) as lon,
+                                    ST_Y(ST_Centroid(ST_Union(geometry))) as lat
+                                FROM {temp_table}
+                            """
+                            result = conn.execute(text(coord_query))
+                            row = result.fetchone()
+                            if row and row[0] and row[1]:
+                                origin_lon = float(row[0])
+                                origin_lat = float(row[1])
+                                logger.info(f"Extracted coordinates: ({origin_lon}, {origin_lat})")
+                        else:
+                            logger.warning(f"Temp table {temp_table} does not exist, will try location_name lookup")
+                except Exception as e:
+                    logger.warning(f"Could not extract coordinates from selected feature: {e}")
+            
+            # Fallback: Try to look up location from landmarks table by name
+            if (not origin_lon or not origin_lat) and location_name:
+                logger.info(f"Looking up location by name: {location_name}")
+                try:
+                    location_query = """
+                        SELECT 
+                            ST_X(ST_Centroid(ST_Union(geometry))) as lon,
+                            ST_Y(ST_Centroid(ST_Union(geometry))) as lat
+                        FROM vector.landmarks 
+                        WHERE LOWER(name) = LOWER(:name)
+                    """
+                    db_manager.initialize()
+                    with db_manager.engine.connect() as conn:
+                        result = conn.execute(text(location_query), {"name": location_name})
+                        row = result.fetchone()
+                        if row and row[0] and row[1]:
+                            origin_lon = float(row[0])
+                            origin_lat = float(row[1])
+                            logger.info(f"Found location '{location_name}' at ({origin_lon}, {origin_lat})")
+                        else:
+                            # Try berlin_districts as fallback
+                            district_query = """
+                                SELECT 
+                                    ST_X(ST_Centroid(ST_Union(geometry))) as lon,
+                                    ST_Y(ST_Centroid(ST_Union(geometry))) as lat
+                                FROM vector.berlin_districts 
+                                WHERE LOWER(bezirk) = LOWER(:name) OR LOWER(name) = LOWER(:name)
+                            """
+                            result = conn.execute(text(district_query), {"name": location_name})
+                            row = result.fetchone()
+                            if row and row[0] and row[1]:
+                                origin_lon = float(row[0])
+                                origin_lat = float(row[1])
+                                logger.info(f"Found district '{location_name}' at ({origin_lon}, {origin_lat})")
+                except Exception as e:
+                    logger.warning(f"Could not look up location by name: {e}")
+            
+            # Validate required parameters
+            if not origin_lon or not origin_lat:
+                return {
+                    "success": False,
+                    "error": "Missing origin coordinates. Please select a feature or provide location.",
+                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                }
+            
+            if not target_table:
+                return {
+                    "success": False,
+                    "error": "Missing target table. Please specify what to find (e.g., supermarkets).",
+                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                }
+            
+            # Ensure table has schema prefix (LLM sometimes omits it)
+            if '.' not in target_table:
+                target_table = f"vector.{target_table}"
+            
+            logger.info(f"Finding nearest from ({origin_lon}, {origin_lat}) in {target_table}")
+            if where_clause:
+                logger.info(f"📋 With filter: {where_clause}")
+            
+            # Call the database function
+            result = db_manager.find_nearest_by_road_distance(
+                origin_lon=origin_lon,
+                origin_lat=origin_lat,
+                target_table=target_table,
+                max_candidates=max_candidates,
+                max_radius_m=max_radius_m,
+                where_clause=where_clause
+            )
+            
+            if not result.get("success"):
+                return {
+                    "success": False,
+                    "error": result.get("error", "Failed to find nearest by road"),
+                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                }
+            
+            # Build GeoJSON response with both the POI and the route
+            features = []
+            
+            # Feature 1: The route geometry
+            route_feature = {
+                "type": "Feature",
+                "geometry": result["route_geometry"],
+                "properties": {
+                    "type": "route",
+                    "road_distance_m": result["road_distance_m"],
+                    "straight_line_m": result["straight_line_m"],
+                    "total_distance_m": result["total_distance_m"]
+                }
+            }
+            features.append(route_feature)
+            
+            # Feature 2: The POI itself
+            poi_feature = result["feature"]
+            if poi_feature.get("geometry"):
+                poi_geojson = {
+                    "type": "Feature",
+                    "geometry": poi_feature["geometry"],
+                    "properties": {k: v for k, v in poi_feature.items() if k != "geometry"}
+                }
+                features.append(poi_geojson)
+            
+            geojson = {
+                "type": "FeatureCollection",
+                "features": features
+            }
+            
+            metadata = {
+                "query_type": "nearest_by_road",
+                "road_distance_m": round(result["road_distance_m"], 1),
+                "straight_line_m": round(result["straight_line_m"], 1),
+                "total_distance_m": round(result["total_distance_m"], 1),
+                "candidates_checked": result["candidates_checked"],
+                "routable_candidates": result["routable_candidates"],
+                "target_table": target_table
+            }
+            
+            # Get name for layer
+            poi_name = result["feature"].get("name", "Unnamed")
+            layer_name = f"Nearest: {poi_name} ({round(result['road_distance_m'])}m by road)"
+            
+            return {
+                "success": True,
+                "result_type": "nearest_by_road",
+                "data": geojson,
+                "layer_name": layer_name,
+                "metadata": metadata,
+                "reasoning": f"Found {poi_name} at {round(result['road_distance_m'])}m by road (vs {round(result['straight_line_m'])}m straight-line)"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in _execute_nearest_by_road_operation: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                "success": False,
+                "error": str(e),
+                "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+            }
+
+    def _execute_walking_time_operation(self, walking_op, plan: OperationPlan) -> Dict[str, Any]:
+        """
+        Execute walking time operation - find POIs within walking time using road network.
+        
+        Parameters expected:
+            - location: {lat, lon} or session_id to extract from selected feature
+            - time_minutes: Walking time in minutes (default 10)
+            - target_table: Table to search (e.g., 'osm_supermarkets', 'osm_buildings')
+            - buffer_m: Buffer distance from roads (default 30m)
+            - limit: Max results (default 5000)
+            - session_id: Optional session ID to extract coordinates from selected feature
+        """
+        try:
+            from app.utils.walking_distance import walking_distance_service
+            from app.utils.database import db_manager
+            from sqlalchemy import text
+            
+            params = walking_op.parameters
+            location = params.get("location") or {}
+            lat = location.get("lat")
+            lon = location.get("lon")
+            time_minutes = params.get("time_minutes", 10)
+            target_table = params.get("target_table", "osm_buildings")
+            building_filter = params.get("building_filter")  # e.g., "building IN ('commercial', 'retail')"
+            buffer_m = params.get("buffer_m", 30)
+            limit = params.get("limit", 5000)
+            session_id = params.get("session_id")
+            include_coverage = False  # Always disabled - coverage polygon not shown
+            
+            # If no coordinates provided, try to extract from selected feature
+            location_name = params.get("location_name")  # e.g., "Wedding", "Mitte"
+            
+            if (not lat or not lon) and session_id:
+                logger.info(f"Extracting coordinates from selected feature (session: {session_id})")
+                try:
+                    temp_table = f"temp.temp_selected_{session_id}"
+                    # First check if the temp table exists
+                    check_query = f"""
+                        SELECT EXISTS (
+                            SELECT 1 FROM information_schema.tables 
+                            WHERE table_schema = 'temp' 
+                            AND table_name = 'temp_selected_{session_id}'
+                        ) as table_exists
+                    """
+                    db_manager.initialize()
+                    with db_manager.engine.connect() as conn:
+                        check_result = conn.execute(text(check_query))
+                        exists = check_result.fetchone()[0]
+                        
+                        if exists:
+                            coord_query = f"""
+                                SELECT 
+                                    ST_X(ST_Centroid(ST_Union(geometry))) as lon,
+                                    ST_Y(ST_Centroid(ST_Union(geometry))) as lat
+                                FROM {temp_table}
+                            """
+                            result = conn.execute(text(coord_query))
+                            row = result.fetchone()
+                            if row and row[0] and row[1]:
+                                lon = float(row[0])
+                                lat = float(row[1])
+                                logger.info(f"Extracted coordinates: ({lon}, {lat})")
+                        else:
+                            logger.warning(f"Temp table {temp_table} does not exist, will try location_name lookup")
+                except Exception as e:
+                    logger.warning(f"Could not extract coordinates from selected feature: {e}")
+            
+            # Fallback: Try to look up location from landmarks table by name
+            if (not lat or not lon) and location_name:
+                logger.info(f"Looking up location by name: {location_name}")
+                try:
+                    # Look for the location in landmarks (districts, ortsteils, etc.)
+                    location_query = f"""
+                        SELECT 
+                            ST_X(ST_Centroid(ST_Union(geometry))) as lon,
+                            ST_Y(ST_Centroid(ST_Union(geometry))) as lat
+                        FROM vector.landmarks 
+                        WHERE LOWER(name) = LOWER(:name)
+                    """
+                    db_manager.initialize()
+                    with db_manager.engine.connect() as conn:
+                        result = conn.execute(text(location_query), {"name": location_name})
+                        row = result.fetchone()
+                        if row and row[0] and row[1]:
+                            lon = float(row[0])
+                            lat = float(row[1])
+                            logger.info(f"Found location '{location_name}' at ({lon}, {lat})")
+                        else:
+                            # Try berlin_districts as fallback
+                            district_query = f"""
+                                SELECT 
+                                    ST_X(ST_Centroid(ST_Union(geometry))) as lon,
+                                    ST_Y(ST_Centroid(ST_Union(geometry))) as lat
+                                FROM vector.berlin_districts 
+                                WHERE LOWER(bezirk) = LOWER(:name) OR LOWER(name) = LOWER(:name)
+                            """
+                            result = conn.execute(text(district_query), {"name": location_name})
+                            row = result.fetchone()
+                            if row and row[0] and row[1]:
+                                lon = float(row[0])
+                                lat = float(row[1])
+                                logger.info(f"Found district '{location_name}' at ({lon}, {lat})")
+                except Exception as e:
+                    logger.warning(f"Could not look up location by name: {e}")
+            
+            # Validate required parameters
+            if not lat or not lon:
+                return {
+                    "success": False,
+                    "error": "Missing location. Please select a feature or provide coordinates.",
+                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                }
+            
+            logger.info(f"🚶 Finding {target_table} within {time_minutes} min walk of ({lon}, {lat})")
+            if building_filter:
+                logger.info(f"📋 With filter: {building_filter}")
+            
+            # Call walking distance service - uses Valhalla if available, falls back to pgRouting
+            result = walking_distance_service.find_buildings_within_walking_time(
+                lat=lat,
+                lon=lon,
+                time_minutes=time_minutes,
+                building_table=target_table,
+                building_filter=building_filter,
+                limit=limit
+            )
+            
+            if not result.get("success"):
+                return {
+                    "success": False,
+                    "error": result.get("error", "Walking time query failed"),
+                    "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+                }
+            
+            # Get the GeoJSON data
+            geojson = result.get("data", {"type": "FeatureCollection", "features": []})
+            metadata = result.get("metadata", {})
+            
+            # Optionally add coverage polygon
+            if include_coverage:
+                coverage_result = walking_distance_service.get_walking_coverage(
+                    lat=lat,
+                    lon=lon,
+                    time_minutes=time_minutes,
+                    buffer_m=buffer_m
+                )
+                if coverage_result.get("success"):
+                    coverage_features = coverage_result.get("data", {}).get("features", [])
+                    # Add coverage as first feature with distinct styling
+                    for cf in coverage_features:
+                        cf["properties"]["feature_type"] = "walking_coverage"
+                        cf["properties"]["style"] = {
+                            "fillColor": "#3388ff",
+                            "fillOpacity": 0.15,
+                            "color": "#3388ff",
+                            "weight": 2
+                        }
+                    # Prepend coverage features
+                    geojson["features"] = coverage_features + geojson.get("features", [])
+            
+            # Add feature type to POI features
+            for feature in geojson.get("features", []):
+                if feature.get("properties", {}).get("feature_type") != "walking_coverage":
+                    feature["properties"]["feature_type"] = "walking_time_poi"
+            
+            # Build layer name
+            table_display = target_table.replace("osm_", "").replace("_", " ").title()
+            layer_name = f"{table_display} within {time_minutes} min walk"
+            
+            return {
+                "success": True,
+                "result_type": "walking_time",
+                "data": geojson,
+                "layer_name": layer_name,
+                "metadata": {
+                    "query_type": "walking_time",
+                    "time_minutes": time_minutes,
+                    "walking_speed_kmh": metadata.get("walking_speed_kmh", 6.0),
+                    "distance_limit_m": metadata.get("distance_limit_m"),
+                    "buffer_m": buffer_m,
+                    "target_table": target_table,
+                    "building_count": metadata.get("building_count", 0),
+                    "start_point": {"lat": lat, "lon": lon}
+                },
+                "reasoning": f"Found {metadata.get('building_count', 0)} {table_display} within {time_minutes} min walk"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in _execute_walking_time_operation: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                "success": False,
+                "error": str(e),
+                "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
+            }
 
     def _format_result(self, gdf: gpd.GeoDataFrame, plan: OperationPlan = None) -> Dict[str, Any]:
         """
@@ -657,6 +1155,20 @@ class SpatialEngine:
         ndvi_t2 = self.data_dir / params['ndvi_t2']
         threshold = params.get('threshold', -0.2)
 
+        # Check if raster files exist
+        if not ndvi_t1.exists():
+            return {
+                "success": False,
+                "error": f"NDVI raster file not found: {ndvi_t1}. Please download Sentinel-2 NDVI data to data/raster/ndvi_timeseries/",
+                "result_type": "error"
+            }
+        if not ndvi_t2.exists():
+            return {
+                "success": False,
+                "error": f"NDVI raster file not found: {ndvi_t2}. Please download Sentinel-2 NDVI data to data/raster/ndvi_timeseries/",
+                "result_type": "error"
+            }
+
         # Compute difference
         diff = self.raster_ops.ndvi_difference(ndvi_t1, ndvi_t2)
 
@@ -690,6 +1202,20 @@ class SpatialEngine:
         ndvi_t1 = self.data_dir / params['ndvi_t1']
         ndvi_t2 = self.data_dir / params['ndvi_t2']
         threshold = params.get('threshold', -0.2)
+
+        # Check if raster files exist
+        if not ndvi_t1.exists():
+            return {
+                "success": False,
+                "error": f"NDVI raster file not found: {ndvi_t1}. Please download Sentinel-2 NDVI data to data/raster/ndvi_timeseries/",
+                "result_type": "error"
+            }
+        if not ndvi_t2.exists():
+            return {
+                "success": False,
+                "error": f"NDVI raster file not found: {ndvi_t2}. Please download Sentinel-2 NDVI data to data/raster/ndvi_timeseries/",
+                "result_type": "error"
+            }
 
         # Compute difference and save to temp file
         diff_path = self.data_dir / "temp" / "ndvi_diff_temp.tif"

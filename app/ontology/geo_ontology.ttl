@@ -1,0 +1,464 @@
+@prefix : <http://geoassist.ai/ontology#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix schema: <http://schema.org/> .
+
+# =============================================================================
+# GeoAssist Ontology
+# Semantic Model for Geographic Data Sources and Analytical Workflows
+# Aligned with GeoTrAnsQData research goals
+# =============================================================================
+
+<http://geoassist.ai/ontology> a owl:Ontology ;
+    dct:title "GeoAssist Geodata Ontology"@en ;
+    dct:description "Ontology for modeling geographic data sources, their analytical purposes, and workflow provenance for geographic question answering."@en ;
+    dct:creator "Sk Fazla Rabby" ;
+    dct:created "2025-12-26"^^xsd:date ;
+    owl:versionInfo "1.0.0" .
+
+# =============================================================================
+# CORE DATASET CLASSES
+# =============================================================================
+
+:GeoDataset a owl:Class ;
+    rdfs:subClassOf dcat:Dataset ;
+    rdfs:label "Geographic Dataset"@en ;
+    rdfs:comment "A dataset containing geographic/spatial information."@en .
+
+:VectorDataset a owl:Class ;
+    rdfs:subClassOf :GeoDataset ;
+    rdfs:label "Vector Dataset"@en ;
+    rdfs:comment "Dataset with vector geometries (points, lines, polygons)."@en .
+
+:RasterDataset a owl:Class ;
+    rdfs:subClassOf :GeoDataset ;
+    rdfs:label "Raster Dataset"@en ;
+    rdfs:comment "Dataset with raster/gridded data (satellite imagery, DEMs)."@en .
+
+# =============================================================================
+# DOMAIN-SPECIFIC DATASET CLASSES
+# =============================================================================
+
+:HealthcareFacilityDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Healthcare Facility Dataset"@en ;
+    rdfs:comment "Dataset containing healthcare-related facilities."@en .
+
+:RecreationFacilityDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Recreation Facility Dataset"@en ;
+    rdfs:comment "Dataset containing recreational facilities and green spaces."@en .
+
+:InfrastructureDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Infrastructure Dataset"@en ;
+    rdfs:comment "Dataset containing urban infrastructure."@en .
+
+:TransportDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Transport Dataset"@en ;
+    rdfs:comment "Dataset containing transportation infrastructure."@en .
+
+:EmergencyServiceDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Emergency Service Dataset"@en ;
+    rdfs:comment "Dataset containing emergency service facilities."@en .
+
+:AdministrativeDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Administrative Dataset"@en ;
+    rdfs:comment "Dataset containing administrative boundaries."@en .
+
+:EnvironmentalDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Environmental Dataset"@en ;
+    rdfs:comment "Dataset containing environmental features."@en .
+
+:VegetationIndexDataset a owl:Class ;
+    rdfs:subClassOf :RasterDataset ;
+    rdfs:label "Vegetation Index Dataset"@en ;
+    rdfs:comment "Raster dataset containing vegetation indices like NDVI."@en .
+
+# =============================================================================
+# ANALYTICAL PURPOSE CLASSES
+# =============================================================================
+
+:AnalyticalPurpose a owl:Class ;
+    rdfs:label "Analytical Purpose"@en ;
+    rdfs:comment "The intended analytical use case for a dataset."@en .
+
+:AccessibilityAnalysis a owl:Class ;
+    rdfs:subClassOf :AnalyticalPurpose ;
+    rdfs:label "Accessibility Analysis"@en ;
+    rdfs:comment "Analysis of spatial accessibility to services or facilities."@en .
+
+:EmergencyPlanning a owl:Class ;
+    rdfs:subClassOf :AnalyticalPurpose ;
+    rdfs:label "Emergency Planning"@en ;
+    rdfs:comment "Planning for emergency response and disaster management."@en .
+
+:UrbanPlanning a owl:Class ;
+    rdfs:subClassOf :AnalyticalPurpose ;
+    rdfs:label "Urban Planning"@en ;
+    rdfs:comment "Analysis for urban development and spatial planning."@en .
+
+:EnvironmentalMonitoring a owl:Class ;
+    rdfs:subClassOf :AnalyticalPurpose ;
+    rdfs:label "Environmental Monitoring"@en ;
+    rdfs:comment "Monitoring of environmental conditions and changes."@en .
+
+:ChangeDetection a owl:Class ;
+    rdfs:subClassOf :AnalyticalPurpose ;
+    rdfs:label "Change Detection"@en ;
+    rdfs:comment "Detection and analysis of temporal changes."@en .
+
+:ProximityAnalysis a owl:Class ;
+    rdfs:subClassOf :AnalyticalPurpose ;
+    rdfs:label "Proximity Analysis"@en ;
+    rdfs:comment "Analysis of spatial proximity and distance relationships."@en .
+
+:CoverageAnalysis a owl:Class ;
+    rdfs:subClassOf :AnalyticalPurpose ;
+    rdfs:label "Coverage Analysis"@en ;
+    rdfs:comment "Analysis of spatial coverage and service areas."@en .
+
+# =============================================================================
+# SPATIAL CAPABILITY CLASSES
+# =============================================================================
+
+:SpatialCapability a owl:Class ;
+    rdfs:label "Spatial Capability"@en ;
+    rdfs:comment "A spatial operation that can be performed on a dataset."@en .
+
+:BufferOperation a owl:Class ;
+    rdfs:subClassOf :SpatialCapability ;
+    rdfs:label "Buffer Operation"@en ;
+    rdfs:comment "Create buffer zones around features."@en .
+
+:SpatialJoinOperation a owl:Class ;
+    rdfs:subClassOf :SpatialCapability ;
+    rdfs:label "Spatial Join Operation"@en ;
+    rdfs:comment "Join datasets based on spatial relationships."@en .
+
+:IntersectionOperation a owl:Class ;
+    rdfs:subClassOf :SpatialCapability ;
+    rdfs:label "Intersection Operation"@en ;
+    rdfs:comment "Find overlapping areas between datasets."@en .
+
+:DistanceCalculation a owl:Class ;
+    rdfs:subClassOf :SpatialCapability ;
+    rdfs:label "Distance Calculation"@en ;
+    rdfs:comment "Calculate distances between features."@en .
+
+:ZonalStatistics a owl:Class ;
+    rdfs:subClassOf :SpatialCapability ;
+    rdfs:label "Zonal Statistics"@en ;
+    rdfs:comment "Calculate statistics for raster values within zones."@en .
+
+# =============================================================================
+# PROPERTIES
+# =============================================================================
+
+# Dataset Properties
+:hasAnalyticalPurpose a owl:ObjectProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range :AnalyticalPurpose ;
+    rdfs:label "has analytical purpose"@en ;
+    rdfs:comment "Links a dataset to its intended analytical uses."@en .
+
+:hasSpatialCapability a owl:ObjectProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range :SpatialCapability ;
+    rdfs:label "has spatial capability"@en ;
+    rdfs:comment "Links a dataset to applicable spatial operations."@en .
+
+:hasGeometryType a owl:DatatypeProperty ;
+    rdfs:domain :VectorDataset ;
+    rdfs:range xsd:string ;
+    rdfs:label "has geometry type"@en ;
+    rdfs:comment "The geometry type of vector features (Point, Line, Polygon)."@en .
+
+:hasCRS a owl:DatatypeProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range xsd:string ;
+    rdfs:label "has CRS"@en ;
+    rdfs:comment "The coordinate reference system of the dataset."@en .
+
+:hasTableName a owl:DatatypeProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range xsd:string ;
+    rdfs:label "has table name"@en ;
+    rdfs:comment "The PostGIS table name for the dataset."@en .
+
+:hasFilePath a owl:DatatypeProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range xsd:string ;
+    rdfs:label "has file path"@en ;
+    rdfs:comment "The file path to the dataset source file."@en .
+
+:hasFeatureCount a owl:DatatypeProperty ;
+    rdfs:domain :VectorDataset ;
+    rdfs:range xsd:integer ;
+    rdfs:label "has feature count"@en ;
+    rdfs:comment "The number of features in the dataset."@en .
+
+:hasResolution a owl:DatatypeProperty ;
+    rdfs:domain :RasterDataset ;
+    rdfs:range xsd:string ;
+    rdfs:label "has resolution"@en ;
+    rdfs:comment "The spatial resolution of the raster dataset."@en .
+
+:hasBandCount a owl:DatatypeProperty ;
+    rdfs:domain :RasterDataset ;
+    rdfs:range xsd:integer ;
+    rdfs:label "has band count"@en ;
+    rdfs:comment "The number of bands in the raster dataset."@en .
+
+# Provenance Properties
+:derivedFrom a owl:ObjectProperty ;
+    rdfs:subPropertyOf prov:wasDerivedFrom ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range :GeoDataset ;
+    rdfs:label "derived from"@en ;
+    rdfs:comment "Indicates a dataset was derived from another dataset."@en .
+
+:usedInWorkflow a owl:ObjectProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range :GeoAnalyticalWorkflow ;
+    rdfs:label "used in workflow"@en ;
+    rdfs:comment "Links a dataset to workflows that use it."@en .
+
+# Spatial Relationship Properties (aligned with GeoSPARQL)
+:spatiallyRelatedTo a owl:ObjectProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range :GeoDataset ;
+    rdfs:label "spatially related to"@en ;
+    rdfs:comment "Indicates a spatial relationship between datasets."@en .
+
+:coversSameArea a owl:ObjectProperty ;
+    rdfs:subPropertyOf :spatiallyRelatedTo ;
+    rdfs:label "covers same area"@en ;
+    rdfs:comment "Datasets that cover the same geographic extent."@en .
+
+# =============================================================================
+# WORKFLOW CLASSES (PROV-O alignment)
+# =============================================================================
+
+:GeoAnalyticalWorkflow a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Geo-Analytical Workflow"@en ;
+    rdfs:comment "A sequence of spatial operations that transforms geodata to answer a question."@en .
+
+:WorkflowStep a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Workflow Step"@en ;
+    rdfs:comment "A single step in a geo-analytical workflow."@en .
+
+:AnswerMap a owl:Class ;
+    rdfs:subClassOf prov:Entity, geo:Feature ;
+    rdfs:label "Answer Map"@en ;
+    rdfs:comment "A map generated as the answer to a geographic question."@en .
+
+# Workflow Properties
+:hasWorkflowStep a owl:ObjectProperty ;
+    rdfs:domain :GeoAnalyticalWorkflow ;
+    rdfs:range :WorkflowStep ;
+    rdfs:label "has workflow step"@en .
+
+:stepOrder a owl:DatatypeProperty ;
+    rdfs:domain :WorkflowStep ;
+    rdfs:range xsd:integer ;
+    rdfs:label "step order"@en ;
+    rdfs:comment "The order of this step in the workflow."@en .
+
+:appliesOperation a owl:ObjectProperty ;
+    rdfs:domain :WorkflowStep ;
+    rdfs:range :SpatialCapability ;
+    rdfs:label "applies operation"@en ;
+    rdfs:comment "The spatial operation applied in this step."@en .
+
+:generatesAnswerMap a owl:ObjectProperty ;
+    rdfs:domain :GeoAnalyticalWorkflow ;
+    rdfs:range :AnswerMap ;
+    rdfs:label "generates answer map"@en ;
+    rdfs:comment "The answer map produced by this workflow."@en .
+
+# =============================================================================
+# INSTANCES: Berlin OSM Datasets
+# =============================================================================
+
+:osm_hospitals a :HealthcareFacilityDataset ;
+    dct:title "Berlin Hospitals"@en ;
+    dct:description "Hospital and medical facility locations in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_hospitals" ;
+    :hasGeometryType "Point/Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :AccessibilityAnalysis, :EmergencyPlanning ;
+    :hasSpatialCapability :BufferOperation, :DistanceCalculation, :SpatialJoinOperation .
+
+:osm_pharmacies a :HealthcareFacilityDataset ;
+    dct:title "Berlin Pharmacies"@en ;
+    dct:description "Pharmacy locations in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_pharmacies" ;
+    :hasGeometryType "Point/Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :AccessibilityAnalysis ;
+    :hasSpatialCapability :BufferOperation, :DistanceCalculation .
+
+:osm_clinics a :HealthcareFacilityDataset ;
+    dct:title "Berlin Clinics"@en ;
+    dct:description "Medical clinics and urgent care facilities in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_clinics" ;
+    :hasGeometryType "Point/Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :AccessibilityAnalysis, :EmergencyPlanning ;
+    :hasSpatialCapability :BufferOperation, :DistanceCalculation .
+
+:osm_parks a :RecreationFacilityDataset ;
+    dct:title "Berlin Parks"@en ;
+    dct:description "Parks and recreational green spaces in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_parks" ;
+    :hasGeometryType "Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :UrbanPlanning, :AccessibilityAnalysis, :EnvironmentalMonitoring ;
+    :hasSpatialCapability :BufferOperation, :IntersectionOperation, :ZonalStatistics .
+
+:osm_schools a :InfrastructureDataset ;
+    dct:title "Berlin Schools"@en ;
+    dct:description "Educational institutions in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_schools" ;
+    :hasGeometryType "Point/Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :AccessibilityAnalysis, :UrbanPlanning ;
+    :hasSpatialCapability :BufferOperation, :DistanceCalculation .
+
+:osm_fire_stations a :EmergencyServiceDataset ;
+    dct:title "Berlin Fire Stations"@en ;
+    dct:description "Fire station locations in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_fire_stations" ;
+    :hasGeometryType "Point/Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :EmergencyPlanning, :CoverageAnalysis ;
+    :hasSpatialCapability :BufferOperation, :DistanceCalculation .
+
+:osm_police_stations a :EmergencyServiceDataset ;
+    dct:title "Berlin Police Stations"@en ;
+    dct:description "Police station locations in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_police_stations" ;
+    :hasGeometryType "Point/Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :EmergencyPlanning, :CoverageAnalysis ;
+    :hasSpatialCapability :BufferOperation, :DistanceCalculation .
+
+:osm_transport_stops a :TransportDataset ;
+    dct:title "Berlin Transport Stops"@en ;
+    dct:description "Public transport stop locations (bus, tram, metro) in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_transport_stops" ;
+    :hasGeometryType "Point" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :AccessibilityAnalysis, :UrbanPlanning ;
+    :hasSpatialCapability :BufferOperation, :DistanceCalculation .
+
+:berlin_districts a :AdministrativeDataset ;
+    dct:title "Berlin Districts"@en ;
+    dct:description "Administrative district boundaries of Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.berlin_districts" ;
+    :hasGeometryType "Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :UrbanPlanning, :CoverageAnalysis ;
+    :hasSpatialCapability :IntersectionOperation, :ZonalStatistics .
+
+:osm_water_bodies a :EnvironmentalDataset ;
+    dct:title "Berlin Water Bodies"@en ;
+    dct:description "Lakes, rivers, and water surfaces in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_water_bodies" ;
+    :hasGeometryType "Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :EnvironmentalMonitoring, :UrbanPlanning ;
+    :hasSpatialCapability :BufferOperation, :IntersectionOperation .
+
+:osm_forests a :EnvironmentalDataset ;
+    dct:title "Berlin Forests"@en ;
+    dct:description "Forest areas and woodlands in Berlin"@en ;
+    dct:source "OpenStreetMap" ;
+    :hasTableName "vector.osm_forests" ;
+    :hasGeometryType "Polygon" ;
+    :hasCRS "EPSG:4326" ;
+    :hasAnalyticalPurpose :EnvironmentalMonitoring, :UrbanPlanning ;
+    :hasSpatialCapability :BufferOperation, :IntersectionOperation, :ZonalStatistics .
+
+# Raster Datasets
+:berlin_ndvi_2018 a :VegetationIndexDataset ;
+    dct:title "Berlin NDVI 2018"@en ;
+    dct:description "Sentinel-2 NDVI for Berlin, acquired 2018-07-16"@en ;
+    dct:source "Sentinel-2 via Microsoft Planetary Computer" ;
+    :hasFilePath "data/raster/ndvi_timeseries/berlin_ndvi_20180716.tif" ;
+    :hasCRS "EPSG:4326" ;
+    :hasResolution "10m" ;
+    :hasBandCount 1 ;
+    :hasAnalyticalPurpose :EnvironmentalMonitoring, :ChangeDetection ;
+    :hasSpatialCapability :ZonalStatistics .
+
+:berlin_ndvi_2024 a :VegetationIndexDataset ;
+    dct:title "Berlin NDVI 2024"@en ;
+    dct:description "Sentinel-2 NDVI for Berlin, acquired 2024-07-21"@en ;
+    dct:source "Sentinel-2 via Microsoft Planetary Computer" ;
+    :hasFilePath "data/raster/ndvi_timeseries/berlin_ndvi_20240721.tif" ;
+    :hasCRS "EPSG:4326" ;
+    :hasResolution "10m" ;
+    :hasBandCount 1 ;
+    :hasAnalyticalPurpose :EnvironmentalMonitoring, :ChangeDetection ;
+    :hasSpatialCapability :ZonalStatistics ;
+    :derivedFrom :berlin_ndvi_2018 .
+
+:berlin_ndvi_change a :VegetationIndexDataset ;
+    dct:title "Berlin NDVI Change 2018-2024"@en ;
+    dct:description "NDVI difference showing vegetation change over 6 years"@en ;
+    dct:source "Computed from Sentinel-2 data" ;
+    :hasFilePath "data/raster/ndvi_timeseries/berlin_ndvi_diff_2018_2024_real.tif" ;
+    :hasCRS "EPSG:4326" ;
+    :hasResolution "10m" ;
+    :hasBandCount 1 ;
+    :hasAnalyticalPurpose :ChangeDetection, :EnvironmentalMonitoring ;
+    :hasSpatialCapability :ZonalStatistics ;
+    :derivedFrom :berlin_ndvi_2018, :berlin_ndvi_2024 .
+
+# =============================================================================
+# INFERENCE RULES (for reasoning)
+# =============================================================================
+
+# All healthcare datasets can be used for accessibility analysis
+[ a owl:Axiom ;
+  owl:annotatedSource :HealthcareFacilityDataset ;
+  owl:annotatedProperty rdfs:subClassOf ;
+  owl:annotatedTarget [ a owl:Restriction ;
+    owl:onProperty :hasAnalyticalPurpose ;
+    owl:someValuesFrom :AccessibilityAnalysis
+  ]
+] .
+
+# All emergency service datasets can be used for emergency planning
+[ a owl:Axiom ;
+  owl:annotatedSource :EmergencyServiceDataset ;
+  owl:annotatedProperty rdfs:subClassOf ;
+  owl:annotatedTarget [ a owl:Restriction ;
+    owl:onProperty :hasAnalyticalPurpose ;
+    owl:someValuesFrom :EmergencyPlanning
+  ]
+] .

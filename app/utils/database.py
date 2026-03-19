@@ -167,7 +167,9 @@ class DatabaseManager:
 
             # Check for geometry column
             if geom_col not in df.columns:
-                raise ValueError(f"Query result missing geometry column '{geom_col}'")
+                import logging
+                logging.warning(f"Query result missing geometry column '{geom_col}'. Adding dummy None geometries.")
+                df[geom_col] = None
 
             # Convert geometry column to shapely objects
             def convert_geometry(geom):
@@ -353,12 +355,19 @@ class DatabaseManager:
         AND f_table_name = '{table_name}'
         """
 
-        # Get column info
+        # Get column info with rich descriptions
         columns_query = f"""
-        SELECT column_name, data_type
-        FROM information_schema.columns
-        WHERE table_schema = '{schema}'
-        AND table_name = '{table_name}'
+        SELECT 
+            c.column_name, 
+            c.data_type,
+            md.description,
+            md.example_value
+        FROM information_schema.columns c
+        LEFT JOIN metadata.column_descriptions md 
+            ON c.table_name = md.table_name 
+            AND c.column_name = md.column_name
+        WHERE c.table_schema = '{schema}'
+        AND c.table_name = '{table_name}'
         """
 
         with self.engine.connect() as conn:
@@ -367,7 +376,15 @@ class DatabaseManager:
             geom_type = geom_type_result[0] if geom_type_result else "Unknown"
 
             columns = conn.execute(text(columns_query)).fetchall()
-            column_info = [{"name": col[0], "type": col[1]} for col in columns]
+            column_info = [
+                {
+                    "name": col[0], 
+                    "type": col[1],
+                    "description": col[2] if col[2] else "",
+                    "example_values": col[3] if col[3] else ""
+                } 
+                for col in columns
+            ]
 
         return {
             "table_name": table_name,
@@ -466,7 +483,7 @@ class DatabaseManager:
                         "description": metadata[table_name]["description"],
                         "row_count": table_info["row_count"],
                         "geometry": metadata[table_name]["geometry_type"] or "NONE",
-                        "columns": [col["name"] for col in table_info["columns"]]
+                        "columns": table_info["columns"]
                     })
                 except Exception as e:
                     # Skip tables that can't be queried
@@ -580,9 +597,25 @@ class DatabaseManager:
                     ON {schema}.{temp_table_name} USING GIST(geometry)
                 """))
                 conn.commit()
+            
+            # Add geom_25833 column for fast distance queries (matches main tables)
+            with self.engine.connect() as conn:
+                conn.execute(text(f"""
+                    ALTER TABLE {schema}.{temp_table_name} 
+                    ADD COLUMN IF NOT EXISTS geom_25833 geometry(Geometry, 25833)
+                """))
+                conn.execute(text(f"""
+                    UPDATE {schema}.{temp_table_name} 
+                    SET geom_25833 = ST_Transform(geometry, 25833)
+                """))
+                conn.execute(text(f"""
+                    CREATE INDEX IF NOT EXISTS idx_{temp_table_name}_geom_25833
+                    ON {schema}.{temp_table_name} USING GIST(geom_25833)
+                """))
+                conn.commit()
 
             feature_count = len(geometries) if isinstance(geometry_json, list) else 1
-            print(f"✅ Created temporary layer: {schema}.{temp_table_name} ({feature_count} features)")
+            print(f"✅ Created temporary layer: {schema}.{temp_table_name} ({feature_count} features, with geom_25833)")
             return temp_table_name
 
         except Exception as e:
@@ -621,678 +654,172 @@ class DatabaseManager:
             print(f"❌ Error dropping temp layer: {e}")
             return False
 
-    # ======================= PGROUTING HELPER METHODS =======================
+    # ======================= VALHALLA-BASED ROUTING HELPERS =======================
 
-    def find_nearest_vertex_to_point(self, lon: float, lat: float) -> Optional[dict]:
+    def find_nearest_by_road_distance(
+        self, 
+        origin_lon: float, 
+        origin_lat: float, 
+        target_table: str,
+        max_candidates: int = 15,
+        max_radius_m: float = 5000.0,
+        where_clause: str = None
+    ) -> Optional[dict]:
         """
-        Find the nearest pgRouting vertex to a given point.
-
+        Find the nearest feature from a target table using ROAD NETWORK distance.
+        
+        Uses Valhalla routing engine for accurate road distance computation.
+        Pre-filters candidates by straight-line distance, then computes actual
+        road distance via Valhalla for each candidate.
+        
         Args:
-            lon: Longitude (X coordinate)
-            lat: Latitude (Y coordinate)
-
+            origin_lon: Longitude of origin point (e.g., selected building)
+            origin_lat: Latitude of origin point
+            target_table: Table to search (e.g., 'vector.osm_supermarkets')
+            max_candidates: Max candidates to check with routing (performance limit)
+            max_radius_m: Pre-filter radius in meters (straight-line)
+            where_clause: Optional SQL WHERE filter (e.g., "brand ILIKE '%Netto%'")
+            
         Returns:
-            Dict with vertex_id, x, y, distance_m or None if error
+            Dict with nearest feature, road distance, and route geometry
         """
         if not self.engine:
             self.initialize()
-
+            
         try:
-            query = """
-            SELECT
-                v.id as vertex_id,
-                ST_X(v.the_geom) as x,
-                ST_Y(v.the_geom) as y,
-                ST_Distance(v.the_geom::geography,
-                    ST_GeomFromText('POINT(:lon :lat)', 4326)::geography) as distance_m
-            FROM routing.ways_vertices_pgr v
-            ORDER BY v.the_geom <-> ST_GeomFromText('POINT(:lon :lat)', 4326)
-            LIMIT 1
-            """
-
-            with self.engine.connect() as conn:
-                result = conn.execute(
-                    text(query),
-                    {"lon": lon, "lat": lat}
+            import json
+            
+            # Step 1: Get candidate POIs within radius (straight-line pre-filter)
+            # Build optional WHERE clause filter (e.g., brand ILIKE '%Netto%')
+            extra_filter = f"AND {where_clause}" if where_clause else ""
+            
+            candidate_query = f"""
+            WITH candidates AS (
+                SELECT 
+                    t.*,
+                    ST_X(ST_Centroid(t.geometry)) as poi_lon,
+                    ST_Y(ST_Centroid(t.geometry)) as poi_lat,
+                    ST_Distance(
+                        ST_Transform(t.geometry, 3857),
+                        ST_Transform(ST_SetSRID(ST_MakePoint(:origin_lon, :origin_lat), 4326), 3857)
+                    ) as straight_line_m
+                FROM {target_table} t
+                WHERE ST_DWithin(
+                    ST_Transform(t.geometry, 3857),
+                    ST_Transform(ST_SetSRID(ST_MakePoint(:origin_lon, :origin_lat), 4326), 3857),
+                    :max_radius
                 )
-                row = result.fetchone()
-
-                if row:
-                    return {
-                        "vertex_id": row[0],
-                        "x": float(row[1]),
-                        "y": float(row[2]),
-                        "distance_m": float(row[3])
-                    }
-            return None
-
-        except Exception as e:
-            print(f"❌ Error finding nearest vertex: {e}")
-            return None
-
-    def get_shortest_path(self, source_vertex: int, target_vertex: int) -> Optional[dict]:
-        """
-        Get shortest path between two pgRouting vertices using Dijkstra algorithm.
-
-        Args:
-            source_vertex: Source vertex ID
-            target_vertex: Target vertex ID
-
-        Returns:
-            Dict with path geometry, distance, and route details or None if error
-        """
-        if not self.engine:
-            self.initialize()
-
-        try:
-            query = """
-            WITH dijkstra_result AS (
-                SELECT * FROM pgr_dijkstra(
-                    'SELECT id, source, target, cost FROM routing.ways',
-                    :source_vertex,
-                    :target_vertex,
-                    FALSE  -- directed = FALSE for bidirectional
-                )
-            ),
-            path_agg AS (
-                SELECT
-                    ARRAY_AGG(edge ORDER BY seq) as edge_ids,
-                    SUM(cost) as total_distance_m
-                FROM dijkstra_result
-                WHERE edge > 0
-            ),
-            path_geom AS (
-                SELECT
-                    ST_LineMerge(ST_Union(w.geometry)) as geometry,
-                    pa.total_distance_m
-                FROM path_agg pa
-                CROSS JOIN LATERAL (
-                    SELECT geometry FROM routing.ways
-                    WHERE id = ANY(pa.edge_ids)
-                ) w
-                GROUP BY pa.total_distance_m
+                {extra_filter}
+                ORDER BY straight_line_m
+                LIMIT :max_candidates
             )
-            SELECT
-                ST_AsGeoJSON(geometry) as geometry_json,
-                total_distance_m as distance_m
-            FROM path_geom
+            SELECT * FROM candidates
             """
-
+            
             with self.engine.connect() as conn:
                 result = conn.execute(
-                    text(query),
-                    {"source_vertex": source_vertex, "target_vertex": target_vertex}
+                    text(candidate_query),
+                    {
+                        "origin_lon": origin_lon,
+                        "origin_lat": origin_lat,
+                        "max_radius": max_radius_m,
+                        "max_candidates": max_candidates
+                    }
                 )
-                row = result.fetchone()
-
-                if row:
-                    import json
-                    return {
-                        "geometry": json.loads(row[0]),
-                        "distance_m": float(row[1]) if row[1] else 0,
-                        "source_vertex": source_vertex,
-                        "target_vertex": target_vertex
-                    }
-            return None
-
-        except Exception as e:
-            print(f"❌ Error getting shortest path: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-
-    def compute_pairwise_shortest_paths(self, geometries: list) -> dict:
-        """
-        Compute all pairwise shortest paths between geometries.
-
-        Args:
-            geometries: List of GeoJSON geometries (Point, Polygon, or other types)
-
-        Returns:
-            Dict with all pairwise routes, total distance, and metadata
-        """
-        if not self.engine:
-            self.initialize()
-
-        try:
-            from shapely.geometry import shape
-
-            # 1. Find nearest vertices for each geometry
-            vertices = []
-            for idx, geom_dict in enumerate(geometries):
-                geom = shape(geom_dict)
-
-                # Handle different geometry types
-                if geom.geom_type == 'Point':
-                    lon, lat = geom.x, geom.y
-                elif geom.geom_type in ['Polygon', 'MultiPolygon', 'LineString', 'MultiLineString']:
-                    # Use centroid for non-point geometries
-                    centroid = geom.centroid
-                    lon, lat = centroid.x, centroid.y
-                else:
-                    # Fallback for other geometry types
-                    centroid = geom.centroid
-                    lon, lat = centroid.x, centroid.y
-
-                vertex_info = self.find_nearest_vertex_to_point(lon, lat)
-
-                if vertex_info:
-                    vertex_info["geom_index"] = idx
-                    vertex_info["geometry"] = geom_dict
-                    vertices.append(vertex_info)
-                else:
-                    print(f"⚠️  Warning: Could not find vertex for geometry {idx}")
-
-            if len(vertices) < 2:
-                return {
-                    "success": False,
-                    "error": "Need at least 2 features with valid road network vertices"
-                }
-
-            # 2. Compute all pairwise shortest paths
-            routes = []
-            total_distance = 0
-
-            for i in range(len(vertices)):
-                for j in range(i + 1, len(vertices)):
-                    source_vertex = vertices[i]["vertex_id"]
-                    target_vertex = vertices[j]["vertex_id"]
-
-                    # Get shortest path
-                    path = self.get_shortest_path(source_vertex, target_vertex)
-
-                    if path:
-                        routes.append({
-                            "from_index": i,
-                            "to_index": j,
-                            "from_geometry": vertices[i]["geometry"],
-                            "to_geometry": vertices[j]["geometry"],
-                            "route_geometry": path["geometry"],
-                            "distance_m": path["distance_m"],
-                            "from_name": f"Item {i+1}",
-                            "to_name": f"Item {j+1}"
-                        })
-                        total_distance += path["distance_m"]
-
-            return {
-                "success": True,
-                "routes": routes,
-                "total_distance_m": total_distance,
-                "route_count": len(routes),
-                "feature_count": len(vertices),
-                "vertices_used": vertices
-            }
-
-        except Exception as e:
-            print(f"❌ Error computing pairwise paths: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "success": False,
-                "error": str(e)
-            }
-
-    def compute_optimal_tour(self, geometries: list, feature_names: list = None) -> dict:
-        """
-        Compute optimal tour connecting all geometries using Nearest Neighbor TSP heuristic.
-        Returns an open tour (visits all points without returning to start).
-
-        Args:
-            geometries: List of GeoJSON geometries (Point, Polygon, or other types)
-            feature_names: Optional list of feature names for waypoint labeling
-
-        Returns:
-            Dict with optimal route, waypoints, directions, and metadata
-        """
-        if not self.engine:
-            self.initialize()
-
-        try:
-            import json
-            from shapely.geometry import shape, LineString
-            import numpy as np
-
-            # 1. Find nearest vertices for each geometry
-            vertices = []
-            for idx, geom_dict in enumerate(geometries):
-                geom = shape(geom_dict)
-
-                # Handle different geometry types
-                if geom.geom_type == 'Point':
-                    lon, lat = geom.x, geom.y
-                elif geom.geom_type in ['Polygon', 'MultiPolygon', 'LineString', 'MultiLineString']:
-                    # Use centroid for non-point geometries
-                    centroid = geom.centroid
-                    lon, lat = centroid.x, centroid.y
-                else:
-                    # Fallback for other geometry types
-                    centroid = geom.centroid
-                    lon, lat = centroid.x, centroid.y
-
-                vertex_info = self.find_nearest_vertex_to_point(lon, lat)
-
-                if vertex_info:
-                    vertex_info["geom_index"] = idx
-                    vertex_info["geometry"] = geom_dict
-                    vertex_info["name"] = feature_names[idx] if feature_names and idx < len(feature_names) else f"Point {idx+1}"
-                    vertices.append(vertex_info)
-                else:
-                    print(f"⚠️  Warning: Could not find vertex for geometry {idx}")
-
-            if len(vertices) < 2:
-                return {
-                    "success": False,
-                    "error": "Need at least 2 features with valid road network vertices"
-                }
-
-            # 2. Build distance matrix between all vertices
-            n = len(vertices)
-            distance_matrix = np.zeros((n, n))
-
-            for i in range(n):
-                for j in range(i + 1, n):
-                    source_vertex = vertices[i]["vertex_id"]
-                    target_vertex = vertices[j]["vertex_id"]
-
-                    # Get shortest path distance
-                    path = self.get_shortest_path(source_vertex, target_vertex)
-
-                    if path:
-                        dist = path["distance_m"]
-                    else:
-                        # Use large distance if path not found
-                        dist = 999999
-
-                    distance_matrix[i][j] = dist
-                    distance_matrix[j][i] = dist  # Symmetric matrix
-
-            # 3. Solve TSP using Nearest Neighbor heuristic
-            optimal_sequence = self._nearest_neighbor_tsp(distance_matrix)
-
-            # 4. Compute total route with all segments (OPEN TOUR - no return to start)
-            all_routes = []
-            total_distance = 0
-            cumulative_distance = 0
-
-            # Use open tour (no return to start)
-            for idx in range(len(optimal_sequence) - 1):
-                from_idx = optimal_sequence[idx]
-                to_idx = optimal_sequence[idx + 1]
-
-                source_vertex = vertices[from_idx]["vertex_id"]
-                target_vertex = vertices[to_idx]["vertex_id"]
-
-                print(f"🛣️  Computing segment {idx+1}/{len(optimal_sequence)-1}: vertex {source_vertex} → {target_vertex}")
-                path = self.get_shortest_path(source_vertex, target_vertex)
-
-                if path:
-                    all_routes.append(path["geometry"])
-                    segment_distance = path["distance_m"]
-                    total_distance += segment_distance
-                    print(f"   ✓ Segment distance: {segment_distance:.1f}m, Geometry type: {path['geometry'].get('type')}")
-                else:
-                    print(f"⚠️  Warning: Could not find path from vertex {source_vertex} to {target_vertex}")
-
-            # 5. Merge all route geometries into single LineString
-            if all_routes:
-                # Filter to keep only geometries (all should be dicts)
-                route_geoms = [g for g in all_routes if isinstance(g, dict)]
-                print(f"🗺️  Collected {len(route_geoms)} route segments for merging")
-
-                # Merge geometries into single route
-                merged_route = self._merge_geojson_linestrings(route_geoms)
-
-                if not merged_route:
-                    return {
-                        "success": False,
-                        "error": "Failed to merge route geometries"
-                    }
-            else:
-                return {
-                    "success": False,
-                    "error": "No routes computed for optimal tour"
-                }
-
-            # 6. Extract turn-by-turn directions from route
-            directions = self._extract_directions_from_route(merged_route, vertices, optimal_sequence)
-
-            # 7. Build waypoints in optimal order (OPEN TOUR - no return to start)
-            waypoints = []
-            cumulative_dist = 0
-
-            for order, idx in enumerate(optimal_sequence, 1):
-                waypoints.append({
-                    "order": order,
-                    "name": vertices[idx]["name"],
-                    "lat": float(vertices[idx]["y"]),
-                    "lon": float(vertices[idx]["x"]),
-                    "arrival_distance_m": cumulative_dist
-                })
-
-                # Add distance to next waypoint
-                if order < len(optimal_sequence):
-                    next_idx = optimal_sequence[order]
-                    source_vertex = vertices[idx]["vertex_id"]
-                    target_vertex = vertices[next_idx]["vertex_id"]
-                    path = self.get_shortest_path(source_vertex, target_vertex)
-                    if path:
-                        cumulative_dist += path["distance_m"]
-
-            # 8. Estimate time (simple heuristic: 30 km/h average urban speed)
-            avg_speed_kmh = 30
-            total_time_minutes = (total_distance / 1000) / avg_speed_kmh * 60
-
-            # 9. Generate layer name
-            point_names = " → ".join([vertices[idx]["name"] for idx in optimal_sequence])
-            layer_name = f"Optimal Route: {point_names}"
-
-            return {
-                "success": True,
-                "geometry": merged_route,
-                "total_distance_m": round(total_distance, 2),
-                "total_time_minutes": round(total_time_minutes, 1),
-                "waypoints": waypoints,
-                "directions": directions,
-                "optimal_sequence": optimal_sequence,
-                "layer_name": layer_name,
-                "metadata": {
-                    "feature_count": len(vertices),
-                    "waypoint_count": len(waypoints),
-                    "algorithm": "Nearest Neighbor TSP",
-                    "road_network": "Berlin Detailnetz"
-                }
-            }
-
-        except Exception as e:
-            print(f"❌ Error computing optimal tour: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "success": False,
-                "error": str(e)
-            }
-
-    def _nearest_neighbor_tsp(self, distance_matrix: 'np.ndarray') -> list:
-        """
-        Solve Traveling Salesman Problem using Nearest Neighbor heuristic.
-
-        Args:
-            distance_matrix: NxN symmetric distance matrix
-
-        Returns:
-            List of indices representing optimal sequence (0-based)
-        """
-        import numpy as np
-
-        n = len(distance_matrix)
-        unvisited = set(range(n))
-        current = 0
-        sequence = [0]
-        unvisited.remove(0)
-
-        while unvisited:
-            # Find nearest unvisited node
-            nearest = min(unvisited, key=lambda x: distance_matrix[current][x])
-            sequence.append(nearest)
-            unvisited.remove(nearest)
-            current = nearest
-
-        return sequence
-
-    def _merge_geojson_linestrings(self, linestrings: list) -> dict:
-        """
-        Merge multiple GeoJSON LineStrings into a single LineString.
-        Properly connects segments end-to-end to form continuous route.
-        Handles both LineString and MultiLineString geometries.
-
-        Args:
-            linestrings: List of GeoJSON LineString/MultiLineString objects (in order)
-
-        Returns:
-            Merged GeoJSON LineString or None if merge fails
-        """
-        try:
-            from shapely.geometry import LineString, MultiLineString, shape
-            import json
-
-            if not linestrings:
-                print("⚠️  Error: No linestrings provided to merge")
-                return None
-
-            print(f"🔗 Merging {len(linestrings)} route segments...")
-
-            # Convert GeoJSON objects to Shapely geometries
-            geoms = []
-            for idx, ls_geojson in enumerate(linestrings):
-                if isinstance(ls_geojson, str):
-                    ls_geojson = json.loads(ls_geojson)
-
-                geom = shape(ls_geojson)
-
-                # Handle MultiLineString by extracting individual lines
-                if geom.geom_type == 'MultiLineString':
-                    print(f"   Segment {idx}: MultiLineString with {len(geom.geoms)} parts")
-                    # Add individual linestrings from the MultiLineString
-                    for line in geom.geoms:
-                        if line.is_valid:
-                            geoms.append(line)
-                elif geom.geom_type == 'LineString':
-                    if geom.is_valid:
-                        print(f"   Segment {idx}: LineString with {len(list(geom.coords))} coords")
-                        geoms.append(geom)
-                else:
-                    print(f"   ⚠️  Segment {idx}: Unexpected geometry type {geom.geom_type}, skipping")
-
-            if not geoms:
-                print("⚠️  Error: No valid LineStrings to merge")
-                return None
-
-            print(f"   Total valid linestrings to merge: {len(geoms)}")
-
-            # Extract all coordinates in sequence, removing duplicate endpoints
-            all_coords = []
-            for i, line in enumerate(geoms):
-                coords = list(line.coords)
-                if i == 0:
-                    # First segment: add all coordinates
-                    all_coords.extend(coords)
-                    print(f"   Added first segment: {len(coords)} coords")
-                else:
-                    # Subsequent segments: skip first coord (duplicate of previous last coord)
-                    # Check if endpoint matches
-                    if coords and all_coords:
-                        last_coord = tuple(all_coords[-1][:2])  # Get x,y only
-                        first_coord = tuple(coords[0][:2])
-                        if last_coord == first_coord:
-                            all_coords.extend(coords[1:])
-                            print(f"   Added segment {i}: {len(coords)-1} coords (skipped duplicate endpoint)")
-                        else:
-                            # Endpoints don't match exactly, add anyway but log warning
-                            print(f"   ⚠️  Segment {i} endpoint mismatch: last={last_coord}, first={first_coord}")
-                            all_coords.extend(coords[1:])
-
-            print(f"   Total coordinates after merging: {len(all_coords)}")
-
-            # Remove duplicates while preserving order
-            cleaned_coords = []
-            seen = set()
-            for coord in all_coords:
-                # Use only x,y for deduplication (ignore z if present)
-                coord_tuple = tuple(coord[:2]) if len(coord) >= 2 else tuple(coord)
-                if coord_tuple not in seen:
-                    cleaned_coords.append(coord)
-                    seen.add(coord_tuple)
-
-            print(f"   Coordinates after deduplication: {len(cleaned_coords)}")
-
-            if len(cleaned_coords) < 2:
-                print("⚠️  Error: Insufficient coordinates to create LineString")
-                return None
-
-            # Create merged LineString
-            merged_line = LineString(cleaned_coords)
-
-            if not merged_line.is_valid:
-                print(f"⚠️  Warning: Merged LineString is invalid, attempting simplification...")
-                merged_line = merged_line.simplify(0.0001)
-
-            print(f"✓ Route merged successfully: {len(list(merged_line.coords))} coordinates")
-
-            return {
-                "type": "LineString",
-                "coordinates": list(merged_line.coords)
-            }
-
-        except Exception as e:
-            print(f"❌ Error merging linestrings: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-
-    def _extract_directions_from_route(self, route_geojson: dict, vertices: list, optimal_sequence: list) -> list:
-        """
-        Extract turn-by-turn directions from route geometry.
-
-        Args:
-            route_geojson: GeoJSON LineString of the complete route
-            vertices: List of vertex dictionaries with coordinates and names
-            optimal_sequence: Order of visited vertices (OPEN TOUR - no return)
-
-        Returns:
-            List of DirectionStep dictionaries
-        """
-        try:
-            from shapely.geometry import shape, Point
-            import math
-
-            directions = []
-            route_geom = shape(route_geojson)
-
-            # Start instruction
-            directions.append({
-                "step": 1,
-                "instruction": f"Start at {vertices[optimal_sequence[0]]['name']}",
-                "street": "",
-                "distance_m": 0.0
-            })
-
-            # For each segment in the tour (OPEN TOUR - no return to start)
-            cumulative_distance = 0
-            for seg_idx, (from_idx, to_idx) in enumerate(
-                zip(optimal_sequence, optimal_sequence[1:])
-            ):
-                from_vertex = vertices[from_idx]
-                to_vertex = vertices[to_idx]
-
-                # Get the segment path
-                path = self.get_shortest_path(from_vertex["vertex_id"], to_vertex["vertex_id"])
-
-                if path:
-                    segment_distance = path["distance_m"]
-                    cumulative_distance += segment_distance
-
-                    # Create direction instruction
-                    # Try to extract street name from database if available
-                    street_name = self._get_street_name_for_segment(
-                        from_vertex["vertex_id"], to_vertex["vertex_id"]
-                    ) or "Main road"
-
-                    # Estimate direction (N, NE, E, etc.)
-                    direction = self._calculate_direction(
-                        from_vertex["x"], from_vertex["y"],
-                        to_vertex["x"], to_vertex["y"]
+                candidates = result.fetchall()
+                columns = result.keys()
+                
+            if not candidates:
+                return {"success": False, "error": f"No features found within {max_radius_m}m"}
+            
+            print(f"📍 Found {len(candidates)} candidate(s) within {max_radius_m}m")
+            
+            # Step 2: Use Valhalla to compute road distance to each candidate
+            from app.utils.valhalla_routing import valhalla_service
+            
+            results_with_road_distance = []
+            
+            for candidate in candidates:
+                candidate_dict = dict(zip(columns, candidate))
+                poi_lon = candidate_dict['poi_lon']
+                poi_lat = candidate_dict['poi_lat']
+                straight_line_m = candidate_dict['straight_line_m']
+                
+                try:
+                    # Compute route via Valhalla
+                    route_result = valhalla_service.get_route(
+                        origin_lat=origin_lat,
+                        origin_lon=origin_lon,
+                        dest_lat=poi_lat,
+                        dest_lon=poi_lon,
+                        costing="pedestrian",
+                        include_maneuvers=False
                     )
-
-                    instruction = f"Head {direction} on {street_name} for {int(segment_distance)}m"
-
-                    # Estimate time (30 km/h average)
-                    duration_sec = (segment_distance / 30000) * 3600
-
-                    directions.append({
-                        "step": len(directions) + 1,
-                        "instruction": instruction,
-                        "street": street_name,
-                        "distance_m": round(segment_distance, 2),
-                        "duration_seconds": round(duration_sec, 0)
-                    })
-
-            # Final arrival instruction (at last point, not back at start)
-            last_point = vertices[optimal_sequence[-1]]['name']
-            directions.append({
-                "step": len(directions) + 1,
-                "instruction": f"Arrive at {last_point} (destination)",
-                "street": "",
-                "distance_m": 0.0
-            })
-
-            return directions
-
+                    
+                    if route_result.success:
+                        results_with_road_distance.append({
+                            "feature": candidate_dict,
+                            "road_distance_m": route_result.distance_m,
+                            "total_distance_m": route_result.distance_m,
+                            "straight_line_m": straight_line_m,
+                            "route_geometry": route_result.geometry,
+                            "duration_minutes": route_result.duration_minutes
+                        })
+                    else:
+                        print(f"   ⚠️ No route to candidate (straight-line: {straight_line_m:.0f}m): {route_result.error}")
+                except Exception as e:
+                    print(f"   ⚠️ Routing error for candidate: {e}")
+            
+            if not results_with_road_distance:
+                return {"success": False, "error": "No routable path to any candidate"}
+            
+            # Step 3: Sort by road distance and return the nearest
+            results_with_road_distance.sort(key=lambda x: x['total_distance_m'])
+            nearest = results_with_road_distance[0]
+            
+            # Clean up feature dict (remove internal columns)
+            feature = nearest['feature']
+            for key in ['poi_lon', 'poi_lat', 'straight_line_m']:
+                feature.pop(key, None)
+            
+            # Convert geometry to GeoJSON if it's WKB (bytes or hex string)
+            if 'geometry' in feature and feature['geometry']:
+                try:
+                    from shapely import wkb
+                    from shapely.geometry import mapping
+                    geom_value = feature['geometry']
+                    if isinstance(geom_value, bytes):
+                        geom = wkb.loads(geom_value)
+                        feature['geometry'] = mapping(geom)
+                    elif isinstance(geom_value, str) and geom_value.startswith('01'):
+                        geom = wkb.loads(bytes.fromhex(geom_value))
+                        feature['geometry'] = mapping(geom)
+                except Exception as e:
+                    print(f"⚠️ Could not convert geometry: {e}")
+                    feature.pop('geometry', None)
+            
+            print(f"✅ Nearest by road: {nearest['road_distance_m']:.0f}m "
+                  f"({nearest.get('duration_minutes', 0):.1f} min walk, "
+                  f"straight-line was {nearest['straight_line_m']:.0f}m)")
+            
+            return {
+                "success": True,
+                "feature": feature,
+                "road_distance_m": nearest['road_distance_m'],
+                "total_distance_m": nearest['total_distance_m'],
+                "straight_line_m": nearest['straight_line_m'],
+                "route_geometry": nearest['route_geometry'],
+                "duration_minutes": nearest.get('duration_minutes', 0),
+                "candidates_checked": len(candidates),
+                "routable_candidates": len(results_with_road_distance),
+                "routing_engine": "valhalla"
+            }
+            
         except Exception as e:
-            print(f"⚠️  Warning: Could not extract detailed directions: {e}")
-            # Return minimal directions
-            return [{
-                "step": 1,
-                "instruction": "Follow optimal route",
-                "street": "Berlin Road Network",
-                "distance_m": 0.0
-            }]
-
-    def _get_street_name_for_segment(self, source_vertex_id: int, target_vertex_id: int) -> str:
-        """
-        Get street name for a routing segment.
-
-        Args:
-            source_vertex_id: Source vertex ID
-            target_vertex_id: Target vertex ID
-
-        Returns:
-            Street name or empty string if not found
-        """
-        try:
-            query = """
-            SELECT DISTINCT name
-            FROM routing.ways
-            WHERE (source = :source AND target = :target)
-               OR (source = :target AND target = :source)
-            LIMIT 1
-            """
-
-            with self.engine.connect() as conn:
-                result = conn.execute(
-                    text(query),
-                    {"source": source_vertex_id, "target": target_vertex_id}
-                )
-                row = result.fetchone()
-                return row[0] if row else ""
-
-        except Exception:
-            return ""
-
-    def _calculate_direction(self, lon1: float, lat1: float, lon2: float, lat2: float) -> str:
-        """
-        Calculate cardinal direction between two points.
-
-        Args:
-            lon1, lat1: Starting point
-            lon2, lat2: Ending point
-
-        Returns:
-            Cardinal direction (N, NE, E, SE, S, SW, W, NW)
-        """
-        import math
-
-        # Calculate bearing
-        dlon = lon2 - lon1
-        dlat = lat2 - lat1
-
-        bearing = math.atan2(dlon, dlat) * 180 / math.pi
-        if bearing < 0:
-            bearing += 360
-
-        # Convert to cardinal direction
-        directions = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"]
-        index = int((bearing + 22.5) / 45) % 8
-        return directions[index]
+            print(f"❌ Error finding nearest by road: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"success": False, "error": str(e)}
 
 
 # Global instance

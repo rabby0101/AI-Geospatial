@@ -43,7 +43,12 @@ class OSMLoader:
         # Build Overpass QL query
         queries = []
         for feature in features:
-            if feature == "building":
+            if "=" in feature:
+                # Support generic 'key=value' queries (e.g. 'amenity=kindergarten')
+                k, v = feature.split("=", 1)
+                queries.append(f'node["{k}"="{v}"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});')
+                queries.append(f'way["{k}"="{v}"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});')
+            elif feature == "building":
                 queries.append(f'way["building"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});')
             elif feature == "hospital":
                 queries.append(f'node["amenity"="hospital"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});')
@@ -144,8 +149,28 @@ class OSMLoader:
 
         logger.info(f"Querying Overpass API for {features} in bbox {bbox}")
 
-        response = requests.post(self.OVERPASS_URL, data={'data': query})
-        response.raise_for_status()
+        import time
+        max_retries = 3
+        retry_delay = 10  # starting delay in seconds
+
+        for attempt in range(max_retries):
+            response = requests.post(self.OVERPASS_URL, data={'data': query})
+            
+            if response.status_code in [429, 504]:
+                if attempt < max_retries - 1:
+                    logger.warning(f"Overpass API limit/timeout ({response.status_code}). Waiting {retry_delay}s before retry...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # exponential backoff
+                    continue
+                else:
+                    logger.error(f"Max retries exceeded for Overpass API ({response.status_code}).")
+                    response.raise_for_status()
+
+            # For other errors, raise immediately
+            response.raise_for_status()
+            
+            # If successful, break out of retry loop
+            break
 
         # Convert to GeoDataFrame
         data = response.json()
@@ -177,6 +202,17 @@ class OSMLoader:
                         'osm_id': element['id'],
                         **element.get('tags', {})
                     })
+
+        if not features_list:
+            logger.info("Retrieved 0 features")
+            # Return an empty GeoDataFrame but ENSURE it has a geometry column + CRS to avoid crashes
+            # when callers attempt to assign a CRS or do spatial operations.
+            import pandas as pd
+            return gpd.GeoDataFrame(
+                pd.DataFrame(columns=['osm_id']), 
+                geometry=pd.Series([], dtype='geometry'), 
+                crs="EPSG:4326"
+            )
 
         gdf = gpd.GeoDataFrame(features_list, crs="EPSG:4326")
         logger.info(f"Retrieved {len(gdf)} features")

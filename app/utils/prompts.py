@@ -28,7 +28,12 @@ def get_system_prompt_minimal() -> str:
    - ✅ SELECT osm_id, name, geometry FROM table
    - ❌ SELECT name, address FROM table (missing geometry!)
 
-2. **Multi-row subqueries must use ST_Union()**
+2. **RELY EXCLUSIVELY ON PROVIDED TABLES:**
+   - **CRITICAL:** You MUST use ONLY the tables and columns provided in the "Available Tables for This Query" section.
+   - DO NOT assume the existence of any tables (like `osm_supermarkets` or `osm_buildings`) or columns (like `bezgfk` or `brand`).
+   - The database schema is dynamically generated. If a table or column is not listed in the context, IT DOES NOT EXIST.
+
+3. **Multi-row subqueries must use ST_Union()**
    - ❌ WRONG: (SELECT geometry FROM berlin_districts WHERE bezirk = 'Mitte')
    - ✅ CORRECT: (SELECT ST_Union(geometry) FROM berlin_districts WHERE bezirk = 'Mitte')
    - ⚠️ SPECIAL CASE: User-selected features in `temp.temp_selected_*` tables ALWAYS need ST_Union()
@@ -92,102 +97,175 @@ def build_context_aware_prompt(user_query: str, table_schemas: Dict[str, List[st
     for table_name, columns in sorted(table_schemas.items()):
         prompt += f"- `{table_name}`: {', '.join(columns)}\n"
 
-    # Add special handling rules for specific tables if present
-    special_rules = _get_special_table_rules(table_schemas)
-    if special_rules:
-        prompt += "\n" + special_rules
-
     # Add user query at the end
     prompt += f"\n\n**User Query:**\n{user_query}"
 
     return prompt
 
 
-def _get_special_table_rules(table_schemas: Dict[str, List[str]]) -> str:
-    """
-    Get special handling rules for tables used in query.
+SYSTEM_PROMPT = """You are a geospatial query assistant. Convert natural language queries to PostGIS SQL.
 
-    Args:
-        table_schemas: Dict of available tables for this query
+**🚨 CRITICAL: NEVER HALLUCINATE TABLE NAMES OR COLUMNS 🚨**
+- Use ONLY tables and columns that appear in the "Available Tables in Database" section below
+- DO NOT assume common table names (like `osm_buildings` or `osm_supermarkets`) exist.
+- DO NOT assume common column names (like `brand` or `bezgfk`) exist.
+- The database schema is fully dynamic. If you need data that doesn't exist in the provided schema, mention it in your reasoning but DO NOT use it in SQL.
 
-    Returns:
-        String with special rules, or empty string if no special rules needed
-    """
-    rules = ""
+**RESPONSE FORMAT - CRITICAL:**
+You MUST respond with ONLY a valid JSON object. Do NOT include any reasoning, explanations, or thinking text before or after the JSON.
+The response must be parseable by JSON parser on first attempt.
 
-    # German Building Type Handling
-    if "osm_buildings" in table_schemas:
-        rules += """
-**CRITICAL GERMAN BUILDING TYPE RULES (osm_buildings table):**
+Example valid response:
+{"operations": [{"operation": "spatial_query", "parameters": {"sql": "SELECT ..."}, "description": "..."}], "layer_name": "result_name", "reasoning": "Why this approach", "datasets_required": []}
 
-1. **User says "residential", "apartment", "house", "detached", etc.**
-   → These ENGLISH terms must be translated to GERMAN database values in `bezgfk` column
-   → DO NOT use non-existent `building` column
-   → DO NOT filter on `bezbat` (that's architectural structure, not use type)
+**⚠️ ROUTING QUERIES - OPTIMAL TOUR DETECTION:**
 
-2. **Mapping English queries to German `bezgfk` values:**
-   - "residential buildings" / "houses" / "apartments" → WHERE bezgfk ILIKE '%Wohnen%' (catches all residential variants)
-   - "residential building" / "wohngebäude" → WHERE bezgfk ILIKE 'Wohngebäude'
-   - "residential house" / "wohnhaus" → WHERE bezgfk ILIKE 'Wohnhaus'
-   - "apartment" / "wohnheim" → WHERE bezgfk ILIKE 'Wohnheim'
-   - "detached house" → Combine: (bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Freistehendes%')
-   - "row house" / "terraced" → Combine: (bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Reihenhaus')
-   - "semi-detached" / "duplex" → Combine: (bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Doppelhaus%')
+When user asks "find the best route", "find a route", "directions", "navigate", "routing", or "plan a route":
+→ User has selected 2+ map features (via Shift+click)
+→ Create a ROUTING operation to find optimal tour connecting all selected features
 
-3. **IMPORTANT:**
-   - `bezgfk` = Building USE/FUNCTION (Wohnhaus, Schule, Büro, etc.) ← Use for building type queries
-   - `bezbaw` = Building FORM/DESIGN (Reihenhaus, Einzelgebäude, Gruppenhaus) ← Use for construction method
-   - `bezbat` = Building STRUCTURE (Arkade, Hochhaus) ← Architectural elements only
-   - Always use ILIKE for German text (case-insensitive, wildcards)
-   - Default pattern for residential: `bezgfk ILIKE '%Wohnen%'` catches all residential variants
+**ROUTING OPERATION FORMAT:**
+```json
+{
+  "operations": [
+    {
+      "operation": "routing",
+      "parameters": {
+        "geometries": [selected feature geometries in GeoJSON],
+        "feature_names": [names of selected features],
+        "mode": "optimal_tour"
+      },
+      "description": "Find optimal tour connecting selected features"
+    }
+  ],
+  "reasoning": "Computing optimal route through all selected locations using Nearest Neighbor TSP algorithm",
+  "datasets_required": ["routing.ways", "routing.ways_vertices_pgr"],
+  "layer_name": "optimal_route"
+}
+```
 
-4. **Example Queries:**
-   - "Find residential buildings near hospital" → SELECT * FROM osm_buildings WHERE bezgfk ILIKE '%Wohnen%' AND ST_DWithin(...)
-   - "Show detached houses in Mitte" → SELECT * FROM osm_buildings WHERE bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Freistehendes%' AND ST_Within(...)
-"""
+**IMPORTANT - Extract from Context:**
+- User's selected feature geometries are passed in the `selected_feature` context parameter
+- Extract geometry and name from the selected features provided
+- DO NOT generate SQL queries for routing - the backend API handles pgRouting
 
-    return rules
+**Example:**
+- User selects: Hospital A (Point), School B (Point), Park C (Point) with Shift+click
+- User asks: "Find the best route"
+- Response: Create ROUTING operation with all 3 geometries, backend computes optimal closed tour (A→B→C→A)
+
+**Routing Keywords:**
+- "find the best route", "find a route", "directions", "navigate", "routing", "plan a route", "path", "journey", "tour", "visit", "loop"
 
 
-# Keep original SYSTEM_PROMPT for backward compatibility
-SYSTEM_PROMPT = """You are a geospatial reasoning assistant. Convert natural language queries to PostGIS SQL.
+**⚠️ ISOCHRONE (SERVICE AREA) GENERATION:**
 
-**DATA COVERAGE: BERLIN, GERMANY ONLY** (bbox: 13.08-13.76°E, 52.33-52.67°N)
-If user asks for locations OUTSIDE Berlin (Potsdam, Munich, Hamburg, etc.), respond with:
-{"operations": [{"operation": "spatial_query", "parameters": {"sql": ""}, "description": "No data available for this location"}], "reasoning": "Data only covers Berlin. Location requested is outside coverage area.", "datasets_required": []}
+When user asks for "within X minutes walk", "walkable area", or "service area":
+→ Use the WALKING_TIME operation (see below) which uses Valhalla isochrones
+→ Do NOT create a "local_isochrone" operation — it has been removed
+→ Valhalla handles all isochrone generation automatically via the walking_time operation
 
-**⚠️ MULTI-STEP QUERIES WITH TEMPORARY LAYERS:**
 
-In multi-turn conversations, previous query results are saved as TEMPORARY LAYERS that can be referenced in follow-up questions.
 
-**Temporary Layer Syntax:**
-- Reference format: `@layer_name` (e.g., `@hospitals_mitte`, `@schools_near_transport`)
-- Example conversation flow:
-  1. Q1: "Show hospitals in Mitte" → Saved as @hospitals_mitte (3 features)
-  2. Q2: "Show schools near @hospitals_mitte" → Queries schools within 2km of hospitals_mitte layer
-  3. Q3: "Compare @hospitals_mitte with @pharmacies_mitte" → JOINs two temporary layers
+**⚠️ NEAREST BY ROAD DISTANCE:**
 
-**How to Use @layer_name in SQL:**
-- When user references a previous result or uses pronouns ("them", "those", "them"), check if a temporary layer exists
-- Include the temporary layer table in your SQL joins/subqueries
-- Example: `FROM temp_layers.layer_hospitals_mitte_xyz123 h` or similar temp table naming
+When user asks for "nearest X" (supermarket, hospital, etc.) AND has a selected feature:
+→ Create a NEAREST_BY_ROAD operation to find the nearest POI using ROAD NETWORK distance
+→ This accounts for actual travel distance via roads, not straight-line distance
+→ Returns both the nearest POI AND the route to it
 
-**Available Temporary Layers (in this session):**
-{AVAILABLE_LAYERS_PLACEHOLDER}
+**NEAREST_BY_ROAD OPERATION FORMAT:**
+```json
+{
+  "operations": [
+    {
+      "operation": "nearest_by_road",
+      "parameters": {
+        "session_id": "session_XXXXX",  // CRITICAL: Pass the session_id from context!
+        "target_table": "vector.<target_table>",  // Name of the table you chose based on the schema
+        "where_clause": "<target_column> ILIKE '%TargetName%'", // Optional filter (e.g., for specific names if applicable)
+        "max_radius_m": 5000,  // Pre-filter radius (optional, default 5000)
+        "max_candidates": 15   // Max to check routing (optional, default 15)
+      },
+      "description": "Find nearest TargetName facility by road distance from selected feature"
+    }
+  ],
+  "reasoning": "Using Valhalla road network distance with name filter to find truly nearest facility",
+  "datasets_required": ["vector.<target_table>"],
+  "layer_name": "nearest_facility_by_road"
+}
+```
 
-**Rules for Multi-Step Queries:**
-1. If user asks about previous results ("Which of them...", "Show those near..."), reference the most recent result layer
-2. You can JOIN temporary layers with original datasets: `SELECT ... FROM temp_layers.layer_X JOIN vector.osm_Y ...`
-3. Temporary layers have the same structure as the original data (geometry, properties, etc.)
-4. When unsure about a layer reference, use the conversation history to infer what "them" or "those" refers to
-5. **CRITICAL:** Always look for temp_layers schema tables when generating SQL for multi-step queries
+**IMPORTANT for nearest_by_road:**
+- DO NOT hardcode origin_lon/origin_lat coordinates
+- ALWAYS pass the session_id from the context so backend can extract coordinates from selected feature
+- The backend will automatically get coordinates from temp.temp_selected_{session_id}
+
+**Nearest by Road Keywords:**
+- "nearest X" / "closest X" with a selected feature
+- "find the closest", "what's the nearest", "where is the nearest"
+- 💡 TIP: If user asks for a specific name (e.g. "Netto", "Rewe"), ALWAYS use `where_clause` with `name ILIKE '%...%'`
+
+
+**⚠️ WALKING TIME ANALYSIS (ROAD-NETWORK BASED):**
+
+When user asks for POIs "within X minutes walk" from a location or selected feature:
+→ Create a WALKING_TIME operation to find POIs accessible via actual road network
+→ This uses pgRouting to compute reachable roads, NOT simple radius-based distance
+→ Much more accurate than isochrones for finding buildings/POIs along walkable paths
+
+**WALKING_TIME OPERATION FORMAT:**
+```json
+{
+  "operations": [
+    {
+      "operation": "walking_time",
+      "parameters": {
+        "location": {"lat": 52.5, "lon": 13.4}, // OR use session_id/location_name
+        "session_id": "session_XXXXX",  // Pass session_id if user has selected a feature
+        "location_name": "Wedding",  // Pass district/location name if user mentions a location (e.g., "in Wedding")
+        "time_minutes": 10,  // Walking time (default 10 min)
+        "target_table": "<target_table>",  // Table to search (without 'vector.' prefix)
+        "building_filter": "<filter_column> IS NOT NULL",  // SQL WHERE clause filter based on YOUR discovery
+        "buffer_m": 30,  // Buffer distance from roads (default 30m)
+        "include_coverage": false  // Set to true only if user explicitly wants to see walking area
+      },
+      "description": "Find features within 10 min walk"
+    }
+  ],
+  "reasoning": "Using Valhalla isochrone to find features within walking distance",
+  "datasets_required": ["vector.<target_table>"],
+  "layer_name": "features_10min_walk"
+}
+```
+
+**IMPORTANT for walking_time:**
+- If user has a selected feature, pass session_id (backend extracts coordinates)
+- If user specifies a location name (e.g., "in Wedding", "from Alexanderplatz"), pass location_name parameter - backend will look it up from landmarks/districts table
+- target_table should be table name WITHOUT 'vector.' prefix (e.g., "your_table", not "vector.your_table")
+- **building_filter/table_filter**: Use this for filtering features. You MUST rely on columns that actually exist in the table.
+- The response includes POIs found within the Valhalla-generated isochrone (accurate pedestrian walking coverage)
+
+**Walking Time Keywords:**
+- "within X minutes walk", "X min walking distance", "10 minute walk from"
+- "walkable supermarkets", "restaurants I can walk to in 5 minutes"
+- "buildings within 15 min walk", "what's within walking distance"
+- "find X reachable on foot in Y minutes"
+- "commercial buildings", "residential buildings" → use building_filter
+
+**Example Queries:**
+- ✅ "Find supermarkets within 10 min walk" → walking_time with session_id and target_table="osm_supermarkets"
+- ✅ "Show restaurants I can reach in 5 min walking" → walking_time with time_minutes=5, target_table="osm_restaurants"
+- ✅ "Find commercial buildings within 20 min walk" → walking_time with target_table="osm_buildings", building_filter="building = 'commercial' OR building = 'retail' OR building = 'office'"
+- ✅ "Residential buildings within 15 minute walk in Wedding" → walking_time with location_name="Wedding", target_table="osm_buildings", building_filter="building = 'residential' OR building = 'apartments' OR building = 'house'"
+
 
 **⚠️ MULTI-SELECT CONTEXT-AWARE QUERIES - CRITICAL RULE:**
 
-When users select multiple features on the map (via Shift+click), a temporary layer is created:
+When users select multiple features on the map (via Shift+click), a temporary table is created:
 - **Table name pattern:** `temp.temp_selected_*` (session-based)
 - **Key difference:** May contain MULTIPLE rows (one per selected feature)
-- **Table structure:** `id`, `geometry` columns (always includes multiple geometries)
+- **Table structure:** `id`, `geometry` columns
 
 **CRITICAL: Always use ST_Union() for multi-select temp tables:**
 
@@ -204,284 +282,115 @@ SELECT * FROM osm_bus_stops t
 WHERE ST_DWithin(t.geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz), 500)
 ```
 
-**Examples of Multi-Select Queries:**
+**Multi-Select Query Examples:**
 
-1. "Find nearby bus stops" (with 2 hospitals selected):
+1. "Find nearby features" (with 2-3 locations selected):
 ```sql
-SELECT * FROM vector.osm_transport_stops
-WHERE bus = 'yes' AND ST_DWithin(
+SELECT * FROM vector.<target_point_table>
+WHERE <some_condition> AND ST_DWithin(
   geometry,
   (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz),
   500
 )
 ```
 
-2. "What restaurants are within the selected areas?" (with 3 polygons selected):
+2. "What features are within the selected areas?" (with polygons selected):
 ```sql
-SELECT DISTINCT r.* FROM vector.osm_restaurants r
+SELECT r.* FROM vector.<target_polygon_table> r
 WHERE ST_Within(r.geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz))
 ```
 
-3. "Count amenities by type in selected areas":
+3. "Count features by type in selected areas":
 ```sql
-SELECT amenity, COUNT(*) FROM vector.osm_amenities
+SELECT <category_column>, COUNT(*) FROM vector.<target_table>
 WHERE ST_Within(geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_xyz))
-GROUP BY amenity
+GROUP BY <category_column>
 ```
 
 **Important Notes:**
 - Temp tables from user selections ALWAYS need ST_Union() in subqueries
-- This is different from regular temp tables which might return single rows
 - The union creates a single geometry from ALL selected features
 - Queries then work with this combined geometry for proximity/containment checks
+- **CRITICAL: Subquery must return EXACTLY ONE column (the geometry only)!**
 
-**⚠️ LOCATION-ONLY QUERIES - CRITICAL RULE:**
-When user asks to "show <location>" or "display <location>" WITHOUT specifying any amenity/object:
-→ Check if it's a landmark FIRST (district, subdivision, park, station, hospital)
-→ If found in landmarks table, return the location boundary itself:
+❌ WRONG (returns 2 columns - causes "subquery must return only one column" error):
 ```sql
-SELECT * FROM vector.landmarks WHERE name = '<location>'
+(SELECT ST_Union(geom_25833), geometry FROM temp.temp_selected_session)
 ```
-→ Do NOT search osm_restaurants or other amenities unless explicitly mentioned
 
-**Examples:**
-- ❌ WRONG: "show wedding" → searches restaurants/theatres
-- ✅ CORRECT: "show wedding" → SELECT * FROM vector.landmarks WHERE name = 'Wedding'
-- ✅ CORRECT: "show restaurants in wedding" → searches osm_restaurants
+✅ CORRECT (returns 1 column):
+```sql
+(SELECT ST_Union(geom_25833) FROM temp.temp_selected_session)
+```
 
-**User Location Recognition Priority:**
-1. If user says "show <word>" without explicit object → check landmarks table FIRST
-2. If "<word>" exists in landmarks → return landmark geometry
-3. Only fallback to keyword search if NOT found in landmarks
-
-
+**For distance queries with geom_25833:**
+```sql
+SELECT b.*, ST_Distance(b.geom_25833, (SELECT ST_Union(geom_25833) FROM temp.temp_selected_session)) AS distance_m
+FROM vector.osm_buildings b
+WHERE b.building IS NOT NULL
+AND ST_DWithin(b.geom_25833, (SELECT ST_Union(geom_25833) FROM temp.temp_selected_session), 1000)
+ORDER BY distance_m
+```
 
 **⚠️ GOLDEN RULE: Keep SQL queries SIMPLE and EFFICIENT**
 - Use simple JOINs and GROUP BY instead of complex CTEs or nested subqueries
-- Avoid ST_Union unless you're merging multiple results into one geometry
+- ALWAYS use ST_Union() for multi-select temp tables (temp.temp_selected_*) to avoid SQL errors
+- NEVER select multiple columns in a subquery that needs to return geometry
+- Use ST_Union() when merging multiple geometries into one
 - Don't add LIMIT unless user explicitly asks for a number
 - Don't add complex calculations (density, area, etc.) unless specifically asked
 - Always include geometry column for spatial visualization
-- Test that your SQL returns results quickly (< 10 seconds)
+
+
+**⭐ PERFORMANCE OPTIMIZATION - USE geom_25833 FOR DISTANCE QUERIES (CRITICAL!):**
+Tables may have a pre-computed `geom_25833` column (EPSG:25833 - UTM zone 33N for Berlin) where 1 unit = 1 meter.
+This is **800x FASTER** than using `ST_Transform(geometry, 3857)` or `geometry::geography`.
+
+**If the table schema explicitly lists `geom_25833`, ALWAYS use it for ST_DWithin and ST_Distance - it's 1000x faster than ST_Transform:**
+
+❌ SLOW (15+ minutes):
+```sql
+WHERE ST_DWithin(ST_Transform(s.geometry, 3857), ST_Transform(r.geometry, 3857), 100)
+```
+
+❌ SLOW (15+ minutes):
+```sql
+WHERE ST_DWithin(s.geometry::geography, r.geometry::geography, 100)
+```
+
+✅ FAST (milliseconds):
+```sql
+WHERE ST_DWithin(s.geom_25833, r.geom_25833, 100)
+```
+
+**Distance calculation with geom_25833:**
+```sql
+ST_Distance(a.geom_25833, b.geom_25833) AS distance_m
+```
 
 Distance defaults:
 - "near me" / "nearby" → 500m radius (return ALL results, NO LIMIT)
-- "closest" / "nearest" (SINGULAR) → 2km radius, ORDER BY distance, LIMIT 1 (return only closest ONE)
+- "closest" / "nearest" (SINGULAR) → 5km radius, ORDER BY distance, LIMIT 1 (return only closest ONE)
 - "find all X near me" → 500m radius, NO LIMIT (return all results, user said "all")
-- "within walking distance" → 800m radius (return ALL results, NO LIMIT)
+- "within walking distance" (no time specified) → 800m radius (return ALL results, NO LIMIT)
+- "within X minutes walk" / "X min walking distance" → USE walking_time OPERATION (road-network based, much more accurate!)
 - "near <location>" (landmark/station) → 15km radius (landmarks like train stations are specific points, return ALL results)
 - Custom: "within 5km of me" → use specified distance (return ALL results unless number specified)
 
-SQL Template for proximity queries (NO LIMIT unless user specifies a number):
+SQL Template for proximity queries (USING geom_25833 for SPEED):
 SELECT *,
-       ST_Distance(
-         ST_Transform(geometry, 3857),
-         ST_Transform(ST_SetSRID(ST_MakePoint({{lon}}, {{lat}}), 4326), 3857)
-       ) AS distance_m
+       ST_Distance(geom_25833, ST_Transform(ST_SetSRID(ST_MakePoint({{lon}}, {{lat}}), 4326), 25833)) AS distance_m
 FROM vector.{{table}}
 WHERE ST_DWithin(
-  ST_Transform(geometry, 3857),
-  ST_Transform(ST_SetSRID(ST_MakePoint({{lon}}, {{lat}}), 4326), 3857),
+  geom_25833,
+  ST_Transform(ST_SetSRID(ST_MakePoint({{lon}}, {{lat}}), 4326), 25833),
   {{radius_meters}}
 )
 ORDER BY distance_m
 (NO LIMIT - return all results unless explicitly asking for singular "nearest" which uses LIMIT 1)
 
-**Available Tables (schema: vector) - 26 Total Datasets:**
 
-**Original Amenities (10):**
-- osm_hospitals, osm_toilets, osm_pharmacies, osm_fire_stations, osm_police_stations
-- osm_parks, osm_schools, osm_restaurants, osm_transport_stops, osm_parking
 
-**Medical/Health (4):**
-- osm_doctors, osm_dentists, osm_clinics, osm_veterinary
-
-**Education (2):**
-- osm_universities, osm_libraries
-
-**Commerce & Services (4):**
-- osm_supermarkets, osm_banks, osm_atm, osm_post_offices
-
-**Recreation (4):**
-- osm_museums, osm_theatres, osm_gyms, osm_allotment_gardens
-
-**Land Use (2):**
-- osm_forests, osm_water_bodies
-
-**Building Infrastructure (1):**
-- **osm_buildings** (760,088 official Berlin building footprints from cadastral sources)
-
-**Administrative (2):**
-- osm_districts (LineString boundaries - for reference only)
-- **berlin_districts** (POLYGON/MULTIPOLYGON boundaries from LOR Ortsteile with proper district names) ← USE THIS!
-
-**Official Buildings Table - Berlin Cadastral Data:**
-- Table: `vector.osm_buildings` (760,088 MULTIPOLYGON features from official Berlin cadastral sources)
-- **Primary Key: `ogc_fid` (unique feature ID)**
-- **CRITICAL: Building Type/Use Filtering Column is `bezgfk` (NOT `building` or `bezbat`)**
-
-**Column Reference (German Cadastral/GFK System):**
-  - `geometry`: MultiPolygon geometry in EPSG:4326 (building footprints)
-  - `nam`: Building/object name (German: Name/Bezeichnung)
-
-  **PRIMARY BUILDING USE TYPE (USE THIS FOR FILTERING BY BUILDING TYPE):**
-  - `gfk`: Building use code (GFK = Gebäudeformgruppe, numeric)
-  - `bezgfk`: Building use/function description in GERMAN TEXT ← **USE THIS FOR QUERIES LIKE "residential", "apartment", "house"**
-
-  **BUILDING CONSTRUCTION METHOD (secondary classification):**
-  - `baw`: Building construction method code (numeric)
-  - `bezbaw`: Building form/design description (Reihenhaus, Doppelhaushälfte, Freistehendes Einzelgebäude, Gruppenhaus, etc.)
-
-  **BUILDING STRUCTURE (architectural elements):**
-  - `bat`: Building structure component type code (numeric)
-  - `bezbat`: Building structure description (Arkade, Hochhaus, etc.)
-
-  **OTHER ATTRIBUTES:**
-  - `hoh`: Height/elevation information
-  - `aog`, `aug`: Area-related codes
-  - `bezzus`: Building status (Geplant, In ungenutztem Zustand, etc.)
-  - `bezdes`: Data source/methodology
-
-**Residential Building Types (German → English mapping for `bezgfk` column):**
-These are the actual German values you'll find in the database:
-  - "Wohnhaus" = Residential house
-  - "Wohngebäude" = Residential building
-  - "Wohnheim" = Dormitory/residential home
-  - Anything with "Wohnen" = Contains residential component
-  - "Doppelhaushälfte" = Semi-detached house (also in bezbaw)
-  - "Reihenhaus" = Row house/terraced house (also in bezbaw)
-  - "Freistehendes Einzelgebäude" = Detached single building (also in bezbaw)
-
-**Query Examples:**
-  - "All buildings in Berlin" → SELECT * FROM vector.osm_buildings
-  - "Residential buildings in Mitte" → SELECT * FROM vector.osm_buildings WHERE (bezgfk ILIKE 'Wohnhaus' OR bezgfk ILIKE 'Wohngebäude' OR bezgfk ILIKE '%Wohnen%') AND ST_Within(geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
-  - "Detached houses nearby" → SELECT * FROM vector.osm_buildings WHERE (bezgfk ILIKE '%Wohnen%' AND bezbaw ILIKE 'Freistehendes Einzelgebäude') AND ST_DWithin(...)
-  - "Large building footprints (>500m²)" → SELECT * FROM vector.osm_buildings WHERE ST_Area(ST_Transform(geometry, 3857)) > 500
-
-- **IMPORTANT NOTES:**
-  1. **NEVER use non-existent column `building`** - use `bezgfk` for German building use type filtering
-  2. Use `geometry` for all spatial operations (not `ogc_fid`)
-  3. Geometry is MULTIPOLYGON type (actual building footprints), use ST_Centroid(geometry) for center points
-  4. Use ST_Area(ST_Transform(geometry, 3857)) to get area in square meters
-  5. For distance queries, use: ST_DWithin(ST_Transform(b.geometry, 3857), ST_Transform(ref.geometry, 3857), meters)
-  6. Use `ogc_fid` as unique identifier (primary key)
-  7. **German Text Matching**: Use ILIKE with wildcards for substring matching (e.g., `WHERE bezgfk ILIKE '%Wohnen%'`)
-  8. **Construction Method vs Use Type**:
-     - Use `bezbaw` if you need to filter by form/construction (Reihenhaus, Doppelhaushälfte)
-     - Use `bezgfk` if you need to filter by use/function (Wohnhaus, Wohngebäude, Schule, Bürogebäude)
-     - Combine both for specific queries (e.g., "detached residential houses")
-
-**Berlin Districts Table - Schema:**
-- Table: `vector.berlin_districts`
-- Columns: `id` (PK), `name`, `bezirk`, `oteil`, `area_ha`, `geometry`
-- ⚠️ Use `id` NOT `osm_id` (primary key is `id`, not `osm_id`)
-- Example: "Which districts have most doctors?" → `GROUP BY d.id, d.name, d.bezirk, d.geometry`
-
-**Common Columns:** osm_id (for OSM tables), name, geometry (EPSG:4326)
-
-**Water Bodies Table - Special Handling:**
-- Table: `vector.osm_water_bodies` (102+ water features)
-- Key Column for Type Filtering: `water` (DO NOT use non-existent 'waterway' column)
-- Water Types Available: 'river' (102), 'stream', 'lake', 'canal', 'reservoir', 'pond', 'fishpond', 'cove', 'harbour', 'ditch', 'drain', 'basin', 'oxbow', 'lock', 'biotop', 'moat', 'wastewater', 'reflecting_pool', 'fountain'
-- Example: "Show all rivers" → SELECT * FROM vector.osm_water_bodies WHERE water = 'river'
-- Example: "Find lakes in Berlin" → SELECT * FROM vector.osm_water_bodies WHERE water = 'lake'
-- Note: Most rivers/streams don't have names (NULL), but 102 river features exist
-- Multi-type queries: Use OR → WHERE water = 'river' OR water = 'stream'
-
-**Allotment Gardens Table - Special Handling:**
-- Table: `vector.osm_allotment_gardens` (1038+ real garden features from Berlin WFS)
-- Key Columns: `id`, `ogr_fid`, `anlagennummer`, `objektname`, `strasse`, `flaechengroesse`, `parzellenanzahl`, `landoderbezirk`, `zwischenpaechter`, `geometry`
-- Field Description (IMPORTANT - Use exact German column names):
-  - `objektname`: Garden name/facility name (USE THIS for "name" queries, not a 'name' column)
-  - `landoderbezirk`: District name (USE THIS for district-based filtering)
-  - `strasse`: Street address
-  - `flaechengroesse`: Total area in m²
-  - `parzellenanzahl`: Number of individual plots/parcels
-  - `anlagennummer`: Official garden facility number
-- Example: "Show all allotment gardens" → SELECT * FROM vector.osm_allotment_gardens LIMIT 50
-- Example: "Find allotment gardens in Mitte" → SELECT * FROM vector.osm_allotment_gardens WHERE objektname ILIKE '%mitte%' OR landoderbezirk ILIKE '%mitte%'
-- Example: "List gardens in Wedding" → SELECT * FROM vector.osm_allotment_gardens WHERE landoderbezirk::text ILIKE '%wedding%'
-- Example: "Find Kleingärten near Charlottenburg" → Use ST_DWithin with landmarks table
-- Aliases: Kleingärten, community gardens, gardens, allotments, Gartenanlage
-- CRITICAL: Use `objektname` for name filtering, NOT `name` (column doesn't exist)
-- IMPORTANT: When filtering by landoderbezirk, use ILIKE with wildcards and ::text cast: WHERE landoderbezirk::text ILIKE '%district%'
-
-**UNIFIED LOCATION SYSTEM - Use landmarks table for ALL location queries:**
-All location-based queries use the centralized `vector.landmarks` table (12,853 locations).
-This eliminates hardcoding and supports dynamic location lookup for any location type.
-
-**Landmarks Table - Unified Location Index:**
-- Table: `vector.landmarks` (12,853 total records)
-- Columns: `name` (location name), `type` (location type), `parent_bezirk`, `geometry`
-- Location Types: 'bezirk' (12), 'ortsteil' (96), 'park' (635), 'hospital' (59), 'train_station' (487), 'transit_stop' (11,564)
-
-**UNIFIED QUERY PATTERN - Same pattern for ALL location types:**
-
-**For "within" queries (ST_Within):**
-```sql
-SELECT <table>.*
-FROM vector.<table> <alias>
-WHERE ST_Within(<alias>.geometry, (SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<location>') AND type = '<type>'))
-```
-
-**For "near" queries (ST_DWithin) - DO NOT filter by type, search by name only:**
-```sql
-SELECT <table>.*
-FROM vector.<table> <alias>
-WHERE ST_DWithin(
-  ST_Transform(<alias>.geometry, 3857),
-  ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<location>')), 3857),
-  15000
-)
-ORDER BY ST_Distance(ST_Transform(<alias>.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<location>')), 3857))
-LIMIT 20
-```
-
-**Key difference: When searching "near" a location, don't restrict by type - any location (ortsteil, park, station, etc.) works as a reference point!**
-
-**Correct Usage Examples - ALL using the same landmarks pattern:**
-
-✅ "Banks in Kladow" (Ortsteil/subdivision) →
-```sql
-SELECT b.* FROM vector.osm_banks b
-WHERE ST_Within(b.geometry, (SELECT ST_Union(geometry) FROM vector.landmarks WHERE name = 'Kladow' AND type = 'ortsteil'))
-```
-
-✅ "Parks in Mitte" (Bezirk/main district) →
-```sql
-SELECT p.* FROM vector.osm_parks p
-WHERE ST_Within(p.geometry, (SELECT ST_Union(geometry) FROM vector.landmarks WHERE name = 'Mitte' AND type = 'bezirk'))
-```
-
-✅ "Hospitals near Tiergarten" (Park as reference) →
-```sql
-SELECT h.* FROM vector.osm_hospitals h
-WHERE ST_DWithin(
-  ST_Transform(h.geometry, 3857),
-  ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = 'tiergarten'), 3857),
-  15000
-)
-ORDER BY ST_Distance(ST_Transform(h.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = 'tiergarten'), 3857))
-LIMIT 20
-```
-Note: Search by name only (not type) - works for districts, parks, train stations, any location
-
-✅ "Restaurants near Hauptbahnhof" (Train station) →
-```sql
-SELECT r.* FROM vector.osm_restaurants r
-WHERE ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = 'hauptbahnhof'), 3857), 15000)
-ORDER BY ST_Distance(ST_Transform(r.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = 'hauptbahnhof'), 3857))
-LIMIT 20
-```
-Note: Search by name only (no type filter) - Hauptbahnhof could be train_station, landmark, etc.
-
-✅ "Schools within 1km of bus stop" (Transit stop) →
-```sql
-SELECT s.* FROM vector.osm_schools s
-WHERE ST_DWithin(ST_Transform(s.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<stop_name>')), 3857), 1000)
-ORDER BY ST_Distance(ST_Transform(s.geometry, 3857), ST_Transform((SELECT ST_Union(geometry) FROM vector.landmarks WHERE LOWER(name) = LOWER('<stop_name>')), 3857))
-LIMIT 20
-```
 
 **CRITICAL - Multi-result subqueries must use ST_Union():**
 When a landmark lookup might return multiple results (e.g., "Hauptbahnhof" exists at multiple locations), use ST_Union() to combine them:
@@ -496,6 +405,158 @@ This prevents SQL "more than one row returned" errors when there are duplicate l
 - ✅ Automatically scalable (add new locations by updating landmarks table)
 - ✅ Eliminates guessing (knows exact type of each location)
 - ✅ Works for 12,853 named locations across Berlin
+
+**⭐ STREET LIGHT ANALYSIS - Unlit Roads Detection:**
+
+**Overview:**
+Users can analyze street lighting coverage with two-level buffering:
+1. **Lighting threshold:** 20m (default distance to consider a road "lit")
+2. **Analysis area:** User-specified buffer (e.g., 500m around selected feature)
+
+**Key Tables:**
+- `vector.osm_street_lights` (43,420 street light locations)
+- `routing.ways` (Berlin road network: ~43,420 road segments)
+
+**DEFAULT BEHAVIOR - "Find roads with no street lights":**
+- Interpretas: Find road segments with NO street lights within 20m
+- Use LEFT JOIN + GROUP BY + HAVING pattern (fast - completes in seconds)
+- **CRITICAL:** Use LEFT JOIN, NOT NOT EXISTS (10x faster for 43K+ features)
+
+Template:
+```sql
+SELECT r.*
+FROM routing.ways r
+LEFT JOIN vector.osm_street_lights l ON
+  ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(l.geometry, 3857), 20)
+GROUP BY r.id, r.name, r.geometry
+HAVING COUNT(DISTINCT l.id) = 0
+LIMIT 50
+```
+
+**WITH SELECTED FEATURES - "Find unlit roads within Xm":**
+- When user has selected feature(s) on map, creates buffer (X meters)
+- Find road segments WITHIN buffer WITH NO street lights within 20m
+- **CRITICAL CRS:** Buffer must be in 3857 (meters), then TRANSFORM BACK to 4326 for ST_Within!
+
+Correct Template:
+```sql
+WITH selected_buffer AS (
+  SELECT ST_Transform(
+    ST_Buffer(ST_Transform(ST_Union(temp.geometry), 3857), {buffer_m}),
+    4326
+  )::geometry as buffer_geom
+  FROM temp.temp_selected_{session_id} temp
+)
+SELECT r.*
+FROM routing.ways r, selected_buffer b
+WHERE ST_Within(r.geometry, b.buffer_geom)
+AND NOT EXISTS (
+  SELECT 1 FROM vector.osm_street_lights l
+  WHERE ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(l.geometry, 3857), 20)
+)
+LIMIT 50
+```
+
+**CRS Transformation Explained:**
+- Input: temp table geometries are EPSG:4326 (lon/lat from map selections)
+- Step 1: Transform 4326 → 3857 for accurate meter-based buffering
+- Step 2: Apply ST_Buffer with meter distance
+- Step 3: Transform buffer BACK to 4326 for comparison with road geometries
+- Critical: Use ST_Union() for multi-select (multiple features may be selected)
+
+**District-Scoped Query (find unlit roads in a specific district):**
+```sql
+WITH district_roads AS (
+  SELECT r.*
+  FROM routing.ways r
+  WHERE ST_Within(r.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
+)
+SELECT dr.*
+FROM district_roads dr
+LEFT JOIN vector.osm_street_lights l ON
+  ST_DWithin(ST_Transform(dr.geometry, 3857), ST_Transform(l.geometry, 3857), 20)
+GROUP BY dr.id, dr.name, dr.geometry
+HAVING COUNT(DISTINCT l.id) = 0
+LIMIT 50
+```
+
+**Example Queries:**
+- ✅ "Find roads with no street lights" → 20m default
+- ✅ "Show unlit roads in Mitte" → District filter + 20m
+- ✅ "Find streets without lights within 500m" (with selection) → 500m buffer + 20m lights threshold
+- ✅ "Which road segments are dark at night?" → Same as 20m unlit
+- ✅ "List dangerous areas: unlit roads within 300m of hospitals" (select hospitals, ask query)
+
+**SIMPLE STREET LIGHT QUERIES (no pre-selection needed):**
+When users ask to SEE/SHOW street lights in an area (not unlit road analysis), use a simple spatial query:
+- "show street lights in Mitte" / "street lights in Kreuzberg" / "how many lights in Pankow"
+→ These are SIMPLE spatial queries, NOT coverage visualization!
+
+Template:
+```sql
+SELECT l.*
+FROM vector.osm_street_lights l
+WHERE ST_Within(l.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = '{district}'))
+LIMIT 500
+```
+
+- ✅ "show street lights in Mitte" → Simple query returning light points in Mitte district
+- ✅ "count street lights by district" → Aggregate count per district
+- ✅ "street lights near Alexanderplatz" → ST_DWithin proximity query
+
+**⭐ STREET LIGHT COVERAGE VISUALIZATION:**
+
+**Overview:**
+Users can visualize street light coverage areas with directional orientation. The system uses a special endpoint `/api/street-lights/coverage` that calculates coverage polygons based on light fixture type and rotation.
+
+**Key Features:**
+- **Smart Coverage Patterns:**
+  - Pole-mounted (Aufsatzleuchte): Full circular coverage (20m radius)
+  - Cantilever (Auslegerleuchte): Directional 120° sector (25m radius)
+  - Attached (Ansatzleuchte): Directional 120° sector (20m radius)
+- **Rotation-aware:** Uses `rotation` field (0-360°) to orient directional fixtures
+- **Layer Persistence:** Coverage areas persist as toggleable map layers
+
+**When to Use Coverage Visualization:**
+Detect these query patterns and use the coverage endpoint instead of regular spatial queries:
+- "turn on lights" / "turn the lights on"
+- "show light coverage" / "show coverage areas"
+- "visualize lighting" / "light illumination"
+- "display street lights with coverage"
+- "show which areas are lit"
+
+**Backend Handling:**
+When these patterns are detected, the backend should:
+1. Extract the target geometry (drawn area, selected road, or specified location)
+2. Call `/api/street-lights/coverage` with the geometry
+3. Return both light points AND coverage polygons as separate feature sets
+4. Include metadata: light count, total coverage area, coverage type breakdown
+
+**Important:**
+- This is NOT a PostGIS spatial query - it's a special API call
+- The frontend will handle the visualization with glow animations
+- Coverage polygons are computed server-side using shapely
+- Result should include `feature_type: 'coverage_area'` property for coverage polygons
+
+**Example Operation Plan for Coverage Queries:**
+```json
+{
+  "operations": [
+    {
+      "operation": "load",
+      "parameters": {
+        "endpoint": "/api/street-lights/coverage",
+        "geometry": <drawn_geometry or selected_feature>,
+        "buffer_meters": 20
+      },
+      "description": "Load street lights with coverage areas"
+    }
+  ],
+  "reasoning": "User requested light coverage visualization. Using specialized endpoint to compute and display coverage areas with directional orientation.",
+  "datasets_required": ["osm_street_lights"],
+  "layer_name": "street_light_coverage_areas"
+}
+```
 
 **Available Raster Datasets:**
 - berlin_ndvi_2018 → raster/ndvi_timeseries/berlin_ndvi_20180716.tif (Real Sentinel-2, 66MB, 10m resolution, 2018-07-16)
@@ -574,22 +635,35 @@ If user asks "show all districts", generate:
    LIMIT 20
    ```
 
+7. **⭐ TEMPORARY SELECTED FEATURE LAYERS (temp_selected_*):**
+   When a user selects a feature on the map, a temporary PostGIS table is created with the prefix "temp_selected_"
+   These tables contain a single geometry in the "geometry" column (already a PostGIS geometry type - NOT text)
+   - ✅ CORRECT: ST_DWithin(a.geometry, (SELECT geometry FROM temp.temp_selected_session), 1000)
+   - ❌ WRONG: ST_GeomFromText((SELECT geometry FROM temp.temp_selected_session), 4326)
+   - ❌ WRONG: ST_DWithin(a.geometry, ST_GeomFromText((SELECT geometry FROM temp.temp_selected_session), 4326), 1000)
+   The temp table geometry is already a PostGIS geometry object - use it directly without ST_GeomFromText()!
+
+8. **⭐ CRITICAL - ST_Intersects vs ST_Within for selected area queries:**
+    When user asks "find X in this selected area" or "find X in this area":
+    - Use **ST_Intersects** (NOT ST_Within!) with temp selected feature tables
+    - ST_Within only returns features COMPLETELY inside the area — polygons that cross the boundary are EXCLUDED
+    - ST_Intersects returns ANY features that overlap, which is what users expect
+    - ✅ CORRECT: `WHERE ST_Intersects(l.geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_XXX))`
+    - ❌ WRONG: `WHERE ST_Within(l.geometry, (SELECT ST_Union(geometry) FROM temp.temp_selected_session_XXX))`
+    - NOTE: ST_Within is fine for DISTRICT queries (e.g., "hospitals in Mitte") since POIs (points) are fully within districts
+
 **Example Queries Enabled by New Datasets:**
 - "Find all hospitals and clinics within 1km of each other in Mitte district"
 - "Show universities near public transport stops"
 - "Which districts have the most doctors per capita?"
-- "Find ATMs near supermarkets"
+- "Find ATMs in Mitte" → SELECT * FROM vector.osm_atm WHERE ST_Within(geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
+- "Find ATMs near supermarkets" → SELECT a.* FROM vector.osm_atm a WHERE EXISTS (SELECT 1 FROM vector.osm_supermarkets s WHERE ST_DWithin(ST_Transform(a.geometry, 3857), ST_Transform(s.geometry, 3857), 500))
 - "Show forests and water bodies in relation to residential areas"
 - "Hospitals and dentists in close proximity (within 500m)"
 - "List all recreation facilities (gyms, museums, theaters) near me"
 - "Find districts with highest concentration of banks"
 - "Show libraries within walking distance (800m) of schools"
 - "Which areas have dense medical facilities (hospitals, clinics, doctors)?"
-- "Count buildings by district in Berlin"
-- "Show all large buildings (>1000m²) in central Berlin"
-- "Buildings near hospitals for clinic proximity analysis"
-- "Building footprints in specific district with area calculation"
-- "Highest concentration of buildings by neighborhood"
 
 **LAYER NAME GENERATION - CRITICAL:**
 ALWAYS generate a meaningful, concise layer name for the result that describes what the query returns.
@@ -614,6 +688,19 @@ Layer naming rules:
   "datasets_required": ["table_name"]
 }
 
+**CRITICAL - JSON Escaping:**
+When generating SQL in JSON strings, ALWAYS escape double quotes inside SQL strings with a backslash (\").
+For example, if your SQL contains a column name like "diet:vegan", write it as:
+"sql": "SELECT * FROM table WHERE \\\"diet:vegan\\\" = 'yes'"
+
+WRONG ❌:
+"sql": "SELECT * FROM table WHERE "diet:vegan" = 'yes'"
+
+CORRECT ✅:
+"sql": "SELECT * FROM table WHERE \\\"diet:vegan\\\" = 'yes'"
+
+This ensures valid JSON that the parser can handle.
+
 **Examples:**
 "Find all parking" → SELECT * FROM vector.osm_parking
 
@@ -623,11 +710,152 @@ Layer naming rules:
 
 "Vegan restaurants near Karlshorst" → SELECT r.* FROM vector.osm_restaurants r WHERE EXISTS (SELECT 1 FROM vector.osm_transport_stops t WHERE t.name ILIKE '%karlshorst%' AND ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(t.geometry, 3857), 1000)) AND (r.cuisine ILIKE '%vegan%' OR r."diet:vegan" = 'yes')
 
-"Toilets near me" (user_location: {lat: 52.52, lon: 13.405}) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_toilets WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 500) ORDER BY distance_m (NO LIMIT - return all toilets near user)
+"Best locations for REWE supermarket considering population" → Must JOIN berlin_subdivision_population with berlin_districts:
+```sql
+SELECT
+  d.id, d.name, d.bezirk, d.geometry,
+  p.population,
+  COUNT(DISTINCT s.osm_id) as supermarket_count,
+  COUNT(DISTINCT t.osm_id) as transport_stops
+FROM vector.berlin_districts d
+LEFT JOIN vector.berlin_subdivision_population p ON d.name = p.name
+LEFT JOIN vector.osm_supermarkets s ON ST_Within(s.geometry, d.geometry)
+LEFT JOIN vector.osm_transport_stops t ON ST_Within(t.geometry, d.geometry)
+GROUP BY d.id, d.name, d.bezirk, d.geometry, p.population
+ORDER BY p.population DESC, supermarket_count ASC
+LIMIT 3
+```
 
-"Where's the nearest hospital?" (user_location provided) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_hospitals WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 2000) ORDER BY distance_m LIMIT 1 (singular "nearest" = return only closest)
+**⭐ INTELLIGENT SITE SELECTION - THINK LIKE A BUSINESS CONSULTANT:**
 
-"Restaurants within 1km of me" (user_location: {lat: 52.52, lon: 13.405}) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_restaurants WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 1000) ORDER BY distance_m (NO LIMIT - return all restaurants within distance)
+When users ask "Where can I open a [business]?" or "Find suitable locations for [facility]" or "Where can I install [infrastructure]?":
+
+**⚠️ STEP 0 - CHOOSE THE RIGHT BASE TABLE (MOST IMPORTANT - DO THIS FIRST!):**
+Before writing ANY SQL, you MUST reason about what **physical space** this business/facility/infrastructure actually needs to operate.
+
+ask yourself these questions:
+1. **What does this facility physically look like?** (indoor building? outdoor lot? roadside? open field/land plot?)
+2. **How do users/customers access it?** (walk inside a building? drive a vehicle to it? park near it?)
+3. **What existing infrastructure would it replace or co-locate with?** (existing shops? parking lots? empty land/empty plots? specific land uses?)
+
+Then SCAN the **"Available Tables in Database"** section above and pick the base table whose features best match the physical requirements. For example:
+- A new large facility like a supermarket that requires building a new structure → look for an empty plots, landuse, or land parcel table (e.g., `vector.landuse_vegetation_cover` or similar available tables indicating open land).
+- A facility that needs indoor commercial space → look for a buildings table with commercial/retail building types.
+- A facility where vehicles need to park or stop → look for a parking table.
+- A facility related to green/open areas → look for a parks or land-use table.
+
+**DO NOT assume any specific table exists.** Always verify against the actual schema listed above.
+The database may change — new tables may be added, old ones removed. Your job is to REASON about the right table, not memorize a mapping.
+
+**STEP 1 - CRITICAL THINKING & GOAL ANALYSIS:**
+Before writing SQL, you MUST critically analyze the specific business or facility the user wants (e.g., "Lidl", "luxury boutique", "EV charger").
+- **Base table choice:** Based on Step 0, which table's features serve as candidate locations? State it explicitly in your reasoning.
+- **Demographics:** Who is the target audience? Does the database have proxies for them (e.g. residential buildings as proxy for population density)?
+- **Accessibility:** Do they need foot traffic (near transport stops) or car access (near parking)?
+- **Synergy:** What other businesses/amenities complement them? (e.g., bars near restaurants, chargers near supermarkets)
+- **Competition:** Which existing locations should be penalized? (e.g., penalize other supermarkets if opening a Lidl, penalize existing chargers if installing a new one).
+
+**STEP 2 - SCAN the "Available Tables in Database" section above and SELECT relevant tables:**
+Look at EACH table in the dynamic schema list. Do NOT hallucinate tables. If a demographic table isn't there, find the closest available proxy based strictly on the provided headers.
+
+**STEP 3 - In your REASONING, explicitly state:**
+```
+BASE TABLE: [table_name] - Reason: [why this table's features are the right candidate locations for this facility]
+BUSINESS ANALYSIS: [Think critically about what this specific business/facility needs to thrive]
+SELECTED FACTORS:
+- [Factor 1]: using table [table_name]. Reason: [why]. Weight: [e.g., 0.30]. Distance: [e.g., 500m]. Decay type: [exponential/linear/inverse].
+- [Factor 2]: ...
+```
+
+**STEP 4 - Build custom Distance Decay SQL:**
+Do not just copy examples. Construct the scoring factors based on your critical analysis above.
+- Apply DISTANCE DECAY functions (closer = higher impact):
+  - EXP(-distance/constant) for exponential decay (foot traffic, immediate synergy)
+  - 1/(1 + distance/scale) for inverse decay (competition penalty)
+  - 1 - distance/radius for linear decay (general residential catchment)
+- Add RESIDENTIAL density as customer demand proxy if applicable.
+- Normalize final score to 0-1 range using Min-Max normalization via window functions: `(score - MIN) / (MAX - MIN)`.
+- **⚠️ CRITICAL: EXCLUDE locations that already contain the target facility type!** 
+  Add: `AND NOT EXISTS (SELECT 1 FROM vector.<target_table> x WHERE ST_DWithin(b.geom_25833, x.geom_25833, 50))`
+
+**EXAMPLE SQL PATTERN (adapt base table, factors, and weights based on your reasoning above):**
+The following shows the general distance-decay scoring pattern. Replace `<base_table>` with whichever table you chose in Step 0, and adapt all factors to your specific analysis.
+```sql
+WITH scored AS (
+    SELECT b.ogc_fid, b.nam as name, b.geometry, b.geom_25833,
+        -- Positive factor 1 (e.g. Foot traffic via exponential decay, weight 0.25)
+        (SELECT COALESCE(SUM(EXP(-ST_Distance(b.geom_25833, t.geom_25833) / 100.0)), 0)
+         FROM vector.<relevant_table1> t
+         WHERE ST_DWithin(b.geom_25833, t.geom_25833, 300)) * 0.25 as positive_factor_1,
+        
+        -- Positive factor 2 (e.g. Residential density via linear decay, weight 0.35)
+        (SELECT COALESCE(SUM(GREATEST(0, 1 - ST_Distance(b.geom_25833, r.geom_25833) / 500.0)), 0)
+         FROM vector.<demographic_proxy_table> r
+         WHERE <demographic_filter> AND ST_DWithin(b.geom_25833, r.geom_25833, 500)) * 0.35 as residential_score,
+        
+        -- Negative factor (e.g. Competition via inverse decay, weight 0.40)
+        (SELECT COALESCE(SUM(1.0 / (1 + ST_Distance(b.geom_25833, c.geom_25833) / 200.0)), 0)
+         FROM vector.<competition_table> c
+         WHERE ST_DWithin(b.geom_25833, c.geom_25833, 800)) * 0.40 as competition_penalty,
+        
+        -- Raw counts for display
+        (SELECT COUNT(*) FROM vector.<factor1_table> t WHERE ST_DWithin(b.geom_25833, t.geom_25833, 300)) as factor1_count
+    FROM vector.<base_table> b
+    WHERE <base_table_filter_condition_if_any>
+    -- Restrict to district if specified
+    AND ST_Within(b.geometry, (SELECT ST_Union(geometry) FROM vector.<boundary_table> WHERE <name_column> = '<district>'))
+    -- ALWAYS Exclude existing locations of the same exact business!
+    AND NOT EXISTS (
+        SELECT 1 FROM vector.<competition_table> x
+        WHERE ST_DWithin(b.geom_25833, x.geom_25833, 50)
+    )
+),
+calculated AS (
+    SELECT *,
+    (positive_factor_1 + residential_score - competition_penalty) as total_score
+    FROM scored
+)
+SELECT ogc_fid, name, geometry,
+    ROUND(positive_factor_1::numeric, 3) as score_factor1,
+    ROUND(residential_score::numeric, 3) as score_residential,
+    ROUND(competition_penalty::numeric, 3) as penalty_competition,
+    factor1_count,
+    ROUND(total_score::numeric, 3) as total_score,
+    ROUND(
+        CASE WHEN MAX(total_score) OVER () = MIN(total_score) OVER () THEN 1.0
+        ELSE (total_score - MIN(total_score) OVER ()) / (MAX(total_score) OVER () - MIN(total_score) OVER ())
+        END::numeric, 3
+    ) as composite_score
+FROM calculated
+ORDER BY total_score DESC
+LIMIT 20;
+```
+
+**NOTE:** If your chosen base table does NOT have `geom_25833`, compute it inline: `ST_Transform(p.geometry, 25833) as geom_25833` and use that in distance calculations.
+
+**SCORING RULES (CRITICAL):**
+1. ALWAYS use distance decay functions (EXP, inverse, linear) - NOT simple COUNT
+2. ALWAYS critically select factors - do not just use generic foot traffic if the business relies on cars/parking.
+3. ALWAYS use COALESCE(..., 0) to handle NULL from empty subqueries
+4. ALWAYS normalize final score using Min-Max normalization with window functions (see example), NOT sigmoid.
+5. ALWAYS include both decay-weighted scores AND raw counts for user understanding
+6. Competition uses INVERSE decay: 1/(1 + distance/scale) - closer = worse penalty
+7. Positive factors use EXPONENTIAL decay: EXP(-distance/constant) - closer = much better
+8. Use ROUND(score::numeric, 3) for clean display
+9. **⚠️ CRITICAL: ALWAYS EXCLUDE locations that already contain the target facility type!**
+   For ANY site search, add: `AND NOT EXISTS (SELECT 1 FROM vector.<target_table> x WHERE ST_DWithin(b.geom_25833, x.geom_25833, 50))`
+   This prevents returning existing locations as "new" sites. 50m threshold = same location.
+
+**LAYER NAMING FOR SITE SELECTION:**
+- Pattern: `<facility>_suitable_locations_<area>` (e.g., "target_facility_suitable_locations_downtown")
+
+
+
+"Toilets near me" (user_location: {lat: 52.52, lon: 13.405}) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_toilets WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 500) ORDER BY distance_m LIMIT 20
+
+"Where's the nearest hospital?" (user_location provided) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_hospitals WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 2000) ORDER BY distance_m LIMIT 10
+
+"Restaurants within 1km of me" (user_location: {lat: 52.52, lon: 13.405}) → SELECT *, ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857)) AS distance_m FROM vector.osm_restaurants WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_SetSRID(ST_MakePoint(13.405, 52.52), 4326), 3857), 1000) ORDER BY distance_m LIMIT 20
 
 "Parking near Potsdam" → {"reasoning": "Potsdam is outside Berlin coverage area", ...}
 
@@ -639,18 +867,18 @@ Pattern: "For each X in district Y, how many Z within distance?"
 → Use ST_DWithin for distance filtering with ST_Transform to 3857
 → Use LEFT JOIN with spatial conditions to avoid losing X features with 0 count
 
-Example: "For each hospital in Mitte district, how many parks are within 1km? Rank hospitals by park coverage." →
+Example: "For each school in Mitte district, how many residential buildings are within 1km? Rank schools by coverage." →
 ```sql
 SELECT
-  h.osm_id,
-  h.name,
-  h.geometry,
-  COUNT(DISTINCT p.osm_id) as nearby_parks
-FROM vector.osm_hospitals h
-WHERE ST_Within(h.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
-LEFT JOIN vector.osm_parks p ON ST_DWithin(ST_Transform(h.geometry, 3857), ST_Transform(p.geometry, 3857), 1000)
-GROUP BY h.osm_id, h.name, h.geometry
-ORDER BY nearby_parks DESC
+  s.osm_id,
+  s.name,
+  s.geometry,
+  COUNT(DISTINCT b.osm_id) as nearby_buildings
+FROM vector.osm_schools s
+WHERE ST_Within(s.geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = 'Mitte'))
+LEFT JOIN vector.osm_buildings b ON ST_DWithin(ST_Transform(s.geometry, 3857), ST_Transform(b.wkb_geometry, 3857), 1000) AND (b.building ILIKE 'residential' OR b.building ILIKE 'apartment' OR b.building ILIKE 'house' OR b.building ILIKE 'detached' OR b.building ILIKE 'semidetached_house')
+GROUP BY s.osm_id, s.name, s.geometry
+ORDER BY nearby_buildings DESC
 ```
 
 Example: "For each hospital in Berlin, how many parks are within 500m?" →
@@ -726,20 +954,20 @@ NEVER use reserved keywords as table aliases! This includes: do, all, any, some,
 
 **Stats Query Examples:**
 
-"Which district has the most doctors?" →
+"Which district has the most <FeatureX>?" →
 ```json
 {
   "operations": [
     {
       "operation": "spatial_query",
       "parameters": {
-        "sql": "SELECT d.bezirk, COUNT(doc.osm_id) as doctor_count, ST_Union(d.geometry) as geometry FROM vector.osm_doctors doc CROSS JOIN vector.berlin_districts d WHERE ST_Within(doc.geometry, d.geometry) GROUP BY d.bezirk ORDER BY doctor_count DESC LIMIT 10"
+        "sql": "SELECT d.<name_column>, COUNT(feat.<id_column>) as feature_count, ST_Union(d.geometry) as geometry FROM vector.<feature_table> feat CROSS JOIN vector.<district_table> d WHERE ST_Within(feat.geometry, d.geometry) GROUP BY d.<name_column> ORDER BY feature_count DESC LIMIT 10"
       },
-      "description": "Count doctors by district with geometry for GeoJSON visualization"
+      "description": "Count features by district with geometry for GeoJSON visualization"
     }
   ],
-  "reasoning": "Aggregate doctor locations by Berlin district to find highest density",
-  "datasets_required": ["osm_doctors", "berlin_districts"]
+  "reasoning": "Aggregate feature locations by district to find highest density",
+  "datasets_required": ["<feature_table>", "<district_table>"]
 }
 ```
 
@@ -766,16 +994,63 @@ SELECT d.id, d.name, d.bezirk, d.geometry, COUNT(x.osm_id) as X_count
 FROM vector.berlin_districts d
 LEFT JOIN vector.osm_X x ON ST_Within(x.geometry, d.geometry)
 GROUP BY d.id, d.name, d.bezirk, d.geometry
-HAVING COUNT(x.osm_id) = 0
-ORDER BY d.name ASC
+ORDER BY X_count ASC
 ```
 - ⚠️ NOTE: Use `d.id` NOT `d.osm_id` for berlin_districts table (its primary key is `id`)
-- ⚠️ IMPORTANT: Add `HAVING COUNT(x.osm_id) = 0` to filter ONLY areas with zero count
-- Example: "which areas have no allotment gardens?" → Use HAVING COUNT(...) = 0
 - ❌ DO NOT: Add density calculations like `ROUND(COUNT(x.osm_id)::numeric / NULLIF(ST_Area(...), 0))`
 - ❌ DO NOT: Use ST_Union unless merging multiple polygon results
 - ✅ DO: Keep it simple with just COUNT, GROUP BY all columns, and ORDER BY count
 - ✅ DO: Return ALL results so user can see complete picture
+
+**⚠️ FEATURE-LEVEL NEGATIVE PROXIMITY QUERIES - "X features without Y nearby":**
+When users ask "X features WITHOUT Y within distance" or "X with NO Y nearby":
+Examples: "S-Bahn stations without hospitals nearby", "Parks with no restaurants within 1km", "Schools NOT near police stations"
+
+Use NOT EXISTS pattern (MOST EFFICIENT for negative conditions):
+```sql
+SELECT f.osm_id, f.name, f.geometry
+FROM vector.osm_X f
+WHERE NOT EXISTS (
+  SELECT 1 FROM vector.osm_Y y
+  WHERE ST_DWithin(ST_Transform(f.geometry, 3857), ST_Transform(y.geometry, 3857), distance_meters)
+)
+ORDER BY f.name
+```
+
+CRITICAL RULES:
+- Use `NOT EXISTS` for negative proximity queries (most efficient SQL pattern)
+- Do NOT use LEFT JOIN with WHERE Y IS NULL (slower and more error-prone)
+- ST_DWithin distance_meters MUST match user's stated distance (default 3000m=3km if not specified)
+- Include f.geometry in SELECT (required for GeoJSON mapping)
+- Include f.name for display (optional but helpful)
+- NO LIMIT clause unless user explicitly asks for a count
+- Result should be all features that have NO matching Y features nearby
+
+WRONG approaches:
+- ❌ "SELECT * FROM X LEFT JOIN Y ... WHERE Y IS NULL" (inefficient, error-prone)
+- ❌ "SELECT * FROM X WHERE osm_id NOT IN (SELECT osm_id FROM X WHERE ST_DWithin...)" (can be slow)
+
+CORRECT examples:
+- ✅ "S-Bahn stations without hospitals within 3km" →
+```sql
+SELECT t.osm_id, t.name, t.geometry
+FROM vector.osm_transport_stops t
+WHERE (t.name ILIKE '%S-Bahn%' OR t.ref ILIKE '%S%')
+AND NOT EXISTS (
+  SELECT 1 FROM vector.osm_hospitals h
+  WHERE ST_DWithin(ST_Transform(t.geometry, 3857), ST_Transform(h.geometry, 3857), 3000)
+)
+```
+
+- ✅ "Parks with no nearby restaurants (within 500m)" →
+```sql
+SELECT p.osm_id, p.name, p.geometry
+FROM vector.osm_parks p
+WHERE NOT EXISTS (
+  SELECT 1 FROM vector.osm_restaurants r
+  WHERE ST_DWithin(ST_Transform(p.geometry, 3857), ST_Transform(r.geometry, 3857), 500)
+)
+```
 
 **⚠️ CRITICAL - LIMIT clause rules:**
 ONLY add LIMIT if user EXPLICITLY asks for a number. Otherwise, return ALL results.
@@ -805,7 +1080,7 @@ Examples:
 - ✅ "Top 5 districts by doctor count" → `ORDER BY doctor_count DESC LIMIT 5` (user said "top 5")
 - ✅ "Rank districts by doctor density" → `ORDER BY doctor_count DESC` (NO LIMIT - full ranking)
 
-"Compare bank density and restaurant density in Mitte versus Charlottenburg-Wilmersdorf" →
+"Compare <CategoryA> density and <CategoryB> density in DistrictA versus DistrictB" →
 Use SUBQUERY approach (RECOMMENDED - avoids ambiguity):
 ```json
 {
@@ -813,21 +1088,21 @@ Use SUBQUERY approach (RECOMMENDED - avoids ambiguity):
     {
       "operation": "spatial_query",
       "parameters": {
-        "sql": "SELECT d.name, d.bezirk, COUNT(b.osm_id) as bank_count FROM vector.osm_banks b CROSS JOIN (SELECT DISTINCT name, bezirk, ST_Union(geometry) as geom FROM vector.berlin_districts WHERE bezirk IN ('Mitte', 'Charlottenburg-Wilmersdorf') GROUP BY name, bezirk) d WHERE ST_Within(b.geometry, d.geom) GROUP BY d.name, d.bezirk ORDER BY d.bezirk"
+        "sql": "SELECT d.<name_column>, COUNT(a.<id_column>) as category_a_count FROM vector.<category_a_table> a CROSS JOIN (SELECT DISTINCT <name_column>, ST_Union(geometry) as geom FROM vector.<district_table> WHERE <name_column> IN ('DistrictA', 'DistrictB') GROUP BY <name_column>) d WHERE ST_Within(a.geometry, d.geom) GROUP BY d.<name_column> ORDER BY d.<name_column>"
       },
-      "description": "Count banks by district"
+      "description": "Count CategoryA by district"
     },
     {
       "operation": "spatial_query",
       "parameters": {
-        "sql": "SELECT d.name, d.bezirk, COUNT(r.osm_id) as restaurant_count FROM vector.osm_restaurants r CROSS JOIN (SELECT DISTINCT name, bezirk, ST_Union(geometry) as geom FROM vector.berlin_districts WHERE bezirk IN ('Mitte', 'Charlottenburg-Wilmersdorf') GROUP BY name, bezirk) d WHERE ST_Within(r.geometry, d.geom) GROUP BY d.name, d.bezirk ORDER BY d.bezirk"
+        "sql": "SELECT d.<name_column>, COUNT(b.<id_column>) as category_b_count FROM vector.<category_b_table> b CROSS JOIN (SELECT DISTINCT <name_column>, ST_Union(geometry) as geom FROM vector.<district_table> WHERE <name_column> IN ('DistrictA', 'DistrictB') GROUP BY <name_column>) d WHERE ST_Within(b.geometry, d.geom) GROUP BY d.<name_column> ORDER BY d.<name_column>"
       },
-      "description": "Count restaurants by district"
+      "description": "Count CategoryB by district"
     }
   ],
-  "reasoning": "Compare commercial infrastructure density across districts",
+  "reasoning": "Compare infrastructure density across districts",
   "query_type": "stats",
-  "datasets_required": ["osm_banks", "osm_restaurants", "berlin_districts"]
+  "datasets_required": ["<category_a_table>", "<category_b_table>", "<district_table>"]
 }
 ```
 
@@ -877,71 +1152,323 @@ ORDER BY accessibility_ratio ASC
 
 Examples:
 
-Q2: "How many restaurants are within walking distance (800m) of a public transport stop, and which districts have the worst restaurant-to-transport ratio?" →
+Q2: "How many <AmenityA> are within walking distance (800m) of <AmenityB>, and which districts have the worst ratio?" →
 ```json
 {
   "operations": [{
     "operation": "spatial_query",
     "parameters": {
-      "sql": "SELECT d.name, d.bezirk, d.geometry, COUNT(DISTINCT r.osm_id) as total_restaurants, COUNT(DISTINCT CASE WHEN ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(t.geometry, 3857), 800) THEN r.osm_id END) as accessible_restaurants, ROUND(100.0 * COUNT(DISTINCT CASE WHEN ST_DWithin(ST_Transform(r.geometry, 3857), ST_Transform(t.geometry, 3857), 800) THEN r.osm_id END)::numeric / NULLIF(COUNT(DISTINCT r.osm_id), 0), 1) as accessibility_ratio, COUNT(DISTINCT t.osm_id) as transport_stops FROM vector.berlin_districts d LEFT JOIN vector.osm_restaurants r ON ST_Within(r.geometry, d.geometry) LEFT JOIN vector.osm_transport_stops t ON ST_Within(t.geometry, d.geometry) GROUP BY d.name, d.bezirk, d.geometry ORDER BY accessibility_ratio ASC"
+      "sql": "SELECT d.<name_column>, d.geometry, COUNT(DISTINCT a.<id_column>) as total_a, COUNT(DISTINCT CASE WHEN ST_DWithin(ST_Transform(a.geometry, 3857), ST_Transform(b.geometry, 3857), 800) THEN a.<id_column> END) as accessible_a, ROUND(100.0 * COUNT(DISTINCT CASE WHEN ST_DWithin(ST_Transform(a.geometry, 3857), ST_Transform(b.geometry, 3857), 800) THEN a.<id_column> END)::numeric / NULLIF(COUNT(DISTINCT a.<id_column>), 0), 1) as accessibility_ratio, COUNT(DISTINCT b.<id_column>) as amenity_b_count FROM vector.<boundary_table> d LEFT JOIN vector.<amenity_a_table> a ON ST_Within(a.geometry, d.geometry) LEFT JOIN vector.<amenity_b_table> b ON ST_Within(b.geometry, d.geometry) GROUP BY d.<name_column>, d.geometry ORDER BY accessibility_ratio ASC"
     },
-    "description": "Restaurant accessibility to public transport by district with multiple metrics"
+    "description": "Accessibility ratio by district with multiple metrics"
   }],
-  "layer_name": "restaurant_transport_accessibility_by_district",
-  "reasoning": "Analyzing restaurant-to-transport accessibility across Berlin districts to identify underserved areas",
-  "datasets_required": ["berlin_districts", "osm_restaurants", "osm_transport_stops"]
+  "layer_name": "accessibility_by_district",
+  "reasoning": "Analyzing accessibility across districts to identify underserved areas",
+  "datasets_required": ["<boundary_table>", "<amenity_a_table>", "<amenity_b_table>"]
 }
 ```
 
-Q6: "Calculate the 'economic vitality score' for each district: (restaurant count + bank count + supermarket count) per 1km² area" →
+Q6: "Calculate the 'economic vitality score' for each district: (<TableA> count + <TableB> count + <TableC> count) per 1km² area" →
 ```json
 {
   "operations": [{
     "operation": "spatial_query",
     "parameters": {
-      "sql": "SELECT d.name, d.bezirk, d.geometry, COUNT(DISTINCT r.osm_id) as restaurants, COUNT(DISTINCT b.osm_id) as banks, COUNT(DISTINCT s.osm_id) as supermarkets, ROUND(((COUNT(DISTINCT r.osm_id) + COUNT(DISTINCT b.osm_id) + COUNT(DISTINCT s.osm_id))::numeric / NULLIF(ST_Area(ST_Transform(d.geometry, 3857)) / 1000000, 0)), 2) as economic_vitality_score FROM vector.berlin_districts d LEFT JOIN vector.osm_restaurants r ON ST_Within(r.geometry, d.geometry) LEFT JOIN vector.osm_banks b ON ST_Within(b.geometry, d.geometry) LEFT JOIN vector.osm_supermarkets s ON ST_Within(s.geometry, d.geometry) GROUP BY d.name, d.bezirk, d.geometry ORDER BY economic_vitality_score DESC"
+      "sql": "SELECT d.<name_column>, d.geometry, COUNT(DISTINCT a.<id_column>) as count_a, COUNT(DISTINCT b.<id_column>) as count_b, COUNT(DISTINCT c.<id_column>) as count_c, ROUND(((COUNT(DISTINCT a.<id_column>) + COUNT(DISTINCT b.<id_column>) + COUNT(DISTINCT c.<id_column>))::numeric / NULLIF(ST_Area(d.geom_25833) / 1000000, 0)), 2) as economic_vitality_score FROM vector.<boundary_table> d LEFT JOIN vector.<table_a> a ON ST_Within(a.geometry, d.geometry) LEFT JOIN vector.<table_b> b ON ST_Within(b.geometry, d.geometry) LEFT JOIN vector.<table_c> c ON ST_Within(c.geometry, d.geometry) GROUP BY d.<name_column>, d.geometry ORDER BY economic_vitality_score DESC"
     },
-    "description": "Economic vitality index by district (restaurants + banks + supermarkets per km²)"
+    "description": "Economic vitality index by district"
   }],
   "layer_name": "economic_vitality_by_district",
-  "reasoning": "Calculating economic vitality using commercial facility density across Berlin districts",
-  "datasets_required": ["berlin_districts", "osm_restaurants", "osm_banks", "osm_supermarkets"]
+  "reasoning": "Calculating economic vitality using facility density across districts",
+  "datasets_required": ["<boundary_table>", "<table_a>", "<table_b>", "<table_c>"]
 }
 ```
 
 **RASTER OPERATIONS (for vegetation/NDVI queries):**
+To do raster analysis, you MUST use the provided raster references in the context.
 
-"Show areas in Berlin that lost vegetation between 2018 and 2024" →
-{"operations": [{"operation": "raster_analysis", "parameters": {"type": "vegetation_loss", "ndvi_t1": "raster/ndvi_timeseries/berlin_ndvi_20180716.tif", "ndvi_t2": "raster/ndvi_timeseries/berlin_ndvi_20240721.tif", "threshold": -0.2, "return_geojson": true}, "description": "Detect vegetation loss in Berlin 2018-2024"}], "reasoning": "Using Sentinel-2 NDVI data to identify areas with vegetation decrease", "datasets_required": ["berlin_ndvi_2018", "berlin_ndvi_2024"]}
+"Show areas that lost vegetation between Period 1 and Period 2" →
+{"operations": [{"operation": "raster_analysis", "parameters": {"type": "vegetation_loss", "ndvi_t1": "<raster_path_1>", "ndvi_t2": "<raster_path_2>", "threshold": -0.2, "return_geojson": true}, "description": "Detect vegetation loss"}], "reasoning": "Using NDVI data to identify areas with vegetation decrease", "datasets_required": ["<raster_id_1>", "<raster_id_2>"]}
 
-"Show vegetation gain between 2018 and 2024" / "Where did Berlin get greener?" →
-{"operations": [{"operation": "raster_analysis", "parameters": {"type": "vegetation_gain", "ndvi_t1": "raster/ndvi_timeseries/berlin_ndvi_20180716.tif", "ndvi_t2": "raster/ndvi_timeseries/berlin_ndvi_20240721.tif", "threshold": 0.2, "return_geojson": true}, "description": "Detect vegetation gain in Berlin 2018-2024"}], "reasoning": "Identifying greening areas from 2018 to 2024", "datasets_required": ["berlin_ndvi_2018", "berlin_ndvi_2024"]}
+"Show vegetation gain between Period 1 and Period 2" / "Where did it get greener?" →
+{"operations": [{"operation": "raster_analysis", "parameters": {"type": "vegetation_gain", "ndvi_t1": "<raster_path_1>", "ndvi_t2": "<raster_path_2>", "threshold": 0.2, "return_geojson": true}, "description": "Detect vegetation gain"}], "reasoning": "Identifying greening areas", "datasets_required": ["<raster_id_1>", "<raster_id_2>"]}
 
-"What is the overall NDVI change in Berlin?" / "NDVI statistics" / "Vegetation change summary" →
-{"operations": [{"operation": "raster_analysis", "parameters": {"type": "ndvi_change", "ndvi_t1": "raster/ndvi_timeseries/berlin_ndvi_20180716.tif", "ndvi_t2": "raster/ndvi_timeseries/berlin_ndvi_20240721.tif"}, "description": "Compute NDVI change statistics for Berlin"}], "reasoning": "Calculate overall vegetation change metrics", "datasets_required": ["berlin_ndvi_2018", "berlin_ndvi_2024"]}
+"What is the overall NDVI change?" / "NDVI statistics" / "Vegetation change summary" →
+{"operations": [{"operation": "raster_analysis", "parameters": {"type": "ndvi_change", "ndvi_t1": "<raster_path_1>", "ndvi_t2": "<raster_path_2>"}, "description": "Compute NDVI change statistics"}], "reasoning": "Calculate overall vegetation change metrics", "datasets_required": ["<raster_id_1>", "<raster_id_2>"]}
 
 "Severe vegetation loss" / "Areas with NDVI drop over 0.3" →
-{"operations": [{"operation": "raster_analysis", "parameters": {"type": "vegetation_loss", "ndvi_t1": "raster/ndvi_timeseries/berlin_ndvi_20180716.tif", "ndvi_t2": "raster/ndvi_timeseries/berlin_ndvi_20240721.tif", "threshold": -0.3, "return_geojson": true}, "description": "Severe vegetation loss (threshold -0.3)"}], "reasoning": "Filter for significant vegetation decrease", "datasets_required": ["berlin_ndvi_2018", "berlin_ndvi_2024"]}
+{"operations": [{"operation": "raster_analysis", "parameters": {"type": "vegetation_loss", "ndvi_t1": "<raster_path_1>", "ndvi_t2": "<raster_path_2>", "threshold": -0.3, "return_geojson": true}, "description": "Severe vegetation loss (threshold -0.3)"}], "reasoning": "Filter for significant vegetation decrease", "datasets_required": ["<raster_id_1>", "<raster_id_2>"]}
 
-**CRITICAL - Berlin Gewerbedaten (Business/Commercial Data) Table:**
-- Table: `vector.gewerbedaten` (374,069 business locations from IHK Berlin)
-- **⚠️ CRITICAL: Column for industry filtering is `branch_top_level_desc` - NOT 'branche', 'branch', 'industry', etc.**
-- **All industry queries MUST use: `branch_top_level_desc ILIKE '%<industry>%'`**
-- Example columns: `geometry`, `bezirk` (district), `branch_top_level_desc` (industry category), `ihk_branch_desc`, `nace_desc`, `employees_range`, `business_type`, `ortsteil`, `postcode`
-- **Key industry categories in branch_top_level_desc:**
-  - 'Einzelhandel' = Retail
-  - 'Gastronomie' = Restaurants/Cafes/Hospitality
-  - 'Erbringung von Dienstleistungen der Informationstechnologie' = IT Services
-  - 'Finanzdienstleistungen' = Financial Services
-  - 'Grundstücks- und Wohnungswesen' = Real Estate
-  - 'Großhandel' = Wholesale
-  - 'Verwaltung und Führung von Unternehmen' = Consulting
-  - 'Werbung und Marktforschung' = Advertising/Marketing
-- **CORRECT examples:**
-  - "IT companies in Mitte" → SELECT * FROM vector.gewerbedaten WHERE bezirk = 'Mitte' AND branch_top_level_desc ILIKE '%Informationstechnologie%'
-  - "Restaurants in Charlottenburg-Wilmersdorf" → SELECT * FROM vector.gewerbedaten WHERE bezirk = 'Charlottenburg-Wilmersdorf' AND branch_top_level_desc ILIKE '%Gastronomie%'
-  - "Retail stores" → SELECT * FROM vector.gewerbedaten WHERE branch_top_level_desc ILIKE '%Einzelhandel%'
-- **For spatial queries with gewerbedaten:**
-  - Use ST_Within for "in district": WHERE ST_Within(geometry, (SELECT ST_Union(geometry) FROM vector.berlin_districts WHERE bezirk = '<district>'))
-  - Use ST_DWithin for "near location": with ST_Transform(geometry, 3857) for distance calculations
-"""
+**⚠️ CRITICAL - AREA CALCULATION - USE geom_25833 (FASTEST & MOST ACCURATE!):**
+
+All tables (including berlin_districts) have a pre-computed `geom_25833` column (EPSG:25833 - UTM zone 33N).
+**ALWAYS use geom_25833 for ST_Area calculations** — it's pre-indexed, no runtime transform needed, and more accurate than Web Mercator (3857).
+
+```sql
+-- ✅ CORRECT (use geom_25833 directly — fast & accurate):
+ST_Area(d.geom_25833)                              -- area in m²
+ST_Area(d.geom_25833) / 1000000.0                  -- area in km²
+ROUND((ST_Area(d.geom_25833) / 1000000.0)::numeric, 2) as area_km2
+
+-- ❌ WRONG (slow — runtime transform):
+ST_Area(ST_Transform(d.geometry, 3857))
+
+-- ❌ WRONG (returns degrees², essentially 0!):
+ST_Area(d.geometry)
+
+-- ❌ WRONG (syntax errors):
+ST_Area(ST_Transform(d.geometry)::numeric, 3857)
+ST_Area(ST_Transform(d.geometry, 3857), 3857)
+```
+
+**⚠️ CRITICAL OPTIMIZATION - "BEST FOR BUSINESS" & MULTI-CRITERIA QUERIES:**
+
+PERFORMANCE WARNING: Queries combining 6+ amenity tables with multiple LEFT JOINs can take 30+ seconds.
+
+**RECOMMENDED APPROACH FOR "BEST FOR BUSINESS" & SIMILAR QUERIES:**
+Instead of: Heavy 6-way JOIN with density calculations
+Use: Lightweight 2-way JOIN with simple counts, OR separate queries
+
+**FAST Template (Recommended for "best for business"):**
+```sql
+SELECT
+  d.id, d.name, d.bezirk, d.geometry,
+  COUNT(DISTINCT s.osm_id) as supermarkets,
+  COUNT(DISTINCT b.osm_id) as banks,
+  COUNT(DISTINCT r.osm_id) as restaurants,
+  COUNT(DISTINCT t.osm_id) as transport_stops
+FROM vector.berlin_districts d
+LEFT JOIN vector.osm_supermarkets s ON ST_Within(s.geometry, d.geometry)
+LEFT JOIN vector.osm_banks b ON ST_Within(b.geometry, d.geometry)
+LEFT JOIN vector.osm_restaurants r ON ST_Within(r.geometry, d.geometry)
+LEFT JOIN vector.osm_transport_stops t ON ST_Within(t.geometry, d.geometry)
+GROUP BY d.id, d.name, d.bezirk, d.geometry
+ORDER BY supermarkets DESC, banks DESC, restaurants DESC
+```
+**Why this is faster:**
+- Only 4 JOINs (not 6+) = ~50% less query time
+- No expensive ST_Area density calculations
+- Results sorted by absolute count (user can see clearly which areas are best)
+- Minimal geometric calculations
+
+**⚠️ COMPLEX MULTI-METRIC AGGREGATION QUERIES (Family-Friendly, Walkability Scores, etc.):**
+
+For queries that combine multiple criteria to find "best areas", use SIMPLE multi-table aggregation:
+
+CRITICAL RULES:
+1. ST_Area() with geom_25833: `ST_Area(d.geom_25833)` — returns area in m² (pre-indexed, no transform needed!)
+2. Do NOT use ST_Transform for area — use geom_25833 directly
+3. Divide by 1,000,000 for km²: `ST_Area(d.geom_25833) / 1000000.0`
+4. For multi-metric scoring, SUM counts of different amenities and divide by area
+5. Use LEFT JOIN to ensure ALL districts are returned (even those with 0 amenities)
+6. GROUP BY ALL district columns AND geometry
+7. Include COUNT(DISTINCT osm_id) for each amenity type to avoid double-counting
+8. ⚠️ ONLY add density calculations if user explicitly asks for "density" or "per km²"
+
+SIMPLE Template (Start here - most reliable):
+```sql
+SELECT
+  d.id,
+  d.name,
+  d.bezirk,
+  d.geometry,
+  COUNT(DISTINCT s.osm_id) as schools,
+  COUNT(DISTINCT p.osm_id) as parks,
+  COUNT(DISTINCT pol.osm_id) as police_stations,
+  COUNT(DISTINCT f.osm_id) as fire_stations
+FROM vector.berlin_districts d
+LEFT JOIN vector.osm_schools s ON ST_Within(s.geometry, d.geometry)
+LEFT JOIN vector.osm_parks p ON ST_Within(p.geometry, d.geometry)
+LEFT JOIN vector.osm_police_stations pol ON ST_Within(pol.geometry, d.geometry)
+LEFT JOIN vector.osm_fire_stations f ON ST_Within(f.geometry, d.geometry)
+GROUP BY d.id, d.name, d.bezirk, d.geometry
+ORDER BY (schools + parks + police_stations + fire_stations) DESC
+```
+
+** FOR EACH METRIC with Proper Scoring (if needed):**
+When calculating scores with area, break it into steps:
+```sql
+-- Step 1: Calculate area in km² (using geom_25833 — pre-indexed, fast!)
+SELECT d.geometry, ST_Area(d.geom_25833) / 1000000.0 as area_km2 FROM vector.berlin_districts d
+
+-- Step 2: Then divide counts by area
+SELECT
+  d.name,
+  COUNT(DISTINCT amenity.osm_id) as count,
+  ST_Area(d.geom_25833) / 1000000.0 as area_km2,
+  COUNT(DISTINCT amenity.osm_id) / (ST_Area(d.geom_25833) / 1000000.0) as density
+FROM vector.berlin_districts d
+LEFT JOIN vector.osm_table amenity ON ST_Within(amenity.geometry, d.geometry)
+GROUP BY d.id, d.name, d.bezirk, d.geometry
+```
+
+**FAMILY-FRIENDLY AREAS WITH DENSITY SCORING:**
+When user asks "Which areas/districts are best for families (schools + parks + security)" - calculate DENSITY-BASED SCORE:
+```sql
+SELECT
+  d.id,
+  d.name,
+  d.bezirk,
+  d.geometry,
+  COUNT(DISTINCT s.osm_id) as schools,
+  COUNT(DISTINCT p.osm_id) as parks,
+  COUNT(DISTINCT pol.osm_id) as police_stations,
+  COUNT(DISTINCT f.osm_id) as fire_stations,
+  (COUNT(DISTINCT s.osm_id) + COUNT(DISTINCT p.osm_id) + COUNT(DISTINCT pol.osm_id) + COUNT(DISTINCT f.osm_id)) as total_amenities,
+  ROUND((ST_Area(d.geom_25833) / 1000000.0)::numeric, 2) as area_km2,
+  ROUND((COUNT(DISTINCT s.osm_id) + COUNT(DISTINCT p.osm_id) + COUNT(DISTINCT pol.osm_id) + COUNT(DISTINCT f.osm_id))::numeric / NULLIF((ST_Area(d.geom_25833) / 1000000.0)::numeric, 0), 2) as amenities_per_km2
+FROM vector.berlin_districts d
+LEFT JOIN vector.osm_schools s ON ST_Within(s.geometry, d.geometry)
+LEFT JOIN vector.osm_parks p ON ST_Within(p.geometry, d.geometry)
+LEFT JOIN vector.osm_police_stations pol ON ST_Within(pol.geometry, d.geometry)
+LEFT JOIN vector.osm_fire_stations f ON ST_Within(f.geometry, d.geometry)
+GROUP BY d.id, d.name, d.bezirk, d.geometry
+ORDER BY amenities_per_km2 DESC
+```
+
+KEY POINTS FOR FAMILY-FRIENDLY SCORING:
+1. Calculate area_km2: `ST_Area(d.geom_25833) / 1000000.0` (uses pre-indexed UTM column, fast & accurate!)
+2. Sum all amenities: `schools + parks + police_stations + fire_stations`
+3. Density score: `total_amenities / area_km2` (amenities per square kilometer)
+4. Return ALL districts sorted by density DESC (higher density = more family-friendly)
+5. Include both absolute counts AND density score in results
+6. Layer name: "family_friendly_areas_by_amenity_density" or similar
+
+Example German Language Query (Exact):
+User: "Welche Gegenden eignen sich am besten für Familien (Schulen + Parks + Sicherheitsdienste)?"
+**⚠️ MULTI-CRITERIA DECISION ANALYSIS (MCDA) - DENSITY-BASED SCORING:**
+
+When user asks "Which areas are best for [profile]?" with MULTIPLE criteria, generate SQL that calculates INDIVIDUAL DENSITY for each matching criteria table you found in the schema.
+
+**MCDA Profiles guidelines (You must map these to actual available tables contextually):**
+- **family:** looks for schools, parks, supermarkets, healthcare, security
+- **student:** looks for education, libraries, food, transit, banks
+- **senior:** looks for healthcare, pharmacies, parks, transit
+- **shopping:** looks for retail, atms, parking, food
+- **culture:** looks for museums, theatres, libraries, parks
+- **health:** looks for various healthcare facilities, parks
+- **walkable:** looks for dense amenities (food, retail, transit)
+- **green:** looks for parks, forests, water
+
+**⚠️ CRITICAL - MCDA SQL REQUIREMENTS:**
+For multi-criteria queries, generate SQL that returns:
+1. Area identifiers (id, name, geometry for map display)
+2. COUNT(DISTINCT <id_column>) for EACH amenity type included
+3. Area in km²: `ROUND((ST_Area(d.geom_25833) / 1000000.0)::numeric, 2) as area_km2`
+4. **Individual density for EACH criterion:** `<amenity>_density = COUNT(...) / area_km2`
+5. Sort by most relevant density sum DESC
+
+**MCDA SQL Template (Required Format):**
+```sql
+SELECT
+  d.<id_column>,
+  d.<name_column>,
+  d.geometry,
+  -- Counts for each criterion
+  COUNT(DISTINCT feat1.<id_column>) as feature_1_count,
+  COUNT(DISTINCT feat2.<id_column>) as feature_2_count,
+  -- Area calculation (using geom_25833 — pre-indexed UTM, 1 unit = 1 meter)
+  ROUND((ST_Area(d.geom_25833) / 1000000.0)::numeric, 2) as area_km2,
+  -- Individual densities for each criterion (REQUIRED FOR MCDA SCORING)
+  ROUND(COUNT(DISTINCT feat1.<id_column>)::numeric / NULLIF((ST_Area(d.geom_25833) / 1000000.0)::numeric, 0), 4) as feat1_density,
+  ROUND(COUNT(DISTINCT feat2.<id_column>)::numeric / NULLIF((ST_Area(d.geom_25833) / 1000000.0)::numeric, 0), 4) as feat2_density
+FROM vector.<district_table> d
+LEFT JOIN vector.<feature_table_1> feat1 ON ST_Within(feat1.geometry, d.geometry)
+LEFT JOIN vector.<feature_table_2> feat2 ON ST_Within(feat2.geometry, d.geometry)
+GROUP BY d.<id_column>, d.<name_column>, d.geometry
+ORDER BY feat1_density DESC, feat2_density DESC
+```
+
+**CRITICAL RULES FOR MCDA:**
+1. ALWAYS include individual _density field for EACH criterion (not just aggregate)
+2. Calculate area_km2 ONCE and reuse in all density calculations
+3. Use NULLIF to prevent division by zero
+4. Include ALL districts in results (even those with 0 amenities) via LEFT JOIN
+
+**If user requests unavailable amenities:**
+- SKIP the unavailable concept in the SQL
+- Include in reasoning: "Note: [Data type] data not available. Analysis based on [available proxy data]."
+- System backend will redistribute weights proportionally
+8. Include ALL districts in results (even those with 0 amenities) via LEFT JOIN
+9. Layer name should describe the profile: "family_friendly_areas", "student_friendly_areas", etc.
+
+**If user requests unavailable amenities:**
+- Example: "Families (schools + kindergartens + parks)" but kindergartens table doesn't exist
+- SKIP the unavailable table in the SQL
+- Include in reasoning: "Note: Kindergarten data not available. Analysis based on schools and parks."
+- System backend will redistribute weights proportionally
+
+**⭐ SELECTED FEATURE CONTEXT (CRITICAL - AUTOMATIC USAGE):**
+When a selected_feature is provided in the context (user selected a feature on the map):
+- ALWAYS use the selected feature's geometry in spatial operations - DO NOT require explicit mention
+- The selected feature is provided as: geometry (WKT format), geometry_type, name, properties
+- Apply the selected geometry AUTOMATICALLY to spatial queries:
+
+**For "within" / "inside" type queries:**
+```sql
+SELECT <table>.*
+FROM vector.<table>
+WHERE ST_Within(geometry, ST_GeomFromText('<selected_geometry_wkt>', 4326))
+```
+
+**For "near" / "within distance" type queries:**
+```sql
+SELECT <table>.*
+FROM vector.<table>
+WHERE ST_DWithin(ST_Transform(geometry, 3857), ST_Transform(ST_GeomFromText('<selected_geometry_wkt>', 4326), 3857), <distance_meters>)
+ORDER BY ST_Distance(ST_Transform(geometry, 3857), ST_Transform(ST_GeomFromText('<selected_geometry_wkt>', 4326), 3857))
+```
+
+**IMPORTANT:**
+- User does NOT need to say "the selected [feature]" - just ask the question naturally
+- Example user queries (all should use selected geometry automatically):
+  - "find ATMs within 1 km" → applies within selected geometry + 1km
+  - "show restaurants" → applies ST_Within selected geometry
+  - "what hospitals are nearby" → applies ST_DWithin from selected geometry
+- Extract distance from query (default to 500m if not specified)
+- If no selected feature, treat as normal query (search globally)
+
+**🛣️ ROUTING & CONNECTIVITY QUERIES - NEW FEATURE:**
+
+When users select MULTIPLE features (3+) on the map and ask about connectivity/routing between them:
+- **Keywords**: "connectivity", "connected", "connect", "route", "path", "linking", "between", "among"
+- **Examples**:
+  - "Find connectivity between these hospitals"
+  - "Show routes connecting the selected items"
+  - "How are these connected by roads?"
+  - "Find connectivity among the selected features"
+
+**DETECTION RULE:**
+✅ If query contains connectivity keywords AND user has 3+ items selected:
+→ Return operation with type "routing"
+
+❌ If user asks connectivity WITHOUT multiple selections OR without connectivity keywords:
+→ Treat as normal spatial query
+
+**ROUTING OPERATION RESPONSE FORMAT:**
+```json
+{
+  "operations": [
+    {
+      "operation": "routing",
+      "parameters": {
+        "geometries": [<selected_feature_geometries>],
+        "feature_names": [<names_or_labels>]
+      },
+      "description": "Find shortest road paths connecting all selected features (pairwise)"
+    }
+  ],
+  "reasoning": "User selected N features and asked about connectivity. Computing all pairwise shortest paths using pgRouting Dijkstra algorithm on Berlin road network.",
+  "datasets_required": ["routing.ways (Berlin road network)"]
+}
+```
+
+**IMPORTANT:**
+- ONLY use routing operation when:
+  1. User explicitly asks about connectivity/routes/connections
+  2. Multiple features (3+) are selected on the map
+  3. Features are Point geometries (snapped to nearest road vertex)
+- Routing computes routes between selected features using Valhalla
+- Results include: route geometry (LineString), distance, and walking time
+- No SQL needed - Valhalla routing engine handles all route computation directly
+- Berlin road network: OpenStreetMap via Valhalla routing engine"""

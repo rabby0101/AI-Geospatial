@@ -21,74 +21,6 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Tailwind CSS + DaisyUI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
-
-    <!-- Configure Tailwind with custom DaisyUI theme -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'palladian': '#EEE9DF',
-                        'oatmeal': '#C9C1B1',
-                        'blue-fantastic': '#2C3B4D',
-                        'burning-flame': '#FFB162',
-                        'truffle-trouble': '#A35139',
-                        'abyssal-blue': '#1B2632',
-                    }
-                }
-            },
-            daisyui: {
-                themes: [
-                    {
-                        dark: {
-                            "primary": "#FFB162",
-                            "primary-content": "#1B2632",
-                            "secondary": "#A35139",
-                            "secondary-content": "#ffffff",
-                            "accent": "#2C3B4D",
-                            "accent-content": "#ffffff",
-                            "neutral": "#1B2632",
-                            "neutral-content": "#C4C3E3",
-                            "base-100": "#1a1825",
-                            "base-200": "#0f0d1a",
-                            "base-300": "#1B2632",
-                            "base-content": "#f5f5f5",
-                            "info": "#3b82f6",
-                            "info-content": "#ffffff",
-                            "success": "#28a745",
-                            "success-content": "#ffffff",
-                            "warning": "#ffc107",
-                            "warning-content": "#1B2632",
-                            "error": "#dc3545",
-                            "error-content": "#ffffff",
-                        },
-                        light: {
-                            "primary": "#FFB162",
-                            "primary-content": "#2C3B4D",
-                            "secondary": "#A35139",
-                            "secondary-content": "#ffffff",
-                            "accent": "#2C3B4D",
-                            "accent-content": "#ffffff",
-                            "neutral": "#EEE9DF",
-                            "neutral-content": "#2C3B4D",
-                            "base-100": "#F8F9FA",
-                            "base-200": "#EEE9DF",
-                            "base-300": "#E2E8F0",
-                            "base-content": "#1B2632",
-                            "info": "#3b82f6",
-                            "success": "#28a745",
-                            "warning": "#ffc107",
-                            "error": "#dc3545",
-                        }
-                    },
-                ],
-            },
-        }
-    </script>
-
     <!-- Turf.js for Geospatial Analysis -->
     <script src="https://unpkg.com/@turf/turf@latest/turf.min.js"></script>
 
@@ -108,20 +40,17 @@
             --accent-secondary: var(--color-truffle-trouble);
             --accent-blue: var(--color-blue-fantastic);
 
-            /* Semantic Colors - Backgrounds (Dark Default) */
+            /* Semantic Colors - Backgrounds */
             --bg-dark: var(--color-abyssal-blue);
             --bg-darker: #0f0d1a;
             --bg-darkest: #1a1825;
             --bg-panel: rgba(26, 24, 37, 0.95);
             --bg-panel-light: rgba(26, 24, 37, 0.5);
 
-            /* Semantic Colors - Text (Dark Default) */
+            /* Semantic Colors - Text */
             --text-primary: #f5f5f5;
             --text-secondary: #C4C3E3;
             --text-muted: #999;
-
-            /* Body Gradient */
-            --body-gradient: linear-gradient(135deg, var(--color-abyssal-blue) 0%, #1f2d3d 50%, var(--color-blue-fantastic) 100%);
 
             /* Accent Color Opacity Variants */
             --accent-primary-rgb: 255, 177, 98;
@@ -132,72 +61,6 @@
             --color-success: #28a745;
             --color-error: #dc3545;
             --color-warning: #ffc107;
-        }
-
-        /* Light Theme Overrides */
-        [data-theme='light'] {
-            /* Semantic Colors - Backgrounds (Light) */
-            --bg-dark: #F8F9FA;
-            --bg-darker: #EEE9DF;
-            --bg-darkest: #E2E8F0;
-            --bg-panel: rgba(255, 255, 255, 0.95);
-            --bg-panel-light: rgba(255, 255, 255, 0.85);
-
-            /* Semantic Colors - Text (Light) */
-            --text-primary: #1B2632;
-            --text-secondary: #4A5568;
-            --text-muted: #718096;
-
-            /* Body Gradient */
-            --body-gradient: linear-gradient(135deg, #F8F9FA 0%, #EEE9DF 100%);
-        }
-
-        /* Explicit Light Theme Overrides for Components */
-        [data-theme='light'] .layers-panel,
-        [data-theme='light'] .operations-panel {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border-right: 1.5px solid rgba(255, 255, 255, 0.35);
-            border-left: 1.5px solid rgba(255, 255, 255, 0.35);
-        }
-
-        [data-theme='light'] .panel-header,
-        [data-theme='light'] .operations-header {
-            background: rgba(240, 240, 240, 0.8);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            color: var(--text-primary);
-        }
-
-        [data-theme='light'] .layer-item {
-            background: rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            color: var(--text-primary);
-        }
-
-        [data-theme='light'] .layer-item:hover {
-            background: rgba(255, 255, 255, 0.9);
-            border-color: var(--accent-primary);
-        }
-
-        [data-theme='light'] .leaflet-popup-content-wrapper,
-        [data-theme='light'] .leaflet-popup-tip {
-            background: rgba(255, 255, 255, 0.95);
-            color: #1B2632;
-            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
-        }
-
-        [data-theme='light'] .panel-action-btn,
-        [data-theme='light'] .panel-toggle-btn {
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            color: var(--text-primary);
-        }
-
-        [data-theme='light'] .panel-action-btn:hover,
-        [data-theme='light'] .panel-toggle-btn:hover {
-            background: rgba(0, 0, 0, 0.1);
-            color: var(--accent-primary);
         }
 
         * {
@@ -211,11 +74,10 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background: var(--body-gradient);
+            background: linear-gradient(135deg, var(--color-abyssal-blue) 0%, #1f2d3d 50%, var(--color-blue-fantastic) 100%);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             color: var(--text-primary);
-            transition: background 0.5s ease, color 0.3s ease;
         }
 
         /* Top Search Bar */
@@ -223,13 +85,8 @@
             background: var(--bg-panel);
             border-bottom: 1.5px solid rgba(196, 195, 227, 0.2);
             padding: 1rem 1.5rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
             z-index: 1000;
-            transition: background 0.3s ease, border-color 0.3s ease;
-        }
-
-        [data-theme='light'] .search-header {
-            border-bottom: 1.5px solid rgba(0, 0, 0, 0.1);
         }
 
         .search-container {
@@ -241,37 +98,6 @@
             gap: 1.2rem;
             justify-content: flex-start;
             padding: 0 1.5rem;
-            position: relative;
-            /* For positioning theme toggle */
-        }
-
-        /* Theme Toggle Button */
-        .theme-toggle-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--text-primary);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-left: auto;
-            /* Push to right */
-        }
-
-        [data-theme='light'] .theme-toggle-btn {
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        .theme-toggle-btn:hover {
-            transform: rotate(30deg);
-            background: var(--accent-primary);
-            color: white;
-            border-color: var(--accent-primary);
         }
 
         .logo {
@@ -292,7 +118,81 @@
             gap: 0.75rem;
         }
 
+        #searchInput {
+            flex: 1;
+            padding: 0.75rem 2.5rem 0.75rem 2.5rem;
 
+
+
+            font-size: 0.95rem;
+            font-family: inherit;
+
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--text-primary);
+        }
+
+        #searchInput::placeholder {
+            color: rgba(196, 195, 227, 0.5);
+        }
+
+        #searchInput:focus {
+            outline: none;
+            background: rgba(37, 32, 53, 0.9);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(196, 195, 227, 0.6);
+            font-size: 1.2rem;
+            pointer-events: none;
+        }
+
+        #searchBtn {
+            padding: 0.6rem 1.5rem;
+            background: rgba(var(--accent-blue-rgb), 0.85);
+            color: rgb(255, 255, 255);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow:
+                0 8px 16px rgba(var(--accent-blue-rgb), 0.25),
+                inset 0 1px 2px rgba(255, 255, 255, 0);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        #searchBtn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: 0;
+            right: 0;
+            height: 200%;
+            pointer-events: none;
+        }
+
+        #searchBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            background: rgba(var(--accent-blue-rgb), 0.95);
+            box-shadow: 0 12px 24px rgba(var(--accent-secondary-rgb), 0.3);
+        }
+
+        #searchBtn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        #searchBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
         /* Browse Datasets Button */
         .browse-btn {
@@ -586,24 +486,23 @@
         .layers-panel {
             width: 320px;
             height: 100vh;
-            background: rgba(26, 24, 37, 0.25);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border-right: 1.5px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 8px 0 32px rgba(0, 0, 0, 0.15);
+            background: rgba(26, 24, 37, 0.464);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-right: 1.5px solid rgba(196, 195, 227, 0.2);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             position: absolute;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
             z-index: 500;
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .panel-header {
             padding: 1rem 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-bottom: 1.5px solid rgba(255, 255, 255, 0.1);
+            background: rgba(37, 32, 53, 0.4);
+            backdrop-filter: blur(15px);
+            border-bottom: 1.5px solid rgba(196, 195, 227, 0.15);
             font-weight: 600;
             color: var(--text-primary);
             font-size: 0.95rem;
@@ -1002,20 +901,202 @@
             pointer-events: auto;
         }
 
-        /* Ensure dropdown menus are clickable when they pop up outside parent bounds */
-        .chat-overlay-bottom .dropdown-content {
-            pointer-events: auto;
+        /* Main Chat Bar */
+        .chat-main-bar {
+            background: #1a18254b;
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 1.25rem 1.75rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            backdrop-filter: blur(30px) saturate(180%);
+            width: 80%;
+            min-height: auto;
         }
 
-        /* Ensure all dropdown elements can receive pointer events */
-        .chat-overlay-bottom .dropdown,
-        .chat-overlay-bottom .dropdown>*,
-        .chat-overlay-bottom .dropdown-content,
-        .chat-overlay-bottom .dropdown-content * {
-            pointer-events: auto;
+        .chat-input-row {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
 
-        /* Main Chat Bar styles removed (Migrated to Tailwind/DaisyUI) */
+        /* Bottom Controls Row */
+        .chat-controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        /* Left Section (Icon Buttons) */
+        .chat-left-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .chat-icon-btn {
+            width: 35px;
+            height: 35px;
+            background: rgba(60, 58, 70, 0.6);
+            border: 1.5px solid rgba(80, 78, 90, 0.4);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: rgba(196, 195, 227, 0.6);
+            transition: all 0.2s ease;
+        }
+
+        .chat-icon-btn:hover {
+            background: rgba(70, 68, 80, 0.8);
+            color: rgba(196, 195, 227, 0.9);
+            border-color: rgba(100, 98, 110, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .chat-icon-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Selected Feature Pill (in chat interface) */
+        .chat-left-section .selected-feature-pill {
+            padding: 0.6rem 1rem;
+            background: rgba(var(--accent-secondary-rgb), 0.3);
+            border: 1.5px solid rgba(var(--accent-primary-rgb), 0.4);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            height: 35px;
+        }
+
+        .chat-left-section .pill-icon {
+            color: var(--accent-primary);
+        }
+
+        .chat-left-section .pill-text {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-left-section .pill-close {
+            background: transparent;
+            border: none;
+            color: rgba(196, 195, 227, 0.7);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0 0.25rem;
+            transition: color 0.2s;
+        }
+
+        .chat-left-section .pill-close:hover {
+            color: var(--text-primary);
+        }
+
+        /* Center Input Container */
+        .chat-input-container {
+            width: 100%;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            padding: 0.5rem 0;
+        }
+
+        .chat-input-container #searchInput {
+            flex: 1;
+            padding-left: 20px;
+            background: transparent;
+            border: none;
+            font-size: 1.9rem;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: #f3f4f6;
+            outline: none;
+            min-width: 0;
+            resize: none;
+            overflow: hidden;
+            line-height: 1.4;
+            min-height: 2.66rem;
+            max-height: 12rem;
+            transition: font-size 0.2s ease;
+        }
+
+        .chat-input-container #searchInput::placeholder {
+            color: rgba(196, 195, 227, 0.5);
+            font-weight: 400;
+        }
+
+        /* Right Section (Model Selector + Submit) */
+        .chat-right-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        .model-selector-dropdown {
+            display: flex;
+            align-items: center;
+            color: #f3f4f6;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            user-select: none;
+        }
+
+        .model-selector-dropdown:hover {
+            color: rgba(196, 195, 227, 0.8);
+        }
+
+        .model-display-text {
+            user-select: none;
+        }
+
+        .chat-submit-btn {
+            width: 48px;
+            height: 48px;
+            background: #C4754B;
+            border: none;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+
+
+
+        .chat-submit-btn:hover:not(:disabled) {
+            background: #d68355;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(196, 117, 75, 0.4);
+        }
+
+        .chat-submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .chat-submit-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(196, 117, 75, 0.5);
+        }
 
         /* Tab Pills Row */
         .chat-tabs-row {
@@ -1023,7 +1104,7 @@
             gap: 0.75rem;
             flex-wrap: wrap;
             justify-content: center;
-            width: 70%;
+            width: 70%%;
         }
 
         .chat-tab-pill {
@@ -1747,16 +1828,15 @@
         .operations-panel {
             width: 320px;
             height: 100vh;
-            background: rgba(26, 24, 37, 0.25);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border-left: 1.5px solid rgba(255, 255, 255, 0.12);
+            background: rgba(26, 24, 37, 0.4);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-left: 2px solid rgba(196, 195, 227, 0.35);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             position: absolute;
             right: 0;
-            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
             z-index: 500;
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -2042,7 +2122,9 @@
 
         }
 
-        /* .leaflet-control-attribution a - no styles needed */
+        .leaflet-control-attribution a {
+            /
+        }
 
         .leaflet-control-attribution a:hover {
             color: #FCDD9D !important;
@@ -2803,256 +2885,6 @@
             background: rgba(var(--accent-primary-rgb), 0.6);
         }
 
-        /* Coordinate Display Control - Bottom Right */
-        .coordinate-display {
-            background: rgba(37, 32, 53, 0.85);
-            border: 1px solid rgba(196, 195, 227, 0.25);
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            -webkit-backdrop-filter: blur(15px);
-            backdrop-filter: blur(15px);
-            padding: 5px 10px;
-            font-size: 0.75rem;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            color: var(--text-primary);
-            white-space: nowrap;
-            pointer-events: none;
-            letter-spacing: 0.3px;
-        }
-
-        .coordinate-display .coord-label {
-            color: rgba(var(--accent-primary-rgb), 0.8);
-            font-weight: 600;
-            margin-right: 2px;
-        }
-
-        .coordinate-display .coord-separator {
-            color: rgba(196, 195, 227, 0.4);
-            margin: 0 6px;
-        }
-
-        [data-theme='light'] .coordinate-display {
-            background: rgba(255, 255, 255, 0.85);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        }
-
-        [data-theme='light'] .coordinate-display .coord-separator {
-            color: rgba(0, 0, 0, 0.3);
-        }
-
-        /* ===== Comprehensive Light Theme Overrides ===== */
-
-        /* Map Controls: North Arrow */
-        [data-theme='light'] .leaflet-control.north-arrow {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(0, 0, 0, 0.12);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Map Controls: Theme Toggle */
-        [data-theme='light'] .leaflet-control.theme-toggle {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(0, 0, 0, 0.12);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Map Controls: Zoom Buttons */
-        [data-theme='light'] .leaflet-control-zoom-in,
-        [data-theme='light'] .leaflet-control-zoom-out {
-            color: var(--text-primary) !important;
-            background: rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid rgba(0, 0, 0, 0.12) !important;
-        }
-
-        [data-theme='light'] .leaflet-control-zoom-in:hover,
-        [data-theme='light'] .leaflet-control-zoom-out:hover {
-            background: rgba(240, 240, 240, 0.95) !important;
-            border-color: rgba(0, 0, 0, 0.2) !important;
-        }
-
-        /* Panel Toggle Buttons (collapse/expand) */
-        [data-theme='light'] .panel-toggle-btn {
-            background: rgba(255, 255, 255, 0.92);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        }
-
-        [data-theme='light'] .panel-toggle-btn:hover {
-            background: rgba(var(--accent-primary-rgb), 0.8);
-        }
-
-        /* Operations Panel (Right) */
-        [data-theme='light'] .operations-panel {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border-left: 1.5px solid rgba(255, 255, 255, 0.35);
-            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.06);
-        }
-
-        /* Locate Me Button */
-        [data-theme='light'] .locate-btn {
-            background: rgba(255, 255, 255, 0.9);
-            border-color: rgba(0, 0, 0, 0.12);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        }
-
-        [data-theme='light'] .locate-btn:hover {
-            background: rgba(240, 240, 240, 0.95);
-        }
-
-        /* Notification Toast */
-        [data-theme='light'] .notification {
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-        }
-
-        /* Location Button & LLM Selector in Header */
-        [data-theme='light'] .location-btn {
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        }
-
-        [data-theme='light'] .location-btn:hover:not(:disabled) {
-            background: rgba(240, 240, 240, 0.95);
-        }
-
-        [data-theme='light'] .llm-selector {
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        }
-
-        [data-theme='light'] .llm-selector:hover {
-            background: rgba(240, 240, 240, 0.95);
-        }
-
-        [data-theme='light'] .llm-selector-label {
-            color: var(--text-secondary);
-        }
-
-        /* Layer Dropdown Menu */
-        [data-theme='light'] .layer-dropdown-menu {
-            background: rgba(255, 255, 255, 0.98);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-        }
-
-        [data-theme='light'] .layer-dropdown-item:hover {
-            background: rgba(0, 0, 0, 0.05);
-        }
-
-        /* Dataset Modal */
-        [data-theme='light'] .dataset-modal {
-            background: rgba(255, 255, 255, 0.98);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-        }
-
-        [data-theme='light'] .dataset-modal-header {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        [data-theme='light'] .dataset-item {
-            background: rgba(240, 240, 240, 0.5);
-            border: 1px solid rgba(0, 0, 0, 0.08);
-        }
-
-        [data-theme='light'] .dataset-item:hover {
-            background: rgba(240, 240, 240, 0.8);
-            border-color: rgba(var(--accent-primary-rgb), 0.4);
-        }
-
-        /* Chat Tab Pills */
-        [data-theme='light'] .chat-tab-pill {
-            background: rgba(255, 255, 255, 0.7);
-            border-color: rgba(0, 0, 0, 0.12);
-            color: var(--text-primary);
-        }
-
-        [data-theme='light'] .chat-tab-pill:hover:not(.chat-tab-disabled) {
-            background: rgba(0, 0, 0, 0.06);
-            border-color: rgba(0, 0, 0, 0.2);
-            color: var(--text-primary);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        [data-theme='light'] .chat-tab-pill:hover:not(.chat-tab-disabled) svg {
-            color: var(--text-primary);
-        }
-
-        [data-theme='light'] .chat-tab-pill.chat-tab-active {
-            background: rgba(var(--accent-primary-rgb), 0.15);
-            border-color: rgba(var(--accent-primary-rgb), 0.4);
-            color: var(--text-primary);
-        }
-
-        /* Draw Dropdown Menu */
-        [data-theme='light'] .draw-dropdown-menu {
-            background: rgba(255, 255, 255, 0.98);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-        }
-
-        [data-theme='light'] .draw-menu-item {
-            color: var(--text-primary);
-        }
-
-        [data-theme='light'] .draw-menu-item:hover {
-            background: rgba(0, 0, 0, 0.05);
-            color: var(--text-primary);
-        }
-
-        /* Selected Feature Pill */
-        [data-theme='light'] .selected-feature-pill {
-            background: rgba(var(--accent-secondary-rgb), 0.12);
-            border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
-        }
-
-        [data-theme='light'] .pill-text {
-            color: var(--text-primary);
-        }
-
-        /* Leaflet Popups */
-        [data-theme='light'] .leaflet-popup {
-            filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.15));
-        }
-
-        /* Empty State Text */
-        [data-theme='light'] .empty-state {
-            color: var(--text-muted);
-        }
-
-        /* Layer Info & Time */
-        [data-theme='light'] .layer-info {
-            border-top-color: rgba(0, 0, 0, 0.08);
-            color: var(--text-secondary);
-        }
-
-        [data-theme='light'] .layer-time {
-            color: var(--text-muted);
-        }
-
-        /* Search Input */
-        [data-theme='light'] .search-input {
-            background: rgba(0, 0, 0, 0.04);
-            border-color: rgba(0, 0, 0, 0.1);
-            color: var(--text-primary);
-        }
-
-        [data-theme='light'] .search-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        /* Panel Legend Container */
-        [data-theme='light'] .panel-legend-container {
-            background: rgba(240, 240, 240, 0.5);
-            border-top-color: rgba(0, 0, 0, 0.08);
-        }
-
         /* Basemap Selector Control - Bottom Right */
         .leaflet-bottom.leaflet-right {
             bottom: 1rem;
@@ -3066,15 +2898,118 @@
             right: 1rem;
         }
 
+        .leaflet-control.basemap-control {
+            background: rgba(37, 32, 53, 0.9);
+            border: 1px solid rgba(196, 195, 227, 0.25);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px);
+            padding: 0;
+            margin: 0 !important;
+            position: relative;
+        }
+
+        .basemap-toggle-btn {
+            padding: 8px 12px;
+            background: rgba(var(--accent-secondary-rgb), 0.3);
+            border: none;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            min-width: 120px;
+        }
+
+        .basemap-toggle-btn:hover {
+            background: rgba(var(--accent-secondary-rgb), 0.5);
+        }
+
+        .basemap-toggle-btn svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .basemap-control.expanded .basemap-toggle-btn svg {
+            transform: rotate(180deg);
+        }
+
+        .basemap-dropdown {
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            margin-bottom: 8px;
+            background: rgba(37, 32, 53, 0.95);
+            border: 1px solid rgba(196, 195, 227, 0.25);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            padding: 6px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 120px;
+        }
+
+        .basemap-control.expanded .basemap-dropdown {
+            display: flex;
+        }
+
+        .basemap-option {
+            padding: 8px 12px;
+            background: rgba(var(--accent-secondary-rgb), 0.3);
+            border: 1px solid rgba(196, 195, 227, 0.15);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .basemap-option:hover {
+            background: rgba(var(--accent-secondary-rgb), 0.5);
+            border-color: rgba(var(--accent-primary-rgb), 0.4);
+            box-shadow: 0 2px 8px rgba(var(--accent-primary-rgb), 0.1);
+        }
+
+        .basemap-option.active {
+            background: rgba(var(--accent-primary-rgb), 0.6);
+            border-color: rgba(var(--accent-primary-rgb), 0.8);
+            box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.3);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .leaflet-bottom.leaflet-right {
+                right: 0.5rem;
+                bottom: 0.5rem;
+            }
+
+            .basemap-toggle-btn,
+            .basemap-option {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+                min-width: 100px;
+            }
+        }
 
         /* North Arrow Control - Top Right */
         .leaflet-top.leaflet-right {
             top: 1rem;
             right: calc(320px + 1rem);
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
 
         .leaflet-control.north-arrow {
@@ -3100,40 +3035,11 @@
             box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.15);
         }
 
-        /* Theme Toggle Control - Below North Arrow */
-        .leaflet-control.theme-toggle {
-            background: rgba(37, 32, 53, 0.85);
-            border: 1px solid rgba(196, 195, 227, 0.25);
-            border-radius: 20px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            -webkit-backdrop-filter: blur(15px);
-            backdrop-filter: blur(15px);
-            width: 42px;
-            height: 42px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-top: 8px !important;
-        }
-
-        .leaflet-control.theme-toggle:hover {
-            background: rgba(var(--accent-secondary-rgb), 0.8);
-            border-color: rgba(var(--accent-primary-rgb), 0.4);
-            box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.15);
-        }
-
-        .theme-toggle-icon {
-            width: 20px;
-            height: 20px;
-            color: var(--text-primary);
-        }
-
-        .north-arrow-icon {
+        .north-arrow-svg {
             width: 22px;
             height: 22px;
-            color: var(--text-primary);
+            fill: #dc3545 !important;
+            stroke: #ffffff !important;
         }
 
         @media (max-width: 768px) {
@@ -3147,9 +3053,10 @@
                 height: 36px;
             }
 
-            .north-arrow-icon {
+            .north-arrow-svg {
                 width: 18px;
                 height: 18px;
+                fill: #dc3545 !important;
             }
         }
 
@@ -3258,114 +3165,6 @@
                 opacity: 1;
             }
         }
-
-        /* ──── Transport Mode Modal ──── */
-        .transport-mode-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 14px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.04);
-            transition: background 0.15s ease;
-        }
-
-        .transport-mode-row:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .transport-mode-row .mode-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .transport-mode-row .mode-icon {
-            font-size: 1.4rem;
-            width: 36px;
-            text-align: center;
-        }
-
-        .transport-mode-row .mode-label {
-            font-weight: 500;
-            font-size: 0.95rem;
-        }
-
-        .transport-mode-row .mode-color-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        /* ──── Route Group Styling ──── */
-        .route-group {
-            margin-bottom: 0.5rem;
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid rgba(241, 100, 46, 0.2);
-            background: rgba(241, 100, 46, 0.04);
-        }
-
-        .route-group-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 12px;
-            cursor: pointer;
-            background: rgba(241, 100, 46, 0.08);
-            transition: background 0.15s ease;
-            user-select: none;
-        }
-
-        .route-group-header:hover {
-            background: rgba(241, 100, 46, 0.14);
-        }
-
-        .route-group-header .group-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            min-width: 0;
-        }
-
-        .route-group-header .group-title span {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .route-group-header .group-controls {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-
-        .route-group-header .group-chevron {
-            transition: transform 0.2s ease;
-        }
-
-        .route-group.collapsed .group-chevron {
-            transform: rotate(-90deg);
-        }
-
-        .route-group-children {
-            padding: 4px 6px 6px 6px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .route-group.collapsed .route-group-children {
-            display: none;
-        }
-
-        .route-group-children .card {
-            margin-bottom: 0 !important;
-        }
     </style>
     <link rel="stylesheet" href="/static/css/safety-styles.css">
 </head>
@@ -3377,21 +3176,22 @@
         <div class="layers-panel" id="layersPanel">
             <div class="panel-header">
                 <span class="panel-title">Layers</span>
-                <div class="flex gap-1">
-                    <button class="btn btn-ghost btn-sm btn-square" onclick="openGdiBerlinModal()"
+                <div class="panel-actions">
+                    <button class="panel-action-btn" onclick="openGdiBerlinModal()"
                         title="Import layers from GDI Berlin">
-                        <i data-lucide="globe" class="w-5 h-5"></i>
+                        <i data-lucide="globe" style="width: 18px; height: 18px;"></i>
                     </button>
-                    <button class="btn btn-ghost btn-sm btn-square" onclick="openKnowledgeGraph()"
+                    <button class="panel-action-btn" onclick="openKnowledgeGraph()"
                         title="Knowledge Graph - Semantic Queries">
-                        <i data-lucide="share-2" class="w-5 h-5"></i>
+                        <i data-lucide="share-2" style="width: 18px; height: 18px;"></i>
                     </button>
-                    <button class="btn btn-ghost btn-sm btn-square" onclick="openDatasetBrowser()"
+                    <button class="panel-action-btn" onclick="openDatasetBrowser()"
                         title="Browse and add layers from database">
-                        <i data-lucide="database" class="w-5 h-5"></i>
+                        <i data-lucide="database" style="width: 18px; height: 18px;"></i>
                     </button>
-                    <a href="/database-inspector" class="btn btn-ghost btn-sm btn-square" title="Database Inspector">
-                        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                    <a href="/database-inspector" class="panel-action-btn" title="Database Inspector"
+                        style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="bar-chart-3" style="width: 18px; height: 18px;"></i>
                     </a>
                 </div>
 
@@ -3401,16 +3201,6 @@
                     <div class="empty-state-icon"><i data-lucide="map" style="width: 48px; height: 48px;"></i></div>
                     <div class="empty-state-text">No layers yet<br>Search to add results as layers</div>
                 </div>
-            </div>
-
-            <!-- Legend Section (bottom of layers panel) -->
-            <div id="panelLegendContainer"
-                style="display: none; flex-shrink: 0; border-top: 1.5px solid rgba(196, 195, 227, 0.15); padding: 0.75rem; background: rgba(37, 32, 53, 0.5);">
-                <div
-                    style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
-                    <i data-lucide="palette" style="width: 14px; height: 14px;"></i> Legend
-                </div>
-                <div id="panelLegendContent"></div>
             </div>
         </div>
 
@@ -3433,83 +3223,58 @@
 
                 <!-- Chat Interface Overlay (Bottom) -->
                 <div class="chat-overlay-bottom">
-                    <!-- Main Chat Bar (Refactored) -->
-                    <div class="w-full max-w-3xl mx-auto px-4 pb-6 relative z-50">
-                        <div
-                            class="bg-base-100/20 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-4 transition-all hover:bg-base-100/30 hover:shadow-3xl focus-within:bg-base-100/40 focus-within:ring-1 focus-within:ring-white/30 focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-                            <div class="flex flex-col gap-3">
-                                <!-- Input Area -->
-                                <textarea id="searchInput"
-                                    class="textarea textarea-ghost text-lg w-full focus:outline-none resize-none bg-transparent placeholder-base-content/30 min-h-[3rem]"
-                                    placeholder="How can I help you today?" rows="1"></textarea>
+                    <!-- Main Chat Bar -->
+                    <div class="chat-main-bar">
+                        <!-- Two Rows Layout -->
+                        <div class="chat-input-row">
+                            <!-- First Row: Search Input -->
+                            <div class="chat-input-container">
+                                <textarea id="searchInput" placeholder="How can I help you today?" rows="1"></textarea>
+                            </div>
 
-                                <!-- Controls Row -->
-                                <div class="flex items-center justify-between pt-2 border-t border-base-content/5">
-                                    <!-- Left: Utilities -->
-                                    <div class="flex items-center gap-1">
-                                        <div class="tooltip" data-tip="Upload file">
-                                            <button class="btn btn-ghost btn-circle btn-sm opacity-70 hover:opacity-100"
-                                                onclick="document.getElementById('fileInput').click()">
-                                                <i data-lucide="paperclip" class="w-5 h-5"></i>
-                                            </button>
-                                        </div>
-                                        <div class="tooltip" data-tip="Settings">
-                                            <button class="btn btn-ghost btn-circle btn-sm opacity-70 hover:opacity-100"
-                                                onclick="console.log('Settings placeholder')">
-                                                <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
-                                            </button>
-                                        </div>
-
-                                        <!-- Selected Feature Pill -->
-                                        <div class="badge badge-primary gap-2 hidden shadow-sm"
-                                            id="selectedFeaturePill">
-                                            <i data-lucide="target" class="w-3 h-3"></i>
-                                            <span id="pillText" class="max-w-[100px] truncate"></span>
-                                            <button class="btn btn-ghost btn-xs btn-circle text-primary-content"
-                                                onclick="clearSelectedFeature()">
-                                                <i data-lucide="x" class="w-3 h-3"></i>
-                                            </button>
-                                        </div>
+                            <!-- Second Row: Controls (Left + Right Sections) -->
+                            <div class="chat-controls-row">
+                                <!-- Left: Icon Buttons + Selected Feature Pill -->
+                                <div class="chat-left-section">
+                                    <button class="chat-icon-btn" title="New conversation" onclick="clearAllLayers()">
+                                        <i data-lucide="plus" style="width: 22px; height: 22px;"></i>
+                                    </button>
+                                    <button class="chat-icon-btn" title="Settings"
+                                        onclick="console.log('Settings placeholder')">
+                                        <i data-lucide="sliders" style="width: 22px; height: 22px;"></i>
+                                    </button>
+                                    <button class="chat-icon-btn" title="Recall"
+                                        onclick="console.log('Recall placeholder')">
+                                        <i data-lucide="history" style="width: 22px; height: 22px;"></i>
+                                    </button>
+                                    <!-- Selected Feature Pill -->
+                                    <div class="selected-feature-pill" id="selectedFeaturePill" style="display: none;">
+                                        <span class="pill-icon"><i data-lucide="target"
+                                                style="width: 16px; height: 16px;"></i></span>
+                                        <span class="pill-text" id="pillText"></span>
+                                        <button class="pill-close" onclick="clearSelectedFeature()"
+                                            title="Clear selection">✕</button>
                                     </div>
+                                </div>
 
-                                    <!-- Right: Submit & Model -->
-                                    <div class="flex items-center gap-2">
-
-                                        <div class="dropdown dropdown-top dropdown-end">
-                                            <label tabindex="0"
-                                                class="btn btn-ghost btn-sm gap-2 normal-case font-normal opacity-80 hover:opacity-100">
-                                                <span class="text-xs font-medium opacity-70">Model:</span>
-                                                <span class="text-sm" id="selectedModelLabel">Gemini 3 Flash</span>
-                                                <i data-lucide="chevron-up" class="w-3 h-3 opacity-50"></i>
-                                            </label>
-                                            <ul tabindex="0"
-                                                class="dropdown-content z-[100] menu p-2 shadow-[0_8px_32px_rgba(0,0,0,0.2)] bg-base-100/30 backdrop-blur-2xl rounded-box w-48 mb-2 border border-white/20 dark:border-white/10">
-                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('deepseek', 'DeepSeek')"
-                                                        class="flex items-center gap-2">
-                                                        <span
-                                                            class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
-                                                        DeepSeek</a></li>
-                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('gemini', 'Gemini 3 Flash')"
-                                                        class="flex items-center gap-2">
-                                                        <span
-                                                            class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
-                                                        Gemini 3 Flash</a></li>
-                                            </ul>
-                                        </div>
-
-                                        <button
-                                            class="btn btn-primary btn-circle shadow-lg hover:scale-105 transition-transform"
-                                            id="searchBtn" onclick="executeSearch()" title="Submit query">
-                                            <i data-lucide="arrow-up" class="w-6 h-6"></i>
-                                        </button>
+                                <!-- Right: Model Selector + Submit Button -->
+                                <div class="chat-right-section">
+                                    <div class="model-selector-dropdown">
+                                        <span class="model-display-text">DeepSeek</span>
+                                        <i data-lucide="chevron-down"
+                                            style="width: 18px; height: 18px; margin-left: 8px;"></i>
                                     </div>
+                                    <button class="chat-submit-btn" id="searchBtn" onclick="executeSearch()"
+                                        title="Submit query">
+                                        <i data-lucide="chevron-down" style="width: 24px; height: 24px; "></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Tab Pills Row (Below Main Bar) -->
-                    <div class="chat-tabs-row relative z-[60]">
+                    <div class="chat-tabs-row">
                         <div class="chat-tab-pill" id="drawTab" onclick="toggleDrawMenu()" title="Draw shapes on map">
                             <i data-lucide="pen-tool" style="width: 18px; height: 18px; margin-right: 8px;"></i>
                             <span>Draw</span>
@@ -3538,15 +3303,35 @@
                             </div>
                         </div>
 
-                        <div class="chat-tab-pill chat-tab-disabled" id="directionsTab" onclick="executeDirections()"
-                            title="Get directions between 2 selected features">
-                            <i data-lucide="route"
-                                style="width: 18px; height: 18px; margin-right: 4px; cursor: pointer;"
-                                onclick="event.stopPropagation(); openTransportModeModal()"
-                                title="Select transport modes"></i>
-                            <span>Directions</span>
-                            <span id="directionsCount"
-                                style="display: none; background: #F1642E; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-left: 6px;">0</span>
+                        <!-- Save Drawing Modal -->
+                        <div id="saveDrawingModal"
+                            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+                            <div
+                                style="background: white; padding: 24px; border-radius: 8px; max-width: 400px; width: 90%;">
+                                <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #333;">Save Drawing as Layer?
+                                </h3>
+                                <p style="margin: 0 0 16px 0; color: #666; font-size: 14px;">Would you like to save this
+                                    drawing as a new layer?</p>
+
+                                <input type="text" id="drawingLayerName" placeholder="Enter layer name"
+                                    style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button onclick="declineSaveDrawing()"
+                                        style="padding: 8px 16px; background: #f5f5f5; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                                        No, Keep as Temporary
+                                    </button>
+                                    <button onclick="confirmSaveDrawing()"
+                                        style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                                        Yes, Save as Layer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-tab-pill chat-tab-disabled" title="Learn (coming soon)">
+                            <i data-lucide="graduation-cap" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                            <span>Learn</span>
                         </div>
                         <div class="chat-tab-pill chat-tab-disabled" title="Code (coming soon)">
                             <i data-lucide="code" style="width: 18px; height: 18px; margin-right: 8px;"></i>
@@ -3570,9 +3355,9 @@
                                     <i data-lucide="map" style="width: 18px; height: 18px;"></i>
                                     <span>Liberty (Vector)</span>
                                 </div>
-                                <div class="draw-menu-item" onclick="switchBasemap('Light (Vector)', event)">
-                                    <i data-lucide="map" style="width: 16px; height: 16px;"></i>
-                                    <span>Light (Vector)</span>
+                                <div class="draw-menu-item" onclick="switchBasemap('Bright (Vector)', event)">
+                                    <i data-lucide="sun" style="width: 18px; height: 18px;"></i>
+                                    <span>Bright (Vector)</span>
                                 </div>
                                 <div class="draw-menu-item" onclick="switchBasemap('Dark (Vector)', event)">
                                     <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
@@ -3586,381 +3371,326 @@
                                     <i data-lucide="sun-medium" style="width: 18px; height: 18px;"></i>
                                     <span>Light (Raster)</span>
                                 </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('Positron', event)">
+                                    <i data-lucide="circle-dot" style="width: 18px; height: 18px;"></i>
+                                    <span>Positron</span>
+                                </div>
+                                <div class="draw-menu-item" onclick="switchBasemap('OSM', event)">
+                                    <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                                    <span>OpenStreetMap</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <span>OpenStreetMap</span>
+            <!-- Right Operations Panel -->
+            <div class="operations-panel" id="operationsPanel">
+                <div class="operations-header">
+                    <div id="operationsTitle">Operations</div>
+                </div>
+                <div class="operations-content" id="operationsContent">
+                    <div class="no-selection">
+                        Click a layer to view operations
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel Toggle Button -->
+            <button class="panel-toggle-btn right" onclick="toggleOperationsPanel()" title="Toggle operations panel">
+                <i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Export Dialog -->
+    <div class="export-dialog-overlay" id="exportDialogOverlay">
+        <div class="export-dialog">
+            <div class="export-dialog-header"><i data-lucide="download"
+                    style="width: 20px; height: 20px; margin-right: 8px; display: inline;"></i>Export Layer as GeoJSON
+            </div>
+
+            <div class="export-dialog-content">
+                <div class="export-option">
+                    <label class="export-option-label">Include Properties</label>
+                    <div class="export-option-description">Add feature attributes to the export</div>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="exportIncludeProperties" checked>
+                        <span>Include feature properties</span>
+                    </label>
+                </div>
+
+                <div class="export-option">
+                    <label class="export-option-label">Formatting</label>
+                    <div class="export-option-description">Choose output formatting</div>
+                    <select class="export-format-select" id="exportFormatSelect">
+                        <option value="minified">Minified (compact)</option>
+                        <option value="pretty">Pretty printed (formatted)</option>
+                    </select>
+                </div>
+
+                <div class="export-option">
+                    <label class="export-option-label">Additional Options</label>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="exportIncludeCRS">
+                        <span>Include CRS (Coordinate Reference System)</span>
+                    </label>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="exportIncludeBbox">
+                        <span>Include bounding box (bbox)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="export-dialog-actions">
+                <button class="export-btn export-btn-secondary" onclick="closeExportDialog()">Cancel</button>
+                <button class="export-btn export-btn-primary" onclick="performExport()">Export</button>
             </div>
         </div>
     </div>
-    </div>
-    </div>
-    </div>
 
-    <!-- Right Operations Panel -->
-    <div class="operations-panel" id="operationsPanel">
-        <div class="operations-header">
-            <div id="operationsTitle">Operations</div>
-        </div>
-        <div class="operations-content" id="operationsContent">
-            <div class="no-selection">
-                Click a layer to view operations
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Panel Toggle Button -->
-    <button class="panel-toggle-btn right" onclick="toggleOperationsPanel()" title="Toggle operations panel">
-        <i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i>
-    </button>
-    </div>
-    </div>
-
-    <!-- Save Drawing Modal (DaisyUI) -->
-    <dialog id="saveDrawingModal" class="modal">
-        <div class="modal-box">
-            <h3 class="font-bold text-lg">Save Drawing as Layer?</h3>
-            <p class="py-4">Would you like to save this drawing as a new layer?</p>
-            <input type="text" id="drawingLayerName" placeholder="Enter layer name"
-                class="input input-bordered w-full mb-4" />
-            <div class="modal-action">
-                <button class="btn btn-ghost" onclick="declineSaveDrawing()">No, Keep as Temporary</button>
-                <button class="btn btn-primary" onclick="confirmSaveDrawing()">Yes, Save as Layer</button>
-            </div>
-        </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
-
-    <!-- Transport Mode Selection Modal -->
-    <dialog id="transportModeModal" class="modal">
-        <div class="modal-box bg-base-200" style="max-width: 400px;">
-            <h3 class="font-bold text-lg flex items-center gap-2 mb-2">
-                <i data-lucide="route" class="w-5 h-5 text-primary"></i>
-                Transport Modes
-            </h3>
-            <p class="text-sm opacity-60 mb-4">Toggle which transport modes to compare when getting directions.</p>
-            <div id="transportModeList" class="flex flex-col gap-2"></div>
-            <div class="modal-action">
-                <form method="dialog">
-                    <button class="btn btn-primary">Done</button>
-                </form>
-            </div>
-        </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
-
-    <!-- Export Dialog (DaisyUI) -->
-    <dialog id="exportDialogOverlay" class="modal">
-        <div class="modal-box bg-base-200">
-            <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
-                <i data-lucide="download" class="w-5 h-5"></i>
-                Export Layer as GeoJSON
-            </h3>
-
-            <div class="form-control">
-                <label class="label cursor-pointer">
-                    <span class="label-text font-semibold">Include Properties</span>
-                    <input type="checkbox" id="exportIncludeProperties" class="toggle toggle-primary toggle-sm"
-                        checked />
-                </label>
+    <!-- Style Dialog -->
+    <div class="style-dialog-overlay" id="styleDialogOverlay">
+        <div class="style-dialog">
+            <div class="style-dialog-header">
+                <h2>Style: <span id="styleLayerName">Layer</span></h2>
+                <span class="close-btn" onclick="closeStyleDialog()"><i data-lucide="x"
+                        style="width: 20px; height: 20px;"></i></span>
             </div>
 
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text font-semibold">Format</span>
-                </label>
-                <select id="exportFormatSelect" class="select select-bordered select-sm w-full">
-                    <option value="minified">Minified (Compact)</option>
-                    <option value="pretty">Pretty Print (Formatted)</option>
-                </select>
-            </div>
-
-            <div class="form-control mt-2">
-                <label class="label cursor-pointer">
-                    <span class="label-text font-semibold">Include CRS</span>
-                    <input type="checkbox" id="exportIncludeCRS" class="toggle toggle-primary toggle-sm" />
-                </label>
-            </div>
-
-            <div class="form-control">
-                <label class="label cursor-pointer">
-                    <span class="label-text font-semibold">Include BBox</span>
-                    <input type="checkbox" id="exportIncludeBbox" class="toggle toggle-primary toggle-sm" />
-                </label>
-            </div>
-
-            <div class="modal-action">
-                <form method="dialog">
-                    <button class="btn btn-ghost" onclick="closeExportDialog()">Cancel</button>
-                    <button class="btn btn-primary" onclick="performExport()">Export</button>
-                </form>
-            </div>
-        </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
-
-    <!-- Style Dialog (DaisyUI) -->
-    <dialog id="styleDialogOverlay" class="modal">
-        <div class="modal-box bg-base-200">
-            <h3 class="font-bold text-lg mb-4">Style: <span id="styleLayerName">Layer</span></h3>
-
-            <div class="tabs tabs-boxed bg-base-300 mb-4">
-                <a class="tab tab-active" data-tab="basic" onclick="switchStyleTab(this)">
-                    <i data-lucide="palette" class="w-4 h-4 mr-2"></i>Basic
-                </a>
-                <a class="tab" data-tab="gradient" onclick="switchStyleTab(this)">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4 mr-2"></i>Gradient
-                </a>
+            <div class="style-tabs">
+                <button class="style-tab active" data-tab="basic" onclick="switchStyleTab(this)"><i
+                        data-lucide="palette"
+                        style="width: 16px; height: 16px; margin-right: 4px; display: inline;"></i>Basic Colors</button>
+                <button class="style-tab" data-tab="gradient" onclick="switchStyleTab(this)"><i
+                        data-lucide="bar-chart-3"
+                        style="width: 16px; height: 16px; margin-right: 4px; display: inline;"></i>Gradient by
+                    Property</button>
             </div>
 
             <!-- Basic Styling Tab -->
-            <div id="basicTab" class="space-y-4">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Fill Color</span>
-                    </label>
-                    <input type="color" id="fillColor" class="w-full h-10 cursor-pointer rounded-lg">
+            <div class="style-tab-content" id="basicTab">
+                <div class="style-option">
+                    <label>Fill Color</label>
+                    <input type="color" id="fillColor" class="style-color-input">
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Border Color</span>
-                    </label>
-                    <input type="color" id="borderColor" class="w-full h-10 cursor-pointer rounded-lg">
+                <div class="style-option">
+                    <label>Border Color</label>
+                    <input type="color" id="borderColor" class="style-color-input">
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Fill Opacity</span>
-                        <span class="label-text-alt" id="fillOpacityValue">0.8</span>
-                    </label>
-                    <input type="range" id="fillOpacity" min="0" max="1" step="0.1" class="range range-primary range-sm"
-                        value="0.8">
+                <div class="style-option">
+                    <label>Fill Opacity</label>
+                    <input type="range" id="fillOpacity" min="0" max="1" step="0.1" class="style-slider" value="0.8">
+                    <span class="slider-value" id="fillOpacityValue">0.8</span>
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Border Width</span>
-                        <span class="label-text-alt" id="borderWidthValue">2</span>
-                    </label>
-                    <input type="range" id="borderWidth" min="0" max="5" step="1" class="range range-primary range-sm"
-                        value="2">
+                <div class="style-option">
+                    <label>Border Width</label>
+                    <input type="range" id="borderWidth" min="0" max="5" step="1" class="style-slider" value="2">
+                    <span class="slider-value" id="borderWidthValue">2</span>
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Icon (optional)</span>
-                    </label>
-                    <div class="flex gap-2">
-                        <input type="text" id="iconNameInput" class="input input-bordered w-full"
+                <div class="style-option">
+                    <label>Icon (optional)</label>
+                    <div style="display: flex; gap: 0.8rem; align-items: flex-start;">
+                        <input type="text" id="iconNameInput" class="style-color-input"
+                            style="flex: 1; padding: 0.6rem 0.8rem; font-size: 0.9rem;"
                             placeholder="e.g., hospital, school, park" oninput="updateIconPreview()">
                         <div id="iconPreview"
-                            class="w-12 h-12 flex items-center justify-center bg-base-300 rounded-lg border border-base-content/20">
+                            style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(var(--accent-secondary-rgb), 0.4); border: 1px solid rgba(196, 195, 227, 0.3); border-radius: 8px; flex-shrink: 0; color: var(--accent-primary); font-size: 20px;">
                         </div>
                     </div>
-                    <label class="label">
-                        <span class="label-text-alt text-base-content/50">Supports Lucide icons. See <a
-                                href="https://lucide.dev" target="_blank"
-                                class="link link-primary">lucide.dev</a></span>
-                    </label>
+                    <div style="font-size: 0.8rem; color: rgba(196, 195, 227, 0.5); margin-top: 0.4rem;">
+                        Lucide icons: hospital, pharmacy, school, university, restaurant, cafe, bank, atm, park, trees,
+                        police, ambulance, church, museum, theater, gym, shopping-cart, hotel, and 1000+ more at <a
+                            href="https://lucide.dev" target="_blank"
+                            style="color: var(--accent-primary); text-decoration: none;">lucide.dev</a>
+                    </div>
                 </div>
+
             </div>
 
             <!-- Gradient Styling Tab -->
-            <div id="gradientTab" class="space-y-4 hidden">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Property to Visualize</span>
-                    </label>
-                    <select id="propertySelect" class="select select-bordered w-full"
-                        onchange="updateGradientPreview()">
+            <div class="style-tab-content hidden" id="gradientTab">
+                <div class="style-option">
+                    <label>Property to Visualize</label>
+                    <select id="propertySelect" class="style-select" onchange="updateGradientPreview()">
                         <option value="">-- Select a numerical property --</option>
                     </select>
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Color Scheme</span>
-                    </label>
-                    <select id="colorScheme" class="select select-bordered w-full" onchange="updateGradientPreview()">
-                        <option value="viridis">Viridis</option>
-                        <option value="plasma">Plasma</option>
-                        <option value="inferno">Inferno</option>
-                        <option value="cool-warm">Cool to Warm</option>
-                        <option value="red-green">Red to Green</option>
-                        <option value="blue-red">Blue to Red</option>
+                <div class="style-option">
+                    <label>Color Scheme</label>
+                    <select id="colorScheme" class="style-select" onchange="updateGradientPreview()">
+                        <option value="viridis"><i data-lucide="palette"
+                                style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Viridis
+                        </option>
+                        <option value="plasma"><i data-lucide="circle"
+                                style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Plasma
+                        </option>
+                        <option value="inferno">🔥 Inferno</option>
+                        <option value="cool-warm">🌊 Cool to Warm</option>
+                        <option value="red-green"><i data-lucide="circle"
+                                style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Red to Green
+                        </option>
+                        <option value="blue-red">🔵 Blue to Red</option>
                     </select>
                 </div>
 
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Range</span>
-                        <button class="btn btn-xs btn-ghost" onclick="autoDetectRange()">Auto Detect</button>
-                    </label>
-                    <div class="flex gap-2 items-center">
-                        <input type="number" id="rangeMin" placeholder="Min" class="input input-bordered w-full"
+                <div class="style-option">
+                    <label>Range</label>
+                    <div class="style-range-inputs">
+                        <input type="number" id="rangeMin" placeholder="Min" class="style-number-input"
                             onchange="updateGradientPreview()">
                         <span>to</span>
-                        <input type="number" id="rangeMax" placeholder="Max" class="input input-bordered w-full"
+                        <input type="number" id="rangeMax" placeholder="Max" class="style-number-input"
                             onchange="updateGradientPreview()">
                     </div>
+                    <button id="autoRangeBtn" class="style-button-small" onclick="autoDetectRange()"><i
+                            data-lucide="bar-chart-3"
+                            style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Auto
+                        Detect</button>
                 </div>
 
-                <div class="mt-4">
-                    <div id="styleLegend" class="w-full h-8 rounded-lg border border-base-content/20"></div>
+                <div style="margin-top: 1rem;">
+                    <div class="style-legend" id="styleLegend">
+                        <!-- Legend preview will be rendered here -->
+                    </div>
                 </div>
             </div>
 
-            <div class="form-control mt-4">
-                <label class="label cursor-pointer justify-start gap-2">
-                    <input type="checkbox" id="livePreview" class="toggle toggle-sm toggle-primary" checked>
-                    <span class="label-text font-semibold">Live Preview</span>
+            <!-- Live Preview Checkbox -->
+            <div class="style-option">
+                <label>
+                    <input type="checkbox" id="livePreview" checked>
+                    Live Preview
                 </label>
             </div>
 
-            <div class="modal-action">
-                <form method="dialog">
-                    <button class="btn btn-ghost" onclick="closeStyleDialog()">Cancel</button>
-                    <button class="btn btn-primary" onclick="applyLayerStyle()">Apply</button>
-                </form>
+            <div class="style-dialog-actions">
+                <button class="btn-cancel" onclick="closeStyleDialog()">Cancel</button>
+                <button class="btn-apply" onclick="applyLayerStyle()">Apply</button>
             </div>
         </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
+    </div>
 
-    <!-- Dataset Browser Modal (DaisyUI) -->
-    <dialog id="datasetModalOverlay" class="modal">
-        <div class="modal-box max-w-2xl bg-base-200">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="database" class="w-6 h-6 text-primary"></i>
-                    <h3 class="text-lg font-bold">Browse Datasets</h3>
+    <!-- Dataset Browser Modal -->
+    <div class="dataset-modal-overlay" id="datasetModalOverlay">
+        <div class="dataset-modal">
+            <div class="dataset-modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="database" style="width: 24px; height: 24px;"></i>
+                    <span>Browse Datasets</span>
                 </div>
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-                </form>
+                <button class="dataset-modal-close" onclick="closeDatasetBrowser()">✕</button>
             </div>
-            <div id="datasetModalContent" class="max-h-96 overflow-y-auto">
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
+            <div class="dataset-modal-content" id="datasetModalContent">
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
                     <span>Loading datasets...</span>
                 </div>
             </div>
         </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
+    </div>
 
     <!-- Notification -->
     <div class="notification" id="notification"></div>
 
-    <!-- GDI Berlin Import Modal (DaisyUI) -->
-    <dialog id="gdiBerlinOverlay" class="modal">
-        <div class="modal-box max-w-2xl bg-base-200">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="globe" class="w-6 h-6 text-primary"></i>
-                    <h3 class="text-lg font-bold">Import from GDI Berlin</h3>
+    <!-- GDI Berlin Import Modal -->
+    <div class="dataset-modal-overlay" id="gdiBerlinOverlay">
+        <div class="dataset-modal" style="max-width: 600px; max-height: 80vh;">
+            <div class="dataset-modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="globe" style="width: 24px; height: 24px;"></i>
+                    <span>Import from GDI Berlin</span>
                 </div>
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-                </form>
+                <button class="dataset-modal-close" onclick="closeGdiBerlinModal()">✕</button>
             </div>
-            <p class="text-sm opacity-70 mb-4">
-                Import official Berlin geodata layers from the Berlin Geodata Infrastructure (GDI Berlin).
-            </p>
-            <div id="gdiBerlinLayersList" class="flex flex-col gap-3 max-h-96 overflow-y-auto">
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
-                    <span>Loading available layers...</span>
+            <div class="dataset-modal-content" id="gdiBerlinContent" style="padding: 1rem;">
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                    Import official Berlin geodata layers from the Berlin Geodata Infrastructure (GDI Berlin).
+                </p>
+                <div id="gdiBerlinLayersList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div class="dataset-loading">
+                        <div class="loading-spinner" style="width: 24px; height: 24px;"></div>
+                        <span>Loading available layers...</span>
+                    </div>
                 </div>
             </div>
         </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
+    </div>
 
-    <!-- Knowledge Graph Modal (DaisyUI) -->
-    <dialog id="knowledgeGraphOverlay" class="modal">
-        <div class="modal-box max-w-3xl bg-base-200 p-0">
-            <!-- Header -->
-            <div class="flex items-center justify-between p-4 border-b border-base-300">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="share-2" class="w-6 h-6 text-primary"></i>
-                    <h3 class="text-lg font-bold">Knowledge Graph</h3>
+    <!-- Knowledge Graph Modal -->
+    <div class="dataset-modal-overlay" id="knowledgeGraphOverlay">
+        <div class="dataset-modal" style="max-width: 700px; max-height: 85vh;">
+            <div class="dataset-modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="share-2" style="width: 24px; height: 24px;"></i>
+                    <span>Knowledge Graph</span>
                 </div>
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-                </form>
+                <button class="dataset-modal-close" onclick="closeKnowledgeGraph()">✕</button>
             </div>
-
-            <!-- Tabs -->
-            <div role="tablist" class="tabs tabs-bordered bg-base-300">
-                <button role="tab" class="tab tab-active" onclick="showKGTab('purposes')" id="kgTabPurposes">
-                    <i data-lucide="target" class="w-4 h-4 mr-2"></i>
-                    By Purpose
-                </button>
-                <button role="tab" class="tab" onclick="showKGTab('sparql')" id="kgTabSparql">
-                    <i data-lucide="code" class="w-4 h-4 mr-2"></i>
-                    SPARQL
-                </button>
-                <button role="tab" class="tab" onclick="showKGTab('stats')" id="kgTabStats">
-                    <i data-lucide="bar-chart-2" class="w-4 h-4 mr-2"></i>
-                    Statistics
-                </button>
-            </div>
-
-            <!-- Tab Content: By Purpose -->
-            <div class="kg-tab-content active p-4" id="kgContentPurposes">
-                <p class="text-sm opacity-70 mb-4">Find datasets by analytical purpose:</p>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    <button class="btn btn-outline btn-sm gap-2"
-                        onclick="loadDatasetsByPurpose('AccessibilityAnalysis')">
-                        <i data-lucide="accessibility" class="w-4 h-4"></i>
-                        Accessibility
+            <div class="dataset-modal-content" id="knowledgeGraphContent" style="padding: 0;">
+                <!-- Tabs -->
+                <div style="display: flex; border-bottom: 1px solid rgba(196, 195, 227, 0.2);">
+                    <button class="kg-tab active" onclick="showKGTab('purposes')" id="kgTabPurposes">
+                        <i data-lucide="target" style="width: 16px; height: 16px;"></i>
+                        By Purpose
                     </button>
-                    <button class="btn btn-outline btn-sm gap-2" onclick="loadDatasetsByPurpose('EmergencyPlanning')">
-                        <i data-lucide="siren" class="w-4 h-4"></i>
-                        Emergency
+                    <button class="kg-tab" onclick="showKGTab('sparql')" id="kgTabSparql">
+                        <i data-lucide="code" style="width: 16px; height: 16px;"></i>
+                        SPARQL
                     </button>
-                    <button class="btn btn-outline btn-sm gap-2" onclick="loadDatasetsByPurpose('UrbanPlanning')">
-                        <i data-lucide="building-2" class="w-4 h-4"></i>
-                        Urban Planning
-                    </button>
-                    <button class="btn btn-outline btn-sm gap-2"
-                        onclick="loadDatasetsByPurpose('EnvironmentalMonitoring')">
-                        <i data-lucide="leaf" class="w-4 h-4"></i>
-                        Environmental
-                    </button>
-                    <button class="btn btn-outline btn-sm gap-2" onclick="loadDatasetsByPurpose('ChangeDetection')">
-                        <i data-lucide="git-compare" class="w-4 h-4"></i>
-                        Change Detection
-                    </button>
-                    <button class="btn btn-outline btn-sm gap-2" onclick="loadDatasetsByPurpose('ProximityAnalysis')">
-                        <i data-lucide="map-pin" class="w-4 h-4"></i>
-                        Proximity
+                    <button class="kg-tab" onclick="showKGTab('stats')" id="kgTabStats">
+                        <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
+                        Statistics
                     </button>
                 </div>
-                <div id="kgPurposeResults" class="mt-4"></div>
-            </div>
 
-            <!-- Tab Content: SPARQL -->
-            <div class="kg-tab-content hidden p-4" id="kgContentSparql">
-                <p class="text-sm opacity-70 mb-3">Run SPARQL queries on the knowledge graph:</p>
-                <textarea id="sparqlQueryInput" class="textarea textarea-bordered w-full h-32 font-mono text-sm"
-                    placeholder="Enter SPARQL query...">PREFIX geo: <http://geoassist.ai/ontology#>
+                <!-- Tab Content: By Purpose -->
+                <div class="kg-tab-content active" id="kgContentPurposes">
+                    <div style="padding: 1rem;">
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">Find datasets
+                            by analytical purpose:</p>
+                        <div class="kg-purpose-grid">
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('AccessibilityAnalysis')">
+                                <i data-lucide="accessibility" style="width: 20px; height: 20px;"></i>
+                                Accessibility
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('EmergencyPlanning')">
+                                <i data-lucide="siren" style="width: 20px; height: 20px;"></i>
+                                Emergency
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('UrbanPlanning')">
+                                <i data-lucide="building-2" style="width: 20px; height: 20px;"></i>
+                                Urban Planning
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('EnvironmentalMonitoring')">
+                                <i data-lucide="leaf" style="width: 20px; height: 20px;"></i>
+                                Environmental
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('ChangeDetection')">
+                                <i data-lucide="git-compare" style="width: 20px; height: 20px;"></i>
+                                Change Detection
+                            </button>
+                            <button class="kg-purpose-btn" onclick="loadDatasetsByPurpose('ProximityAnalysis')">
+                                <i data-lucide="map-pin" style="width: 20px; height: 20px;"></i>
+                                Proximity
+                            </button>
+                        </div>
+                        <div id="kgPurposeResults" style="margin-top: 1rem;"></div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: SPARQL -->
+                <div class="kg-tab-content" id="kgContentSparql">
+                    <div style="padding: 1rem;">
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.75rem;">Run SPARQL
+                            queries on the knowledge graph:</p>
+                        <textarea id="sparqlQueryInput" class="kg-sparql-input" placeholder="Enter SPARQL query...">PREFIX geo: <http://geoassist.ai/ontology#>
 PREFIX dct: <http://purl.org/dc/terms/>
 
 SELECT ?dataset ?title
@@ -3968,36 +3698,37 @@ WHERE {
     ?dataset dct:title ?title .
 }
 LIMIT 10</textarea>
-                <div class="flex gap-2 mt-3">
-                    <button class="btn btn-primary btn-sm gap-2" onclick="runSparqlQuery()">
-                        <i data-lucide="play" class="w-4 h-4"></i>
-                        Run Query
-                    </button>
-                    <select id="sparqlPresets" class="select select-bordered select-sm" onchange="loadSparqlPreset()">
-                        <option value="">Load preset...</option>
-                        <option value="all_datasets">All Datasets</option>
-                        <option value="healthcare">Healthcare Datasets</option>
-                        <option value="emergency">Emergency Services</option>
-                        <option value="capabilities">Spatial Capabilities</option>
-                    </select>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                            <button class="kg-run-btn" onclick="runSparqlQuery()">
+                                <i data-lucide="play" style="width: 16px; height: 16px;"></i>
+                                Run Query
+                            </button>
+                            <select id="sparqlPresets" class="kg-preset-select" onchange="loadSparqlPreset()">
+                                <option value="">Load preset...</option>
+                                <option value="all_datasets">All Datasets</option>
+                                <option value="healthcare">Healthcare Datasets</option>
+                                <option value="emergency">Emergency Services</option>
+                                <option value="capabilities">Spatial Capabilities</option>
+                            </select>
+                        </div>
+                        <div id="sparqlResults" style="margin-top: 1rem;"></div>
+                    </div>
                 </div>
-                <div id="sparqlResults" class="mt-4"></div>
-            </div>
 
-            <!-- Tab Content: Statistics -->
-            <div class="kg-tab-content hidden p-4" id="kgContentStats">
-                <div id="kgStatsContent">
-                    <div class="flex items-center justify-center gap-2 p-4">
-                        <span class="loading loading-spinner loading-md"></span>
-                        <span>Loading statistics...</span>
+                <!-- Tab Content: Statistics -->
+                <div class="kg-tab-content" id="kgContentStats">
+                    <div style="padding: 1rem;">
+                        <div id="kgStatsContent">
+                            <div class="dataset-loading">
+                                <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
+                                <span>Loading statistics...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-        </form>
-    </dialog>
+    </div>
 
     <style>
         /* Knowledge Graph Tab Styles */
@@ -4197,7 +3928,7 @@ LIMIT 10</textarea>
 
     <script>
         // Initialize map centered on Berlin with smooth interaction settings
-        const map = window.map = L.map('map', {
+        const map = L.map('map', {
             // Default Leaflet settings
             center: [52.52, 13.405],
             zoom: 11,
@@ -4238,7 +3969,7 @@ LIMIT 10</textarea>
         });
 
         // Define basemap layers (free tile services only)
-        const basemaps = window.basemaps = {
+        const basemaps = {
             // Satellite imagery (default)
             'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: '© Esri, Maxar, Earthstar Geographics, CNES/Airbus DS, USDA FSA, USGS, Aerogrid, IGN, IGP, and the GIS User Community',
@@ -4250,13 +3981,13 @@ LIMIT 10</textarea>
                 style: 'https://tiles.openfreemap.org/styles/liberty',
                 attribution: '© OpenStreetMap contributors'
             }),
-            'Light (Vector)': L.maplibreGL({
-                style: 'https://api.maptiler.com/maps/019c0f2c-8b89-70e5-9ae5-d3be4032c66d/style.json?key=bhEdp4p4rIXWG6w033k0',
-                attribution: '© <a href="https://www.maptiler.com/copyright/">MapTiler</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            'Bright (Vector)': L.maplibreGL({
+                style: 'https://tiles.openfreemap.org/styles/bright',
+                attribution: '© OpenStreetMap contributors'
             }),
             'Dark (Vector)': L.maplibreGL({
-                style: 'https://api.maptiler.com/maps/019c1f90-e089-76f6-8573-fd7f4d3947f3/style.json?key=bhEdp4p4rIXWG6w033k0',
-                attribution: '© <a href="https://www.maptiler.com/copyright/">MapTiler</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                style: 'https://tiles.openfreemap.org/styles/dark',
+                attribution: '© OpenStreetMap contributors'
             }),
 
             // Raster tile layers (existing)
@@ -4282,19 +4013,85 @@ LIMIT 10</textarea>
             })
         };
 
-        // Add default basemap based on current theme
-        const currentThemeForBasemap = document.documentElement.getAttribute('data-theme') || 'dark';
-        let initialBasemapKey = currentThemeForBasemap === 'light' ? 'Light (Vector)' : 'Dark (Vector)';
-        let currentBasemap = window.currentBasemap = basemaps[initialBasemapKey];
+        // Add default basemap (Satellite)
+        let currentBasemap = basemaps['Satellite'];
         currentBasemap.addTo(map);
 
-        // Update UI Text safely
-        const basemapTabName = document.getElementById('basemapTabName');
-        if (basemapTabName) {
-            // Map internal keys to friendly display names if needed
-            basemapTabName.textContent = initialBasemapKey;
-        }
+        // Create custom basemap selector control (dropdown)
+        L.Control.BasemapControl = L.Control.extend({
+            onAdd: function (map) {
+                const container = L.DomUtil.create('div', 'leaflet-control basemap-control');
+                let currentBasemapName = 'Satellite';
 
+                // Create toggle button
+                const toggleBtn = L.DomUtil.create('button', 'basemap-toggle-btn', container);
+                toggleBtn.setAttribute('type', 'button');
+                toggleBtn.innerHTML = `
+                    <span class="basemap-current-name">${currentBasemapName}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                `;
+
+                // Create dropdown menu
+                const dropdown = L.DomUtil.create('div', 'basemap-dropdown', container);
+
+                Object.keys(basemaps).forEach(name => {
+                    const option = L.DomUtil.create('div', 'basemap-option', dropdown);
+                    option.textContent = name;
+                    option.setAttribute('data-basemap', name);
+
+                    if (name === 'Dark') {
+                        option.classList.add('active');
+                    }
+
+                    option.addEventListener('click', function (e) {
+                        L.DomEvent.stopPropagation(e);
+
+                        // Remove current basemap
+                        map.removeLayer(currentBasemap);
+
+                        // Add new basemap
+                        currentBasemap = basemaps[name];
+                        currentBasemap.addTo(map);
+
+                        // Update current name
+                        currentBasemapName = name;
+                        toggleBtn.querySelector('.basemap-current-name').textContent = name;
+
+                        // Update active states
+                        dropdown.querySelectorAll('.basemap-option').forEach(opt => {
+                            opt.classList.remove('active');
+                        });
+                        option.classList.add('active');
+
+                        // Close dropdown
+                        container.classList.remove('expanded');
+                    });
+                });
+
+                // Toggle dropdown on button click
+                toggleBtn.addEventListener('click', function (e) {
+                    L.DomEvent.stopPropagation(e);
+                    container.classList.toggle('expanded');
+                });
+
+                // Close dropdown when clicking outside
+                L.DomEvent.on(document, 'click', function () {
+                    container.classList.remove('expanded');
+                });
+
+                // Prevent map interactions when clicking on control
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+
+                return container;
+            }
+        });
+
+        // Add basemap control to map (bottom-right corner, compact)
+        // Commented out - basemap selector now in pill tab
+        // new L.Control.BasemapControl({ position: 'bottomright' }).addTo(map);
 
         // Initialize Lucide icons when popups are opened
         map.on('popupopen', function (e) {
@@ -4311,25 +4108,30 @@ LIMIT 10</textarea>
                 const container = L.DomUtil.create('div', 'leaflet-control north-arrow');
                 container.setAttribute('title', 'North direction');
 
-                // Use Lucide arrow-big-up icon
-                const icon = document.createElement('i');
-                icon.setAttribute('data-lucide', 'arrow-big-up');
-                icon.className = 'north-arrow-icon';
-                container.appendChild(icon);
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 30 30');
+                svg.setAttribute('class', 'north-arrow-svg');
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', '#F1642E');
+                svg.setAttribute('stroke-width', '2');
+                svg.setAttribute('stroke-linecap', 'round');
+                svg.setAttribute('stroke-linejoin', 'round');
+
+                // Create north arrow shape (triangle pointing up)
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M 15 2 L 22 20 L 15 17 L 8 20 Z');
+                path.setAttribute('fill', 'none');
+
+                svg.appendChild(path);
+                container.appendChild(svg);
 
                 container.addEventListener('click', function (e) {
                     L.DomEvent.stopPropagation(e);
+                    // Reset map rotation/bearing if applicable
                     if (map.bearingControl) {
                         map.setBearing(0);
                     }
                 });
-
-                // Initialize Lucide icon after adding to DOM
-                setTimeout(() => {
-                    if (typeof lucide !== 'undefined') {
-                        lucide.createIcons();
-                    }
-                }, 50);
 
                 return container;
             }
@@ -4338,60 +4140,6 @@ LIMIT 10</textarea>
         // Add north arrow control to map (top-right corner)
         new L.Control.NorthArrow({ position: 'topright' }).addTo(map);
 
-        // Create custom theme toggle control
-        L.Control.ThemeToggle = L.Control.extend({
-            onAdd: function (map) {
-                const container = L.DomUtil.create('div', 'leaflet-control theme-toggle');
-                container.setAttribute('title', 'Toggle Light/Dark Mode');
-                container.setAttribute('id', 'themeToggleControl');
-
-                // Create icon container
-                const sunIcon = document.createElement('i');
-                sunIcon.setAttribute('data-lucide', 'sun');
-                sunIcon.setAttribute('id', 'sunIcon');
-                sunIcon.className = 'theme-toggle-icon';
-                sunIcon.style.display = 'none';
-
-                const moonIcon = document.createElement('i');
-                moonIcon.setAttribute('data-lucide', 'moon');
-                moonIcon.setAttribute('id', 'moonIcon');
-                moonIcon.className = 'theme-toggle-icon';
-
-                container.appendChild(sunIcon);
-                container.appendChild(moonIcon);
-
-                container.addEventListener('click', function (e) {
-                    L.DomEvent.stopPropagation(e);
-                    toggleTheme();
-                });
-
-                // Initialize icons after adding to DOM
-                setTimeout(() => {
-                    if (typeof lucide !== 'undefined') {
-                        lucide.createIcons();
-                    }
-                    // Update icon visibility based on current theme
-                    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-                    const sun = document.getElementById('sunIcon');
-                    const moon = document.getElementById('moonIcon');
-                    if (sun && moon) {
-                        if (currentTheme === 'light') {
-                            sun.style.display = 'none';
-                            moon.style.display = 'block';
-                        } else {
-                            sun.style.display = 'block';
-                            moon.style.display = 'none';
-                        }
-                    }
-                }, 100);
-
-                return container;
-            }
-        });
-
-        // Add theme toggle control to map (below north arrow)
-        new L.Control.ThemeToggle({ position: 'topright' }).addTo(map);
-
         // Add scale control to map (bottom-left)
         L.control.scale({
             position: 'bottomleft',
@@ -4399,24 +4147,6 @@ LIMIT 10</textarea>
             imperial: true,
             updateWhenIdle: true
         }).addTo(map);
-
-        // Add coordinate display control (bottom-right)
-        L.Control.CoordinateDisplay = L.Control.extend({
-            onAdd: function (map) {
-                this._container = L.DomUtil.create('div', 'leaflet-control coordinate-display');
-                this._container.innerHTML = '<span class="coord-label">Lat:</span> 52.520000 <span class="coord-separator">|</span> <span class="coord-label">Lng:</span> 13.405000';
-                return this._container;
-            },
-            updateCoordinates: function (lat, lng) {
-                this._container.innerHTML = '<span class="coord-label">Lat:</span> ' + lat.toFixed(6) + ' <span class="coord-separator">|</span> <span class="coord-label">Lng:</span> ' + lng.toFixed(6);
-            }
-        });
-        const coordDisplay = new L.Control.CoordinateDisplay({ position: 'bottomright' });
-        coordDisplay.addTo(map);
-
-        map.on('mousemove', function (e) {
-            coordDisplay.updateCoordinates(e.latlng.lat, e.latlng.lng);
-        });
 
         // Smart popup zoom handler - automatically zoom in when popup is too large for viewport
         map.on('popupopen', function (e) {
@@ -4492,52 +4222,6 @@ LIMIT 10</textarea>
 
         // Feature selection state for context-aware queries (multi-select support)
         let selectedFeatures = [];  // Array of {geometry, properties, type}
-
-        // ──── Transport Mode Configuration ────
-        const transportModes = {
-            pedestrian: { enabled: true, label: 'Pedestrian', icon: '🚶', color: '#F1642E' },
-            bicycle: { enabled: false, label: 'Bicycle', icon: '🚲', color: '#3B82F6' },
-            auto: { enabled: false, label: 'Car', icon: '🚗', color: '#10B981' },
-            truck: { enabled: false, label: 'Truck', icon: '🚛', color: '#8B5CF6' },
-            bus: { enabled: false, label: 'Bus', icon: '🚌', color: '#F59E0B' },
-            motor_scooter: { enabled: false, label: 'Motor Scooter', icon: '🛵', color: '#EC4899' },
-            motorcycle: { enabled: false, label: 'Motorcycle', icon: '🏍️', color: '#06B6D4' }
-        };
-
-        function openTransportModeModal() {
-            const list = document.getElementById('transportModeList');
-            list.innerHTML = '';
-            for (const [key, mode] of Object.entries(transportModes)) {
-                const row = document.createElement('div');
-                row.className = 'transport-mode-row';
-                row.innerHTML = `
-                    <div class="mode-info">
-                        <span class="mode-icon">${mode.icon}</span>
-                        <span class="mode-label">${mode.label}</span>
-                        <span class="mode-color-dot" style="background: ${mode.color};"></span>
-                    </div>
-                    <input type="checkbox" class="toggle toggle-primary toggle-sm" data-mode="${key}" ${mode.enabled ? 'checked' : ''} />
-                `;
-                row.querySelector('input').addEventListener('change', (e) => {
-                    transportModes[key].enabled = e.target.checked;
-                    updateDirectionsActiveCount();
-                });
-                list.appendChild(row);
-            }
-            document.getElementById('transportModeModal').showModal();
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        function updateDirectionsActiveCount() {
-            const count = Object.values(transportModes).filter(m => m.enabled).length;
-            const pill = document.getElementById('directionsTab');
-            if (!pill) return;
-            const badge = pill.querySelector('.transport-badge');
-            if (badge) {
-                badge.textContent = count;
-                badge.style.display = count > 0 ? 'inline-block' : 'none';
-            }
-        }
         let selectedFeatureLayers = [];  // Array of references to selected layers
         let selectedFeatureGeometries = [];  // Array of WKT format geometries for API
         let contextMode = false;  // Whether in context-aware query mode
@@ -4547,37 +4231,8 @@ LIMIT 10</textarea>
         let currentDrawingMode = null;  // 'point', 'line', 'polygon'
         let drawnLayer = null;
         let drawnGeometry = null;
-        let currentDrawHandler = null;  // Reference to active draw handler
         const drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
-
-        // Initialize Leaflet.Draw control (hidden - we use custom UI)
-        // This is needed to properly initialize the draw handlers
-        const drawControl = new L.Control.Draw({
-            position: 'topleft',
-            draw: {
-                polygon: false,
-                polyline: false,
-                rectangle: false,
-                circle: false,
-                circlemarker: false,
-                marker: false
-            },
-            edit: {
-                featureGroup: drawnItems,
-                remove: false,
-                edit: false
-            }
-        });
-        // Add then immediately remove to initialize without showing
-        map.addControl(drawControl);
-        // Hide the control via DOM manipulation
-        setTimeout(() => {
-            const drawContainer = document.querySelector('.leaflet-draw');
-            if (drawContainer) {
-                drawContainer.style.display = 'none';
-            }
-        }, 100);
 
         // ===== DRAWING TOOL FUNCTIONS =====
 
@@ -4614,59 +4269,43 @@ LIMIT 10</textarea>
         }
 
         // Switch basemap
-        // Switch basemap
         function switchBasemap(basemapName, event) {
-            // Stop event propagation if event is provided
+            // Stop event propagation
             if (event) {
                 event.stopPropagation();
             }
 
-            // Close the dropdown (DaisyUI style) by blurring the active element
-            if (document.activeElement && document.activeElement.blur) {
-                document.activeElement.blur();
-            }
+            // Hide the dropdown menu
+            document.getElementById('basemapDropdownMenu').style.display = 'none';
+            document.getElementById('basemapTab').classList.remove('chat-tab-active');
 
-            // Legacy cleanups (optional/fail-safe)
-            const dropdown = document.getElementById('basemapDropdownMenu');
-            if (dropdown) dropdown.style.display = 'none';
-
-            const tab = document.getElementById('basemapTab');
-            if (tab) tab.classList.remove('chat-tab-active');
-
-            // Remove current basemap layer
+            // Remove current basemap
             if (currentBasemap) {
                 map.removeLayer(currentBasemap);
             }
 
-            // Add new basemap layer
-            if (basemaps[basemapName]) {
-                currentBasemap = basemaps[basemapName];
+            // Add new basemap
+            currentBasemap = basemaps[basemapName];
+            if (currentBasemap) {
                 currentBasemap.addTo(map);
-
-                // Update the UI text
-                const basemapTabName = document.getElementById('basemapTabName');
-                if (basemapTabName) {
-                    basemapTabName.textContent = basemapName;
-                }
-            } else {
-                console.error(`Basemap '${basemapName}' not found.`);
             }
 
-            // Re-render icons if needed
-            if (window.lucide) {
+            // Update the pill tab text to show current basemap name
+            const basemapTabName = document.getElementById('basemapTabName');
+            if (basemapTabName) {
+                basemapTabName.textContent = basemapName;
+            }
+
+            // Update Lucide icons
+            if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
         }
 
         // Activate drawing mode for a specific type
         function activateDrawing(type) {
-            // Close DaisyUI dropdown by blurring the dropdown trigger
-            // Use setTimeout to ensure the click event completes first
-            setTimeout(() => {
-                if (document.activeElement && document.activeElement.blur) {
-                    document.activeElement.blur();
-                }
-            }, 0);
+            // Hide the dropdown menu
+            document.getElementById('drawDropdownMenu').style.display = 'none';
 
             // Clear any previous drawings
             drawnItems.clearLayers();
@@ -4678,14 +4317,6 @@ LIMIT 10</textarea>
 
             // Create appropriate drawing handler
             let drawHandler;
-            const drawOptions = {
-                shapeOptions: {
-                    color: '#FFB162',
-                    weight: 3,
-                    fillOpacity: 0.3
-                }
-            };
-
             switch (type) {
                 case 'point':
                     drawHandler = new L.Draw.Marker(map, {
@@ -4701,45 +4332,66 @@ LIMIT 10</textarea>
                     });
                     break;
                 case 'line':
-                    drawHandler = new L.Draw.Polyline(map, drawOptions);
+                    drawHandler = new L.Draw.Polyline(map, {
+                        shapeOptions: {
+                            color: '#FFB162',
+                            weight: 3
+                        }
+                    });
                     break;
                 case 'polygon':
-                    drawHandler = new L.Draw.Polygon(map, drawOptions);
+                    drawHandler = new L.Draw.Polygon(map, {
+                        shapeOptions: {
+                            color: '#FFB162',
+                            fillOpacity: 0.3
+                        }
+                    });
                     break;
             }
 
-            // Enable drawing handler
+            // Enable drawing
             if (drawHandler) {
                 drawHandler.enable();
-                console.log(`Drawing handler enabled for ${type}`);
+
+                // Update tab to show active state
+                document.getElementById('drawTab').classList.add('chat-tab-active');
 
                 // Show notification
                 showNotification(`Drawing ${type} mode activated. Click on the map to draw.`, 'info');
-            } else {
-                console.error(`Failed to create draw handler for type: ${type}`);
             }
         }
 
         // Clear drawn geometry
         function clearDrawing(event) {
-            // Close dropdown
-            if (document.activeElement && document.activeElement.blur) {
-                document.activeElement.blur();
+            // Stop event propagation
+            if (event) {
+                event.stopPropagation();
             }
-            if (event) event.preventDefault();
 
+            // Hide the dropdown menu
+            const menu = document.getElementById('drawDropdownMenu');
+            const tab = document.getElementById('drawTab');
+            if (menu) {
+                menu.style.display = 'none';
+            }
+            if (tab) {
+                tab.classList.remove('chat-tab-active');
+            }
+
+            // Clear drawn layers from map
             drawnItems.clearLayers();
+            drawnLayer = null;
             drawnGeometry = null;
-            drawingEnabled = false;
-            currentDrawingMode = null;
 
-            // Hide indicator
+            // Hide the active indicator
             const indicator = document.getElementById('drawActiveIndicator');
             if (indicator) {
-                indicator.classList.add('hidden');
+                indicator.style.display = 'none';
             }
 
-            showNotification('Drawing cleared', 'info');
+            // Show notification
+            showNotification('Drawing cleared', 'success');
+
             console.log('Drawn geometry cleared');
         }
 
@@ -4753,7 +4405,7 @@ LIMIT 10</textarea>
             nameInput.value = `Drawing (${currentDrawingMode}) - ${timestamp}`;
 
             // Show modal
-            if (modal) modal.showModal();
+            modal.style.display = 'flex';
 
             // Auto-select text for easy editing
             setTimeout(() => nameInput.select(), 100);
@@ -4828,7 +4480,7 @@ LIMIT 10</textarea>
         // Close save dialog
         function closeSaveDrawingDialog() {
             const modal = document.getElementById('saveDrawingModal');
-            if (modal) modal.close();
+            modal.style.display = 'none';
         }
 
         // Clear drawing after saving to layer
@@ -4841,7 +4493,12 @@ LIMIT 10</textarea>
 
             const indicator = document.getElementById('drawActiveIndicator');
             if (indicator) {
-                indicator.classList.add('hidden');
+                indicator.style.display = 'none';
+            }
+
+            const tab = document.getElementById('drawTab');
+            if (tab) {
+                tab.classList.remove('chat-tab-active');
             }
         }
 
@@ -4858,7 +4515,7 @@ LIMIT 10</textarea>
             // Show indicator that geometry is active
             const indicator = document.getElementById('drawActiveIndicator');
             if (indicator) {
-                indicator.classList.remove('hidden');
+                indicator.style.display = 'inline-block';
             }
 
             // Keep drawing mode active until user decides
@@ -4871,7 +4528,27 @@ LIMIT 10</textarea>
             console.log('Drawn geometry:', drawnGeometry);
         });
 
-        // Obsolete manual listeners removed (handled by DaisyUI)
+        // Close draw menu when clicking outside
+        document.addEventListener('click', function (e) {
+            const drawTab = document.getElementById('drawTab');
+            const menu = document.getElementById('drawDropdownMenu');
+
+            if (menu && !drawTab.contains(e.target)) {
+                menu.style.display = 'none';
+                drawTab.classList.remove('chat-tab-active');
+            }
+        });
+
+        // Close basemap menu when clicking outside
+        document.addEventListener('click', function (e) {
+            const basemapTab = document.getElementById('basemapTab');
+            const menu = document.getElementById('basemapDropdownMenu');
+
+            if (menu && !basemapTab.contains(e.target)) {
+                menu.style.display = 'none';
+                basemapTab.classList.remove('chat-tab-active');
+            }
+        });
 
         // ===== MULTI-STEP QUERY FUNCTIONS =====
 
@@ -5034,51 +4711,15 @@ LIMIT 10</textarea>
             showNotification('Query removed from chain');
         }
 
-        // Show notification using DaisyUI toast
+        // Show notification
         function showNotification(message, type = 'success') {
-            // Create toast container if it doesn't exist
-            let toastContainer = document.getElementById('toast-container');
-            if (!toastContainer) {
-                toastContainer = document.createElement('div');
-                toastContainer.id = 'toast-container';
-                toastContainer.className = 'toast toast-end toast-bottom z-[9999]';
-                document.body.appendChild(toastContainer);
-            }
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
 
-            // Map type to DaisyUI alert classes
-            const alertClasses = {
-                'success': 'alert-success',
-                'error': 'alert-error',
-                'warning': 'alert-warning',
-                'info': 'alert-info'
-            };
-
-            // Map type to icons
-            const icons = {
-                'success': 'check-circle',
-                'error': 'x-circle',
-                'warning': 'alert-triangle',
-                'info': 'info'
-            };
-
-            const alertClass = alertClasses[type] || 'alert-info';
-            const icon = icons[type] || 'info';
-
-            // Create toast element
-            const toast = document.createElement('div');
-            toast.className = `alert ${alertClass} shadow-lg animate-fade-in`;
-            toast.innerHTML = `
-                <i data-lucide="${icon}" class="w-5 h-5"></i>
-                <span>${message}</span>
-            `;
-
-            toastContainer.appendChild(toast);
-            lucide.createIcons();
-
-            // Auto-remove after 4 seconds
             setTimeout(() => {
-                toast.classList.add('opacity-0', 'transition-opacity');
-                setTimeout(() => toast.remove(), 300);
+                notification.style.display = 'none';
             }, 4000);
         }
 
@@ -5088,24 +4729,6 @@ LIMIT 10</textarea>
 
             if (searchBtn) {
                 searchBtn.disabled = isLoading;
-
-                if (isLoading) {
-                    // Save original content if not already saved
-                    if (!searchBtn.dataset.originalContent) {
-                        searchBtn.dataset.originalContent = searchBtn.innerHTML;
-                    }
-                    // Show spinner
-                    searchBtn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>';
-                } else {
-                    // Restore original content
-                    if (searchBtn.dataset.originalContent) {
-                        searchBtn.innerHTML = searchBtn.dataset.originalContent;
-                        // Re-initialize icons for the restored content
-                        if (window.lucide) {
-                            lucide.createIcons();
-                        }
-                    }
-                }
             }
         }
 
@@ -5364,7 +4987,7 @@ LIMIT 10</textarea>
             // Generate color for this layer (new palette)
             const colors = ['#FFB162', '#A35139', '#2C3B4D', '#1B2632',
                 '#C9A462', '#7A6B5D', '#FFD89B', '#E8A87C'];
-            let layerColor = (metadata && metadata.routeColor) ? metadata.routeColor : colors[numericId % colors.length];
+            const layerColor = colors[numericId % colors.length];
 
             // Default style configuration
             const defaultStyle = {
@@ -5676,7 +5299,7 @@ LIMIT 10</textarea>
             };
 
             const excludeKeys = new Set([
-                'geometry', 'geom_25833', 'description', 'description_de', 'note', 'name', 'amenity', 'shop',
+                'geometry', 'description', 'description_de', 'note', 'name', 'amenity', 'shop',
                 'tourism', 'highway', 'building', 'type', 'operator', 'brand', 'market_count', 'count',
                 'area_sq_km', 'area_ha', 'area', 'oteil', 'bezirk', 'title'
             ]);
@@ -5806,152 +5429,63 @@ LIMIT 10</textarea>
 
             layersList.innerHTML = '';
 
-            // Group route layers by routeGroupId
-            const reversedLayers = [...layers].reverse();
-            const routeGroups = {};
-            const orderedItems = [];  // mixed: either a layer or a group placeholder
-            const processedGroupIds = new Set();
+            // Reverse order to show newest first
+            [...layers].reverse().forEach(layerInfo => {
+                const layerItem = document.createElement('div');
+                layerItem.className = 'layer-item' + (layerInfo.visible ? ' active' : '');
 
-            for (const layerInfo of reversedLayers) {
-                const gid = layerInfo.metadata?.routeGroupId;
-                if (gid) {
-                    if (!routeGroups[gid]) routeGroups[gid] = [];
-                    routeGroups[gid].push(layerInfo);
-                    if (!processedGroupIds.has(gid)) {
-                        processedGroupIds.add(gid);
-                        orderedItems.push({ type: 'group', groupId: gid });
-                    }
-                } else {
-                    orderedItems.push({ type: 'layer', layerInfo });
-                }
-            }
+                // Get the actual color used on the map
+                const style = layerInfo.style || {};
+                const fillColor = style.fillColor || layerInfo.color || '#F1642E';
+                const borderColor = style.borderColor || '#ffffff';
+                const isGradient = style.isGradient && style.gradientProperty;
 
-            for (const item of orderedItems) {
-                if (item.type === 'group') {
-                    const groupLayers = routeGroups[item.groupId];
-                    const label = groupLayers[0]?.metadata?.routeGroupLabel || 'Route';
-                    const groupEl = document.createElement('div');
-                    groupEl.className = 'route-group';
-                    groupEl.dataset.groupId = item.groupId;
+                // Apply color-tinted background based on layer's fill color (or gradient)
+                applyLayerColor(layerItem, fillColor, isGradient, style.gradientScheme);
 
-                    // Header
-                    const header = document.createElement('div');
-                    header.className = 'route-group-header';
-                    header.innerHTML = `
-                        <div class="group-title">
-                            <i data-lucide="route" class="w-4 h-4 group-chevron"></i>
-                            <span title="${label}">🗺️ ${label}</span>
-                            <span style="font-size: 0.7rem; opacity: 0.6;">${groupLayers.length} modes</span>
-                        </div>
-                        <div class="group-controls">
-                            <button class="btn btn-ghost btn-xs btn-circle text-error" title="Remove all routes in group">
-                                <i data-lucide="x" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    `;
-                    // Toggle collapse on header click
-                    header.addEventListener('click', (e) => {
-                        if (e.target.closest('.group-controls')) return;
-                        groupEl.classList.toggle('collapsed');
-                    });
-                    // Remove-all button
-                    header.querySelector('.group-controls button').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        [...groupLayers].forEach(l => removeLayer(l.id));
-                    });
-                    groupEl.appendChild(header);
+                const timeAgo = getTimeAgo(layerInfo.timestamp);
 
-                    // Children container
-                    const childrenEl = document.createElement('div');
-                    childrenEl.className = 'route-group-children';
-
-                    for (const layerInfo of groupLayers) {
-                        childrenEl.appendChild(createLayerCard(layerInfo));
-                    }
-                    groupEl.appendChild(childrenEl);
-                    layersList.appendChild(groupEl);
-                } else {
-                    layersList.appendChild(createLayerCard(item.layerInfo));
-                }
-            }
-
-            // Refresh Lucide icons for newly created DOM elements
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-
-        // Create a single layer card element (extracted for reuse in groups)
-        function createLayerCard(layerInfo) {
-            const layerItem = document.createElement('div');
-            layerItem.className = 'card shadow-sm mb-2 hover:bg-base-200 transition-colors border-l-4';
-
-            const style = layerInfo.style || {};
-            const fillColor = style.fillColor || layerInfo.color || '#F1642E';
-
-            if (layerInfo.visible) {
-                layerItem.style.background = `color-mix(in srgb, ${fillColor}, transparent 85%)`;
-                layerItem.style.borderLeftColor = fillColor;
-            } else {
-                layerItem.classList.add('bg-base-300', 'border-transparent');
-            }
-
-            const timeAgo = getTimeAgo(layerInfo.timestamp);
-
-            // For route layers, show distance/time instead of feature count
-            const meta = layerInfo.metadata || {};
-            let infoHtml;
-            if (meta.type === 'route' && meta.distance_m) {
-                const km = (meta.distance_m / 1000).toFixed(2);
-                const mins = meta.time_minutes?.toFixed(1) || '?';
-                infoHtml = `<span>${km} km · ~${mins} min</span>`;
-            } else {
-                infoHtml = `<i data-lucide="map-pin" class="w-3 h-3"></i><span>${layerInfo.featureCount} features</span>`;
-            }
-
-            layerItem.innerHTML = `
-                <div class="card-body p-3">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-semibold text-sm truncate pr-2" title="${layerInfo.name}">${layerInfo.name}</h3>
-                        <div class="flex items-center gap-1">
-                            <input type="checkbox" class="toggle toggle-xs toggle-primary" ${layerInfo.visible ? 'checked' : ''} onclick="toggleLayer(${layerInfo.id})" />
-                            
-                            <div class="dropdown dropdown-end">
-                                <label tabindex="0" class="btn btn-ghost btn-xs btn-circle" onclick="event.stopPropagation()">
-                                    <i data-lucide="more-vertical" class="w-4 h-4"></i>
-                                </label>
-                                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32 border border-base-content/10">
-                                    <li><a onclick="openStyleDialog(event, ${layerInfo.id})"><i data-lucide="palette" class="w-3 h-3"></i> Style</a></li>
-                                    <li><a onclick="openExportDialog(${layerInfo.id}, event)"><i data-lucide="download" class="w-3 h-3"></i> Export</a></li>
-                                </ul>
+                layerItem.innerHTML = `
+                    <div class="layer-header">
+                        <div class="layer-name" title="${layerInfo.name}">${layerInfo.name}</div>
+                        <div class="layer-controls">
+                            <div class="layer-toggle ${layerInfo.visible ? 'active' : ''}"
+                                 onclick="toggleLayer(${layerInfo.id})"></div>
+                            <div class="layer-menu-wrapper">
+                                <button class="layer-menu-btn" onclick="toggleLayerMenu(event, ${layerInfo.id})" title="More options"><i data-lucide="more-vertical" style="width: 18px; height: 18px;"></i></button>
+                                <div class="layer-dropdown-menu" id="menu${layerInfo.id}">
+                                    <div class="layer-dropdown-item" onclick="openStyleDialog(event, ${layerInfo.id})"><i data-lucide="palette" style="width: 16px; height: 16px; margin-right: 6px; display: inline;"></i>Style</div>
+                                    <div class="layer-dropdown-item" onclick="openExportDialog(${layerInfo.id}, event)"><i data-lucide="download" style="width: 16px; height: 16px; margin-right: 6px; display: inline;"></i>Export as GeoJSON</div>
+                                </div>
                             </div>
-                            
-                            <button class="btn btn-ghost btn-xs btn-circle text-error" onclick="removeLayer(${layerInfo.id}); event.stopPropagation()">
-                                <i data-lucide="x" class="w-4 h-4"></i>
-                            </button>
+                            <span class="layer-remove" onclick="removeLayer(${layerInfo.id})"><i data-lucide="x" style="width: 16px; height: 16px;"></i></span>
                         </div>
                     </div>
-                    
-                    <div class="flex justify-between items-center text-xs opacity-70">
-                        <div class="flex items-center gap-1">
-                            ${infoHtml}
+                    <div class="layer-info">
+                        <div class="layer-count">
+                            <span><i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>${layerInfo.featureCount} features</span>
                         </div>
-                        <span>${timeAgo}</span>
+                        <div class="layer-time">${timeAgo}</div>
                     </div>
-                </div>
-            `;
+                `;
 
-            layerItem.onclick = (e) => {
-                if (e.target.closest('.toggle') ||
-                    e.target.closest('.btn') ||
-                    e.target.closest('.dropdown') ||
-                    e.target.closest('a')) {
-                    return;
-                }
-                displayLayerOperations(layerInfo.id);
-                createMapLegend(layerInfo);
-                zoomToLayer(layerInfo.id);
-            };
+                layerItem.onclick = (e) => {
+                    // Don't zoom if clicking controls
+                    if (e.target.classList.contains('layer-toggle') ||
+                        e.target.classList.contains('layer-remove') ||
+                        e.target.classList.contains('layer-menu-btn')) {
+                        return;
+                    }
+                    // Display operations when layer is clicked
+                    displayLayerOperations(layerInfo.id);
+                    // Update map legend for this layer
+                    createMapLegend(layerInfo);
+                    // Zoom to layer
+                    zoomToLayer(layerInfo.id);
+                };
 
-            return layerItem;
+                layersList.appendChild(layerItem);
+            });
         }
 
         // Get time ago string
@@ -6441,8 +5975,11 @@ LIMIT 10</textarea>
             map.removeLayer(layerInfo.layer);
             layers = layers.filter(l => l.id !== layerId);
 
-            // Remove legend if this was the active layer
-            clearPanelLegend();
+            // Remove map legend if this was the active layer
+            if (currentLegendControl) {
+                map.removeControl(currentLegendControl);
+                currentLegendControl = null;
+            }
 
             updateLayersPanel();
 
@@ -6481,23 +6018,24 @@ LIMIT 10</textarea>
 
         // Open export dialog
         function openExportDialog(layerId, event) {
-            if (event) event.stopPropagation();
+            event.stopPropagation();
             currentExportLayerId = layerId;
-            const modal = document.getElementById('exportDialogOverlay');
-            if (modal) {
-                modal.showModal();
+            const overlay = document.getElementById('exportDialogOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
             }
-            // Close any active dropdowns (DaisyUI handles this mostly, but good to be sure if manually toggled)
-            if (document.activeElement) {
-                document.activeElement.blur();
+            // Close the menu
+            const menu = document.getElementById(`menu${layerId}`);
+            if (menu) {
+                menu.classList.remove('active');
             }
         }
 
         // Close export dialog
         function closeExportDialog() {
-            const modal = document.getElementById('exportDialogOverlay');
-            if (modal) {
-                modal.close();
+            const overlay = document.getElementById('exportDialogOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
             }
             currentExportLayerId = null;
         }
@@ -6599,7 +6137,7 @@ LIMIT 10</textarea>
 
         // Open style dialog
         function openStyleDialog(event, layerId) {
-            if (event) event.stopPropagation();
+            event.stopPropagation();
             currentStyleLayerId = layerId;
 
             const layerInfo = layers.find(l => l.id === layerId);
@@ -6622,13 +6160,13 @@ LIMIT 10</textarea>
                 gradientRange: { min: null, max: null }
             };
 
-            // Set simple style inputs
+            // Set basic tab values
             document.getElementById('fillColor').value = style.fillColor || '#FF6B6B';
             document.getElementById('borderColor').value = style.borderColor || '#ffffff';
-            document.getElementById('fillOpacity').value = style.fillOpacity !== undefined ? style.fillOpacity : 0.8;
-            document.getElementById('fillOpacityValue').textContent = style.fillOpacity !== undefined ? style.fillOpacity : 0.8;
-            document.getElementById('borderWidth').value = style.borderWidth !== undefined ? style.borderWidth : 2;
-            document.getElementById('borderWidthValue').textContent = style.borderWidth !== undefined ? style.borderWidth : 2;
+            document.getElementById('fillOpacity').value = style.fillOpacity || 0.8;
+            document.getElementById('borderWidth').value = style.borderWidth || 2;
+            document.getElementById('fillOpacityValue').textContent = (style.fillOpacity || 0.8).toFixed(1);
+            document.getElementById('borderWidthValue').textContent = style.borderWidth || 2;
 
             // Set icon name input and preview
             if (document.getElementById('iconNameInput')) {
@@ -6648,24 +6186,18 @@ LIMIT 10</textarea>
                     document.getElementById('rangeMin').value = style.gradientRange.min || '';
                     document.getElementById('rangeMax').value = style.gradientRange.max || '';
                 }
-
-                // Switch to gradient tab if active
-                const gradientTabBtn = document.querySelector('.tab[data-tab="gradient"]');
-                if (gradientTabBtn) switchStyleTab(gradientTabBtn);
-            } else {
-                // Default to basic tab
-                const basicTabBtn = document.querySelector('.tab[data-tab="basic"]');
-                if (basicTabBtn) switchStyleTab(basicTabBtn);
             }
 
             // Show dialog
-            const modal = document.getElementById('styleDialogOverlay');
-            if (modal) {
-                modal.showModal();
+            const overlay = document.getElementById('styleDialogOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
             }
 
-            if (document.activeElement) {
-                document.activeElement.blur();
+            // Close the menu
+            const menu = document.getElementById(`menu${layerId}`);
+            if (menu) {
+                menu.classList.remove('active');
             }
 
             // Add event listeners for sliders
@@ -6674,9 +6206,9 @@ LIMIT 10</textarea>
 
         // Close style dialog
         function closeStyleDialog() {
-            const modal = document.getElementById('styleDialogOverlay');
-            if (modal) {
-                modal.close();
+            const overlay = document.getElementById('styleDialogOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
             }
             currentStyleLayerId = null;
             styleFormData = null;
@@ -6684,23 +6216,24 @@ LIMIT 10</textarea>
 
         // Switch between tabs
         function switchStyleTab(tabButton) {
-            const tabs = document.querySelectorAll('.tab');
-            const targetId = tabButton.getAttribute('data-tab') + 'Tab';
-
             // Remove active class from all tabs
-            tabs.forEach(tab => tab.classList.remove('tab-active'));
+            document.querySelectorAll('.style-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
 
             // Add active class to clicked tab
-            tabButton.classList.add('tab-active');
+            tabButton.classList.add('active');
 
-            // Hide all contents
-            document.getElementById('basicTab').classList.add('hidden');
-            document.getElementById('gradientTab').classList.add('hidden');
+            // Hide all tab contents
+            document.querySelectorAll('.style-tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
 
-            // Show target content
-            const content = document.getElementById(targetId);
-            if (content) {
-                content.classList.remove('hidden');
+            // Show selected tab content
+            const tabName = tabButton.getAttribute('data-tab');
+            const tabContent = document.getElementById(tabName + 'Tab');
+            if (tabContent) {
+                tabContent.classList.remove('hidden');
             }
         }
 
@@ -7753,12 +7286,8 @@ LIMIT 10</textarea>
         // Store map legend control reference
         let currentLegendControl = null;
 
-        // Create legend in the left panel's bottom section
+        // Create and add Leaflet map legend
         function createMapLegend(layerInfo) {
-            const container = document.getElementById('panelLegendContainer');
-            const content = document.getElementById('panelLegendContent');
-            if (!container || !content) return;
-
             if (!layerInfo.geojsonData || !layerInfo.geojsonData.features) return;
 
             const features = layerInfo.geojsonData.features;
@@ -7773,75 +7302,76 @@ LIMIT 10</textarea>
                 return;
             }
 
-            // Remove old floating Leaflet legend if any
+            // Remove existing legend
             if (currentLegendControl) {
                 map.removeControl(currentLegendControl);
-                currentLegendControl = null;
             }
 
-            let html = '';
+            // Create custom Leaflet control - GRADIENT BAR WITH LABELS
+            const LegendControl = L.Control.extend({
+                options: {
+                    position: 'bottomleft'
+                },
+                onAdd: function (map) {
+                    const div = L.DomUtil.create('div', 'map-legend');
 
-            if (layerInfo.style && layerInfo.style.isGradient && layerInfo.style.gradientProperty && layerInfo.style.gradientRange) {
-                const style = layerInfo.style;
-                const isCompositeScore = style.gradientProperty === 'composite_score';
+                    // Build legend HTML - GRADIENT BAR with appropriate labels
+                    let html = '';
 
-                // Generate gradient color bar
-                const colors = [];
-                for (let i = 0; i <= 10; i++) {
-                    const normalized = i / 10;
-                    const color = interpolateColor(normalized, style.gradientScheme || 'viridis');
-                    colors.push(color);
+                    if (layerInfo.style && layerInfo.style.isGradient && layerInfo.style.gradientProperty && layerInfo.style.gradientRange) {
+                        const style = layerInfo.style;
+                        const isCompositeScore = style.gradientProperty === 'composite_score';
+
+                        // Generate gradient color bar
+                        const colors = [];
+                        for (let i = 0; i <= 10; i++) {
+                            const normalized = i / 10;
+                            const color = interpolateColor(normalized, style.gradientScheme || 'viridis');
+                            colors.push(color);
+                        }
+                        const gradientBarStyle = 'linear-gradient(to right, ' + colors.join(', ') + ')';
+
+                        // Get label text based on property type
+                        let minLabel = style.gradientRange.min?.toFixed(2) || '0';
+                        let maxLabel = style.gradientRange.max?.toFixed(2) || '10';
+                        let legendTitle = 'Gradient Legend';
+                        let legendUnit = '';
+
+                        if (isCompositeScore) {
+                            minLabel = '0.0';
+                            maxLabel = '1.0';
+                            legendTitle = 'Suitability Score';
+                            legendUnit = '(0=Poor, 1=Excellent)';
+                        } else if (style.gradientProperty === 'amenities_per_km2' || style.gradientProperty === 'density_per_sq_km') {
+                            legendTitle = 'Density (amenities/km²)';
+                        }
+
+                        html = `
+                            <div style="background: rgba(26, 24, 37, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(var(--accent-primary-rgb), 0.3); border-radius: 6px; padding: 10px 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+                                ${legendTitle ? `<div style="font-size: 0.75rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); margin-bottom: 6px;">${legendTitle}</div>` : ''}
+                                <div style="width: 140px; height: 20px; background: ${gradientBarStyle}; border-radius: 2px; border: 1px solid rgba(255, 255, 255, 0.2); margin-bottom: 4px;"></div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: rgba(255, 255, 255, 0.7); margin-bottom: ${legendUnit ? '4px' : '0'};">
+                                    <span>${minLabel}</span>
+                                    <span>${maxLabel}</span>
+                                </div>
+                                ${legendUnit ? `<div style="font-size: 0.6rem; color: rgba(255, 255, 255, 0.6); text-align: center;">${legendUnit}</div>` : ''}
+                            </div>
+                        `;
+                    }
+
+                    div.innerHTML = html;
+
+                    // Prevent click propagation to map
+                    L.DomEvent.disableClickPropagation(div);
+                    L.DomEvent.disableScrollPropagation(div);
+
+                    return div;
                 }
-                const gradientBarStyle = 'linear-gradient(to right, ' + colors.join(', ') + ')';
+            });
 
-                // Get label text based on property type
-                let minLabel = style.gradientRange.min?.toFixed(2) || '0';
-                let maxLabel = style.gradientRange.max?.toFixed(2) || '10';
-                let legendTitle = 'Gradient Legend';
-                let legendUnit = '';
-
-                if (isCompositeScore) {
-                    minLabel = '0.0';
-                    maxLabel = '1.0';
-                    legendTitle = 'Suitability Score';
-                    legendUnit = '(0=Poor, 1=Excellent)';
-                } else if (style.gradientProperty === 'amenities_per_km2' || style.gradientProperty === 'density_per_sq_km') {
-                    legendTitle = 'Density (amenities/km²)';
-                }
-
-                const layerName = layerInfo.name || 'Active Layer';
-
-                html = `
-                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 6px;">${layerName}</div>
-                    ${legendTitle ? `<div style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">${legendTitle}</div>` : ''}
-                    <div style="width: 100%; height: 16px; background: ${gradientBarStyle}; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.15); margin-bottom: 4px;"></div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: ${legendUnit ? '4px' : '0'};">
-                        <span>${minLabel}</span>
-                        <span>${maxLabel}</span>
-                    </div>
-                    ${legendUnit ? `<div style="font-size: 0.65rem; color: var(--text-muted); text-align: center;">${legendUnit}</div>` : ''}
-                `;
-            }
-
-            if (html) {
-                content.innerHTML = html;
-                container.style.display = 'block';
-                // Re-init Lucide icons
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        }
-
-        // Clear panel legend
-        function clearPanelLegend() {
-            const container = document.getElementById('panelLegendContainer');
-            const content = document.getElementById('panelLegendContent');
-            if (container) container.style.display = 'none';
-            if (content) content.innerHTML = '';
-            // Also remove old floating Leaflet legend if any
-            if (currentLegendControl) {
-                map.removeControl(currentLegendControl);
-                currentLegendControl = null;
-            }
+            // Add legend to map
+            currentLegendControl = new LegendControl();
+            currentLegendControl.addTo(map);
         }
 
         // Get gradient colors for a scheme (used for legend display)
@@ -8295,10 +7825,6 @@ LIMIT 10</textarea>
             // Recreate temp layer with all selected geometries
             if (selectedFeatures.length > 0) {
                 try {
-                    // Ensure session_id is set and consistent
-                    if (!window.sessionId) {
-                        window.sessionId = `session_${Date.now()}`;
-                    }
                     const tempLayerResponse = await fetch(`${API_URL}/create-temp-layer`, {
                         method: 'POST',
                         headers: {
@@ -8306,7 +7832,7 @@ LIMIT 10</textarea>
                         },
                         body: JSON.stringify({
                             geometries: selectedFeatures.map(f => f.geometry),
-                            session_id: window.sessionId
+                            session_id: window.sessionId || `session_${Date.now()}`
                         })
                     });
 
@@ -8408,201 +7934,6 @@ LIMIT 10</textarea>
                 pill.style.display = 'none';
                 pill.title = '';
             }
-
-            // Update Directions button state based on selection count
-            updateDirectionsButton();
-        }
-
-        // Update the Directions button based on selection count
-        function updateDirectionsButton() {
-            const directionsTab = document.getElementById('directionsTab');
-            const directionsCount = document.getElementById('directionsCount');
-
-            if (!directionsTab) return;
-
-            const count = selectedFeatures.length;
-
-            // Show/update count badge
-            if (directionsCount) {
-                if (count > 0) {
-                    directionsCount.textContent = count;
-                    directionsCount.style.display = 'inline-block';
-                } else {
-                    directionsCount.style.display = 'none';
-                }
-            }
-
-            // Enable button only when exactly 2 features are selected
-            if (count === 2) {
-                directionsTab.classList.remove('chat-tab-disabled');
-                directionsTab.style.cursor = 'pointer';
-                directionsTab.title = 'Get walking directions between the 2 selected features';
-            } else {
-                directionsTab.classList.add('chat-tab-disabled');
-                directionsTab.style.cursor = 'not-allowed';
-                if (count === 0) {
-                    directionsTab.title = 'Select 2 features on the map to get directions';
-                } else if (count === 1) {
-                    directionsTab.title = 'Select 1 more feature to get directions';
-                } else {
-                    directionsTab.title = `${count} features selected - select exactly 2 for directions`;
-                }
-            }
-        }
-
-        // Execute directions between 2 selected features (multi-mode)
-        async function executeDirections() {
-            if (selectedFeatures.length !== 2) {
-                if (selectedFeatures.length < 2) {
-                    showNotification('Please select 2 features on the map first', 'warning');
-                } else {
-                    showNotification('Please select exactly 2 features for directions', 'warning');
-                }
-                return;
-            }
-
-            // Collect enabled modes
-            const enabledModes = Object.entries(transportModes).filter(([, m]) => m.enabled);
-            if (enabledModes.length === 0) {
-                showNotification('No transport modes selected. Click the route icon to choose modes.', 'warning');
-                return;
-            }
-
-            const directionsTab = document.getElementById('directionsTab');
-
-            try {
-                // Show loading state
-                directionsTab.innerHTML = `
-                    <span class="loading loading-spinner loading-sm"></span>
-                    <span>Calculating ${enabledModes.length} route${enabledModes.length > 1 ? 's' : ''}...</span>
-                `;
-
-                console.log(`🗺️ Getting directions for ${enabledModes.length} transport mode(s)`);
-
-                const featureNames = selectedFeatures.map((f, i) =>
-                    f.properties?.name ||
-                    f.properties?.amenity ||
-                    f.properties?.type ||
-                    `Point ${i + 1}`
-                );
-
-                // Fire parallel requests for each enabled mode
-                const requests = enabledModes.map(([costing]) =>
-                    fetch(`${API_URL}/routing/optimal-tour`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            geometries: selectedFeatures.map(f => f.geometry),
-                            feature_names: featureNames,
-                            costing: costing,
-                            session_id: window.sessionId
-                        })
-                    }).then(r => r.json()).then(result => ({ costing, result }))
-                        .catch(err => ({ costing, result: { success: false, error: err.message } }))
-                );
-
-                const responses = await Promise.all(requests);
-
-                // Process results and add routes to map
-                let anySuccess = false;
-                let combinedBounds = null;
-                const routeSummaries = [];
-                const routeGroupId = `route_${Date.now()}`;
-                const routeGroupLabel = `${featureNames[0]} → ${featureNames[1]}`;
-
-                for (const { costing, result } of responses) {
-                    const mode = transportModes[costing];
-                    if (!result.success || !result.geometry) {
-                        console.warn(`⚠️ ${mode.label} route failed: ${result.error || 'no geometry'}`);
-                        routeSummaries.push(`${mode.icon} ${mode.label}: failed`);
-                        continue;
-                    }
-
-                    anySuccess = true;
-                    const distanceKm = (result.total_distance_m / 1000).toFixed(2);
-                    const time = result.total_time_minutes?.toFixed(1) || 'N/A';
-
-                    // Create a temp Leaflet layer to get bounds, then remove
-                    const tempLayer = L.geoJSON(result.geometry);
-                    const routeBounds = tempLayer.getBounds();
-                    if (!combinedBounds) {
-                        combinedBounds = L.latLngBounds(routeBounds.getSouthWest(), routeBounds.getNorthEast());
-                    } else {
-                        combinedBounds.extend(routeBounds);
-                    }
-
-                    const layerName = `${mode.icon} ${mode.label}: ${featureNames[0]} → ${featureNames[1]}`;
-
-                    const routeGeoJSON = {
-                        type: 'FeatureCollection',
-                        features: [{
-                            type: 'Feature',
-                            properties: {
-                                name: layerName,
-                                distance_m: result.total_distance_m,
-                                time_minutes: result.total_time_minutes,
-                                routing_engine: result.routing_engine || 'valhalla',
-                                costing: costing,
-                                mode_label: mode.label
-                            },
-                            geometry: result.geometry
-                        }]
-                    };
-
-                    // Add to layers panel with mode-specific color
-                    addLayer(
-                        layerName,
-                        routeGeoJSON,
-                        `${mode.label} route: ${featureNames[0]} → ${featureNames[1]}`,
-                        null,
-                        `${mode.label} route via ${result.routing_engine || 'valhalla'}`,
-                        null,
-                        {
-                            type: 'route',
-                            distance_m: result.total_distance_m,
-                            time_minutes: result.total_time_minutes,
-                            routing_engine: result.routing_engine || 'valhalla',
-                            costing: costing,
-                            routeColor: mode.color,
-                            routeGroupId: routeGroupId,
-                            routeGroupLabel: routeGroupLabel
-                        }
-                    );
-
-                    // Override the color of the just-added layer
-                    const lastLayer = layers[layers.length - 1];
-                    if (lastLayer && lastLayer.layer && lastLayer.layer.setStyle) {
-                        lastLayer.layer.setStyle({ color: mode.color, weight: 5, opacity: 0.8 });
-                    }
-
-                    routeSummaries.push(`${mode.icon} ${mode.label}: ${distanceKm}km, ~${time}min`);
-                }
-
-                if (anySuccess && combinedBounds) {
-                    map.fitBounds(combinedBounds, { padding: [50, 50] });
-                }
-
-                if (anySuccess) {
-                    showNotification(routeSummaries.join(' | '), 'success');
-                } else {
-                    showNotification('All route calculations failed', 'error');
-                }
-
-            } catch (error) {
-                console.error('Directions error:', error);
-                showNotification('Failed to get directions: ' + error.message, 'error');
-            } finally {
-                // Restore button
-                directionsTab.innerHTML = `
-                    <i data-lucide="route" style="width: 18px; height: 18px; margin-right: 4px; cursor: pointer;"
-                        onclick="event.stopPropagation(); openTransportModeModal()"
-                        title="Select transport modes"></i>
-                    <span>Directions</span>
-                    <span id="directionsCount" style="${selectedFeatures.length > 0 ? '' : 'display: none;'} background: #F1642E; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-left: 6px;">${selectedFeatures.length}</span>
-                `;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-                updateDirectionsButton();
-            }
         }
 
         // Clear all feature selections (button callback)
@@ -8701,22 +8032,10 @@ LIMIT 10</textarea>
             }
         }
 
-        // Global LLM provider selection (default: gemini)
-        window.selectedLLMProvider = 'gemini';
-
-        // Set active LLM provider from dropdown
-        function selectLLMProvider(provider, displayName) {
-            window.selectedLLMProvider = provider;
-            const label = document.getElementById('selectedModelLabel');
-            if (label) label.textContent = displayName;
-            // Close the DaisyUI dropdown
-            document.activeElement?.blur();
-            console.log(`🧠 LLM provider switched to: ${provider} (${displayName})`);
-        }
-
         // Get selected LLM provider
         function getSelectedLLMProvider() {
-            return window.selectedLLMProvider || 'gemini';
+            const selected = document.querySelector('input[name="llmProvider"]:checked');
+            return selected ? selected.value : 'deepseek';
         }
 
         // Check provider health and update UI
@@ -9653,16 +8972,16 @@ LIMIT 10</textarea>
         }
         // GDI Berlin Import Functions
         async function openGdiBerlinModal() {
-            const modal = document.getElementById('gdiBerlinOverlay');
+            const overlay = document.getElementById('gdiBerlinOverlay');
             const layersList = document.getElementById('gdiBerlinLayersList');
 
-            modal.showModal();
+            overlay.classList.add('active');
             lucide.createIcons();
 
-            // Show loading state with DaisyUI spinner
+            // Show loading state
             layersList.innerHTML = `
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 24px; height: 24px;"></div>
                     <span>Loading available layers...</span>
                 </div>
             `;
@@ -9674,39 +8993,36 @@ LIMIT 10</textarea>
                 const data = await response.json();
 
                 if (!data.layers || data.layers.length === 0) {
-                    layersList.innerHTML = '<p class="text-center opacity-70">No layers available</p>';
+                    layersList.innerHTML = '<p style="color: var(--text-secondary);">No layers available</p>';
                     return;
                 }
 
-                // Build layer list HTML with DaisyUI cards
-                let html = '<div class="alert alert-info mb-3 text-sm"><i data-lucide="info" class="w-4 h-4"></i> Features will be filtered to your current map view.</div>';
+                // Build layer list HTML with category grouping
+                let html = '<p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Features will be filtered to your current map view.</p>';
                 data.layers.forEach(layer => {
                     const categoryColors = {
-                        'administrative': 'badge-info',
-                        'lor': 'badge-success',
-                        'buildings': 'badge-warning',
-                        'land': 'badge-neutral',
-                        'environment': 'badge-accent',
-                        'recreation': 'badge-secondary',
-                        'transport': 'badge-primary',
-                        'facilities': 'badge-error'
+                        'administrative': '#64B5F6',
+                        'lor': '#81C784',
+                        'buildings': '#FFB74D',
+                        'land': '#A1887F',
+                        'environment': '#4DB6AC',
+                        'recreation': '#BA68C8',
+                        'transport': '#90A4AE',
+                        'facilities': '#F06292'
                     };
-                    const badgeClass = categoryColors[layer.category] || 'badge-ghost';
+                    const categoryColor = categoryColors[layer.category] || '#9E9E9E';
 
                     html += `
-                        <div class="card bg-base-300 shadow-sm">
-                            <div class="card-body p-3 flex-row justify-between items-center">
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-sm">${layer.name}</h4>
-                                    <p class="text-xs opacity-70">${layer.description}</p>
-                                    <span class="badge ${badgeClass} badge-xs mt-1">${layer.category}</span>
-                                </div>
-                                <button onclick="importGdiBerlinLayer('${layer.id}', '${layer.name}')" 
-                                    class="btn btn-primary btn-sm">
-                                    <i data-lucide="download" class="w-4 h-4"></i>
-                                    Import
-                                </button>
+                        <div class="gdi-layer-card" style="background: rgba(var(--accent-secondary-rgb), 0.2); border: 1px solid rgba(196, 195, 227, 0.2); border-radius: 8px; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">${layer.name}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">${layer.description}</div>
+                                <span style="display: inline-block; margin-top: 0.25rem; font-size: 0.7rem; padding: 0.15rem 0.5rem; background: ${categoryColor}22; color: ${categoryColor}; border-radius: 4px;">${layer.category}</span>
                             </div>
+                            <button onclick="importGdiBerlinLayer('${layer.id}', '${layer.name}')" 
+                                style="background: rgba(var(--accent-primary-rgb), 0.8); border: none; border-radius: 6px; padding: 0.5rem 1rem; color: white; cursor: pointer; font-weight: 500; white-space: nowrap;">
+                                <i data-lucide="download" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Import
+                            </button>
                         </div>
                     `;
                 });
@@ -9716,12 +9032,12 @@ LIMIT 10</textarea>
 
             } catch (error) {
                 console.error('Error loading GDI Berlin layers:', error);
-                layersList.innerHTML = `<div class="alert alert-error"><span>Error: ${error.message}</span></div>`;
+                layersList.innerHTML = `<p style="color: #ff6b6b;">Error loading layers: ${error.message}</p>`;
             }
         }
 
         function closeGdiBerlinModal() {
-            document.getElementById('gdiBerlinOverlay').close();
+            document.getElementById('gdiBerlinOverlay').classList.remove('active');
         }
 
         async function importGdiBerlinLayer(layerId, layerName) {
@@ -9773,14 +9089,14 @@ LIMIT 10</textarea>
 
         // Dataset Browser Functions
         async function openDatasetBrowser() {
-            const modal = document.getElementById('datasetModalOverlay');
+            const overlay = document.getElementById('datasetModalOverlay');
             const content = document.getElementById('datasetModalContent');
 
             // Show loading state
-            modal.showModal();
+            overlay.classList.add('active');
             content.innerHTML = `
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
                     <span>Loading datasets...</span>
                 </div>
             `;
@@ -9796,17 +9112,16 @@ LIMIT 10</textarea>
 
                 if (!datasets || datasets.length === 0) {
                     content.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-8 opacity-50">
-                            <i data-lucide="inbox" class="w-12 h-12 mb-2"></i>
+                        <div class="dataset-empty">
+                            <i data-lucide="inbox" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
                             <p>No datasets available</p>
                         </div>
                     `;
-                    lucide.createIcons();
                     return;
                 }
 
-                // Build dataset list HTML with DaisyUI cards
-                let html = '<div class="flex flex-col gap-2">';
+                // Build dataset list HTML
+                let html = '<div class="dataset-list">';
 
                 datasets.forEach(dataset => {
                     const tableName = dataset.table_name || dataset.name;
@@ -9820,25 +9135,22 @@ LIMIT 10</textarea>
                     if (geomType === 'Polygon' || geomType === 'MultiPolygon') icon = 'square';
 
                     html += `
-                        <div class="card bg-base-300 hover:bg-base-100 cursor-pointer transition-colors" onclick="loadDatasetTable('${tableName}')">
-                            <div class="card-body p-3 flex-row items-center gap-3">
-                                <div class="bg-primary/20 p-2 rounded-lg">
-                                    <i data-lucide="${icon}" class="w-5 h-5 text-primary"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-sm">${tableName}</h4>
-                                    <div class="flex gap-3 text-xs opacity-70">
-                                        <span class="flex items-center gap-1">
-                                            <i data-lucide="hash" class="w-3 h-3"></i>
-                                            ${count.toLocaleString()} features
-                                        </span>
-                                        <span class="flex items-center gap-1">
-                                            <i data-lucide="shape" class="w-3 h-3"></i>
-                                            ${geomType}
-                                        </span>
+                        <div class="dataset-item" onclick="loadDatasetTable('${tableName}')">
+                            <div class="dataset-item-icon">
+                                <i data-lucide="${icon}" style="width: 24px; height: 24px;"></i>
+                            </div>
+                            <div class="dataset-item-info">
+                                <div class="dataset-item-name">${tableName}</div>
+                                <div class="dataset-item-meta">
+                                    <div class="dataset-item-count">
+                                        <i data-lucide="hash" style="width: 14px; height: 14px;"></i>
+                                        <span>${count.toLocaleString()} features</span>
+                                    </div>
+                                    <div class="dataset-item-type">
+                                        <i data-lucide="shape" style="width: 14px; height: 14px;"></i>
+                                        <span>${geomType}</span>
                                     </div>
                                 </div>
-                                <i data-lucide="chevron-right" class="w-4 h-4 opacity-50"></i>
                             </div>
                         </div>
                     `;
@@ -9848,42 +9160,42 @@ LIMIT 10</textarea>
                 content.innerHTML = html;
 
                 // Re-render Lucide icons
-                lucide.createIcons();
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
 
             } catch (error) {
                 console.error('❌ Failed to load datasets:', error);
                 content.innerHTML = `
-                    <div class="alert alert-error">
-                        <i data-lucide="alert-circle" class="w-5 h-5"></i>
-                        <div>
-                            <p class="font-semibold">Failed to load datasets</p>
-                            <p class="text-sm">${error.message}</p>
-                        </div>
+                    <div class="dataset-error">
+                        <i data-lucide="alert-circle" style="width: 24px; height: 24px; margin-bottom: 0.5rem; display: inline;"></i>
+                        <p>Failed to load datasets</p>
+                        <small>${error.message}</small>
                     </div>
                 `;
-                lucide.createIcons();
             }
         }
 
         function closeDatasetBrowser() {
-            document.getElementById('datasetModalOverlay').close();
+            document.getElementById('datasetModalOverlay').classList.remove('active');
         }
 
         async function loadDatasetTable(tableName) {
+            const overlay = document.getElementById('datasetModalOverlay');
             const browseBtn = document.getElementById('browseBtn');
 
             // Update modal to show loading
             const content = document.getElementById('datasetModalContent');
             content.innerHTML = `
-                <div class="flex items-center justify-center gap-2 p-4">
-                    <span class="loading loading-spinner loading-md"></span>
+                <div class="dataset-loading">
+                    <div class="loading-spinner" style="width: 32px; height: 32px;"></div>
                     <span>Loading ${tableName}...</span>
                 </div>
             `;
 
             // Show main loading indicator
             setLoading(true, `Loading ${tableName}...`);
-            if (browseBtn) browseBtn.disabled = true;
+            browseBtn.disabled = true;
 
             try {
                 // Fetch table data
@@ -9948,7 +9260,7 @@ LIMIT 10</textarea>
                 openDatasetBrowser();
             } finally {
                 setLoading(false);
-                if (browseBtn) browseBtn.disabled = false;
+                browseBtn.disabled = false;
             }
         }
 
@@ -9964,8 +9276,8 @@ LIMIT 10</textarea>
         // ========================================
 
         function openKnowledgeGraph() {
-            const modal = document.getElementById('knowledgeGraphOverlay');
-            modal.showModal();
+            const overlay = document.getElementById('knowledgeGraphOverlay');
+            overlay.classList.add('active');
 
             // Load statistics by default
             loadKnowledgeGraphStats();
@@ -9977,32 +9289,23 @@ LIMIT 10</textarea>
         }
 
         function closeKnowledgeGraph() {
-            document.getElementById('knowledgeGraphOverlay').close();
+            const overlay = document.getElementById('knowledgeGraphOverlay');
+            overlay.classList.remove('active');
         }
 
         function showKGTab(tabName) {
-            // Hide all tab contents and deactivate tabs
-            document.querySelectorAll('.kg-tab-content').forEach(el => {
-                el.classList.add('hidden');
-                el.classList.remove('active');
-            });
-            document.querySelectorAll('[role="tab"]').forEach(el => el.classList.remove('tab-active'));
+            // Hide all tab contents
+            document.querySelectorAll('.kg-tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.kg-tab').forEach(el => el.classList.remove('active'));
 
-            // Show selected tab content
-            const contentId = `kgContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`;
-            const tabId = `kgTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`;
-
-            document.getElementById(contentId).classList.remove('hidden');
-            document.getElementById(contentId).classList.add('active');
-            document.getElementById(tabId).classList.add('tab-active');
+            // Show selected tab
+            document.getElementById(`kgContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+            document.getElementById(`kgTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
 
             // Load stats if stats tab
             if (tabName === 'stats') {
                 loadKnowledgeGraphStats();
             }
-
-            // Re-render icons
-            lucide.createIcons();
         }
 
         async function loadKnowledgeGraphStats() {
@@ -10234,81 +9537,6 @@ ORDER BY ?title`
         // Auto-locate on page load (optional - commented out by default)
         // Uncomment the next line to automatically locate user when page loads
         // window.addEventListener('load', () => setTimeout(locateUser, 1000));
-
-        // Expose critical functions to window for HTML event handlers
-        window.switchBasemap = switchBasemap;
-        window.activateDrawing = activateDrawing;
-        window.clearDrawing = clearDrawing;
-        window.toggleLayer = toggleLayer;
-        window.removeLayer = removeLayer;
-        window.openStyleDialog = openStyleDialog;
-        window.openExportDialog = openExportDialog;
-        window.openGdiBerlinModal = openGdiBerlinModal;
-        window.openDatasetBrowserModal = openDatasetBrowserModal;
-        window.openKnowledgeGraphModal = openKnowledgeGraphModal;
-
-        // Theme Switcher Logic
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-theme') || 'dark';
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-
-            setTheme(newTheme);
-        }
-
-        function setTheme(theme) {
-            const html = document.documentElement;
-            html.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-
-            // Update Icon visibility
-            const sunIcon = document.getElementById('sunIcon');
-            const moonIcon = document.getElementById('moonIcon');
-
-            if (sunIcon && moonIcon) {
-                if (theme === 'light') {
-                    sunIcon.style.display = 'none';
-                    moonIcon.style.display = 'block';
-                } else {
-                    sunIcon.style.display = 'block';
-                    moonIcon.style.display = 'none';
-                }
-            }
-
-            // Update Map Basemap if map is ready
-            if (typeof switchBasemap === 'function' && typeof basemaps !== 'undefined') {
-                if (theme === 'light') {
-                    switchBasemap('Light (Vector)');
-                } else {
-                    switchBasemap('Dark (Vector)');
-                }
-            }
-        }
-
-        // Initialize Theme on Load
-        function initializeTheme() {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                setTheme(savedTheme);
-            } else {
-                // Default to system preference
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                setTheme(prefersDark ? 'dark' : 'light');
-            }
-        }
-
-        // Expose to window
-        window.toggleTheme = toggleTheme;
-
-        // Initialize immediately
-        initializeTheme();
-
-        // Initialize icons on load
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.lucide) {
-                lucide.createIcons();
-            }
-        });
     </script>
 
 

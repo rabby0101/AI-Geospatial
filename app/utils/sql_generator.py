@@ -172,42 +172,83 @@ class SQLQueryGenerator:
 
     def _ensure_geometry_in_select(self, sql: str) -> str:
         """
-        Ensure geometry column is included in SELECT clause for spatial queries.
+        Ensure geometry column is included in the MAIN SELECT clause for spatial queries.
         If missing, add it to prevent "missing geometry column" errors.
 
-        This is critical for road/LineString queries where geometry must be explicit.
+        CRITICAL: Only modify the outermost/main SELECT, NOT subqueries!
+        Subqueries in parentheses (like `(SELECT ST_Union(geom) FROM temp...)`) must NOT be modified
+        because they need to return exactly one column for scalar operations.
 
         Examples:
             "SELECT bezirk FROM table" → "SELECT bezirk, geometry FROM table"
             "SELECT * FROM table" → "SELECT * FROM table" (no change, * includes geometry)
+            "SELECT b.* FROM t WHERE ST_DWithin(g, (SELECT ST_Union(g) FROM temp)) → unchanged subquery
         """
         import re
 
-        # If query uses SELECT *, it's fine (includes all columns)
-        if re.search(r'SELECT\s+\*', sql, re.IGNORECASE):
+        # If query uses SELECT * at the start (main query), it's fine (includes all columns)
+        # Match SELECT * only at the start (possibly after WITH clause)
+        if re.search(r'^(?:WITH\s+.*?\)\s*)?SELECT\s+\w*\.?\*', sql.strip(), re.IGNORECASE | re.DOTALL):
             return sql
 
-        # Check if geometry is already in the SELECT clause (case-insensitive, allow aliases)
-        # Look for: geometry, ST_AsText(geometry), geom, etc.
-        if re.search(r'SELECT\s+.*\b(geometry|geom|ST_AsText|ST_AsGeoJSON|ST_AsEWKT)\b', sql, re.IGNORECASE | re.DOTALL):
+        # Check if geometry is already in the main SELECT clause
+        # We need to check only the first SELECT (before any subqueries)
+        # Find the main SELECT...FROM portion (before any parentheses that might contain subqueries)
+        main_select_match = re.match(r'^(?:WITH\s+.*?\)\s*)?(SELECT\s+)(.*?)\s+(FROM\s+)', sql.strip(), re.IGNORECASE | re.DOTALL)
+        
+        if not main_select_match:
+            # Can't parse the main SELECT, return as-is
+            return sql
+        
+        main_select_columns = main_select_match.group(2)
+        
+        # Check if geometry-related terms are in the main SELECT columns
+        if re.search(r'\b(geometry|geom|ST_AsText|ST_AsGeoJSON|ST_AsEWKT|\.\*)\b', main_select_columns, re.IGNORECASE):
             return sql
 
-        # If neither SELECT * nor explicit geometry, add geometry to SELECT
-        # Find the SELECT clause and add geometry
-        select_pattern = r'(SELECT\s+)([^F]+?)(FROM)'
-
-        def add_geometry(match):
-            select_keyword = match.group(1)
-            select_columns = match.group(2).rstrip(', ')
-            from_keyword = match.group(3)
-
-            # Add geometry unless it ends with DISTINCT * or similar
-            if not select_columns.strip().endswith('*'):
+        # Now we know the main SELECT is missing geometry - add it
+        # But we must be careful to only modify the MAIN SELECT, not any subqueries
+        
+        # Strategy: Only add geometry to the first SELECT...FROM if it's at the start of the query
+        # (possibly after a WITH clause) and NOT inside parentheses
+        
+        def add_geometry_to_main_select(sql_text):
+            """Add geometry to the main SELECT clause only."""
+            # Find position of first SELECT (accounting for WITH clause)
+            with_match = re.match(r'^(WITH\s+.*?\)\s*)', sql_text.strip(), re.IGNORECASE | re.DOTALL)
+            prefix = ""
+            rest = sql_text.strip()
+            
+            if with_match:
+                prefix = with_match.group(1)
+                rest = sql_text.strip()[len(prefix):]
+            
+            # Now find the main SELECT...FROM
+            select_match = re.match(r'^(SELECT\s+)(.*?)(\s+FROM\s+)', rest, re.IGNORECASE | re.DOTALL)
+            
+            if not select_match:
+                return sql_text  # Can't parse, return unchanged
+            
+            select_keyword = select_match.group(1)
+            select_columns = select_match.group(2).rstrip(', ')
+            from_clause = select_match.group(3)
+            remainder = rest[select_match.end():]
+            
+            # Don't add if already has * or geometry
+            if re.search(r'\*$|\bgeometry\b|\bgeom\b', select_columns, re.IGNORECASE):
+                return sql_text
+            
+            # Heuristic: If there's a join to districts or landmarks, use their geometry
+            if re.search(r'\bJOIN\s+\w+\.berlin_districts\s+d\b', sql_text, re.IGNORECASE):
+                select_columns = f"{select_columns}, d.geometry"
+            elif re.search(r'\bJOIN\s+\w+\.landmarks\s+l\b', sql_text, re.IGNORECASE):
+                select_columns = f"{select_columns}, l.geometry"
+            else:
                 select_columns = f"{select_columns}, geometry"
-
-            return f"{select_keyword}{select_columns} {from_keyword}"
-
-        fixed_sql = re.sub(select_pattern, add_geometry, sql, flags=re.IGNORECASE | re.DOTALL)
+            
+            return f"{prefix}{select_keyword}{select_columns}{from_clause}{remainder}"
+        
+        fixed_sql = add_geometry_to_main_select(sql)
 
         if fixed_sql != sql:
             logger.info(f"⚠️  Geometry column was missing from SELECT - auto-added")

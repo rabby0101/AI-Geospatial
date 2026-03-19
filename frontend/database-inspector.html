@@ -1,805 +1,1580 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Inspector - GeoAssist</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            box-sizing: border-box
+        }
+
+        :root {
+            --bg1: #0a0914;
+            --bg2: #151024;
+            --bg3: rgba(80, 78, 118, .18);
+            --glass: rgba(80, 78, 118, .25);
+            --border: rgba(241, 100, 46, .15);
+            --border-h: rgba(241, 100, 46, .4);
+            --accent: #F1642E;
+            --accent2: #ff8a57;
+            --text: #e0e0e0;
+            --text2: #999;
+            --green: #4CAF50;
+            --yellow: #FF9800;
+            --red: #f44336;
+            --font: 'Inter', sans-serif;
+            --mono: 'JetBrains Mono', monospace
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f0d1a 0%, #251f35 100%);
-            color: #e0e0e0;
+            font-family: var(--font);
+            background: linear-gradient(145deg, var(--bg1) 0%, var(--bg2) 100%);
+            color: var(--text);
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        /* Header */
-        .header {
-            background: rgba(80, 78, 118, 0.3);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(241, 100, 46, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
+        /* HEADER */
+        .top-bar {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            padding: 16px 28px;
+            background: var(--glass);
+            backdrop-filter: blur(30px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100
         }
 
-        .header h1 {
-            font-size: 28px;
-            background: linear-gradient(135deg, #F1642E 0%, #504E76 100%);
+        .top-bar h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
+            background-clip: text
         }
 
-        .search-box {
-            display: flex;
-            gap: 10px;
-            align-items: center;
+        .top-bar .sub {
+            font-size: 11px;
+            color: var(--text2);
+            margin-top: 2px
         }
 
-        .search-box input {
-            padding: 10px 15px;
-            border: 1px solid rgba(241, 100, 46, 0.3);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            color: #e0e0e0;
-            width: 300px;
-        }
-
-        .search-box input::placeholder {
-            color: #888;
-        }
-
-        /* Layout */
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 20px;
-            height: 600px;
-        }
-
-        /* Tables List */
-        .tables-list {
-            background: rgba(80, 78, 118, 0.2);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(241, 100, 46, 0.15);
-            border-radius: 12px;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .tables-list h2 {
-            margin-bottom: 15px;
-            font-size: 16px;
-            color: #F1642E;
-        }
-
-        .table-item {
-            padding: 12px;
-            margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(241, 100, 46, 0.1);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .table-item:hover {
-            background: rgba(241, 100, 46, 0.1);
-            border-color: rgba(241, 100, 46, 0.3);
-            transform: translateX(5px);
-        }
-
-        .table-item.active {
-            background: rgba(241, 100, 46, 0.2);
-            border-color: #F1642E;
-        }
-
-        .status-badge {
+        .back-btn {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .status-badge.documented {
-            background: #4CAF50;
-            color: white;
-            title: 'Table documented';
-        }
-
-        .status-badge.partial {
-            background: #FF9800;
-            color: white;
-        }
-
-        .status-badge.empty {
-            background: #f44336;
-            color: white;
-        }
-
-        .table-item-name {
-            flex: 1;
-            font-family: 'Courier New', monospace;
+            gap: 6px;
+            padding: 8px 14px;
+            background: rgba(241, 100, 46, .12);
+            border: 1px solid var(--border);
+            color: var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
             font-size: 13px;
+            transition: .25s
         }
 
-        /* Table Details */
-        .table-details {
-            background: rgba(80, 78, 118, 0.2);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(241, 100, 46, 0.15);
-            border-radius: 12px;
-            padding: 20px;
-            overflow-y: auto;
+        .back-btn:hover {
+            background: rgba(241, 100, 46, .25);
+            border-color: var(--accent)
         }
 
-        .table-details h2 {
-            color: #F1642E;
-            margin-bottom: 15px;
-            font-size: 18px;
-            font-family: 'Courier New', monospace;
+        /* TABS */
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            padding: 0 28px;
+            background: rgba(0, 0, 0, .25);
+            border-bottom: 1px solid var(--border)
         }
 
-        .detail-section {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(241, 100, 46, 0.1);
+        .tab {
+            padding: 14px 22px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text2);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: .25s;
+            display: flex;
+            align-items: center;
+            gap: 8px
         }
 
-        .detail-section:last-child {
-            border-bottom: none;
+        .tab:hover {
+            color: var(--text);
+            background: rgba(241, 100, 46, .04)
         }
 
-        .detail-label {
-            font-size: 12px;
-            color: #F1642E;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 5px;
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: rgba(241, 100, 46, .06)
         }
 
-        .detail-value {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(241, 100, 46, 0.15);
+        .tab .badge {
+            background: var(--accent);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 600
+        }
+
+        /* CONTEXT MENU */
+        .context-menu {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            background: linear-gradient(145deg, var(--bg1), var(--bg2));
+            border: 1px solid var(--border-h);
+            border-radius: 8px;
+            padding: 6px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            min-width: 150px;
+        }
+
+        .context-menu.active {
+            display: block;
+        }
+
+        .context-item {
+            padding: 8px 12px;
+            font-size: 13px;
+            color: var(--text);
+            cursor: pointer;
             border-radius: 6px;
-            padding: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            overflow-wrap: break-word;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
         }
 
-        /* Textarea for descriptions */
-        textarea {
+        .context-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--accent);
+        }
+
+        .context-item.danger:hover {
+            background: rgba(244, 67, 54, 0.15);
+            color: var(--red);
+        }
+
+        /* PANELS */
+        .panel {
+            display: none;
+            height: calc(100vh - 108px);
+            overflow: hidden
+        }
+
+        .panel.active {
+            display: flex
+        }
+
+        /* TABLES TAB */
+        .tables-panel {
+            display: flex;
+            width: 100%
+        }
+
+        .sidebar {
+            width: 340px;
+            min-width: 280px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            background: rgba(0, 0, 0, .15)
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .search-input {
             width: 100%;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(241, 100, 46, 0.3);
-            border-radius: 6px;
-            color: #e0e0e0;
-            resize: vertical;
-            font-family: 'Segoe UI', sans-serif;
+            padding: 10px 14px 10px 36px;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
             font-size: 13px;
+            font-family: var(--font);
+            outline: none;
+            transition: .25s
         }
 
-        textarea::placeholder {
-            color: #666;
+        .search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(241, 100, 46, .1)
         }
 
-        /* Columns Grid */
-        .columns-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        .search-wrap {
+            position: relative
+        }
+
+        .search-wrap i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text2);
+            font-size: 13px
+        }
+
+        .table-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px
+        }
+
+        .t-item {
+            padding: 11px 14px;
+            margin-bottom: 4px;
+            background: rgba(255, 255, 255, .02);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
             gap: 10px;
-            margin-top: 10px;
+            transition: .2s;
+            font-size: 13px
         }
 
-        .column-item {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(241, 100, 46, 0.1);
+        .t-item:hover {
+            background: rgba(241, 100, 46, .06);
+            border-color: var(--border);
+            transform: translateX(3px)
+        }
+
+        .t-item.active {
+            background: rgba(241, 100, 46, .12);
+            border-color: var(--accent)
+        }
+
+        .t-item .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        .t-item .dot.green {
+            background: var(--green)
+        }
+
+        .t-item .dot.yellow {
+            background: var(--yellow)
+        }
+
+        .t-item .dot.red {
+            background: var(--red)
+        }
+
+        .t-item .name {
+            flex: 1;
+            font-family: var(--mono);
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .t-item .rows {
+            font-size: 11px;
+            color: var(--text2);
+            white-space: nowrap
+        }
+
+        .detail-pane {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 28px
+        }
+
+        /* DETAIL SECTIONS */
+        .d-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px
+        }
+
+        .d-head h2 {
+            font-family: var(--mono);
+            font-size: 18px;
+            color: var(--accent)
+        }
+
+        .d-section {
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid rgba(241, 100, 46, .08)
+        }
+
+        .d-section:last-child {
+            border-bottom: none
+        }
+
+        .d-label {
+            font-size: 11px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-bottom: 6px;
+            font-weight: 600
+        }
+
+        .d-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 12px
+        }
+
+        .d-grid strong {
+            color: var(--accent2)
+        }
+
+        .col-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 10px;
+            margin-top: 8px
+        }
+
+        .col-card {
+            background: rgba(255, 255, 255, .025);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px;
+            transition: .2s
         }
 
-        .column-name {
-            font-family: 'Courier New', monospace;
+        .col-card:hover {
+            border-color: var(--border-h);
+            transform: translateY(-1px)
+        }
+
+        .col-card .cn {
+            font-family: var(--mono);
             font-size: 12px;
-            color: #F1642E;
-            margin-bottom: 8px;
-            word-break: break-all;
+            color: var(--accent);
+            margin-bottom: 4px;
+            word-break: break-all
         }
 
-        .column-type {
+        .col-card .ct {
             font-size: 11px;
-            color: #999;
-            margin-bottom: 8px;
+            color: var(--text2);
+            margin-bottom: 6px
         }
 
-        .column-description {
+        .col-card .cd {
             font-size: 12px;
-            color: #ccc;
-            margin-bottom: 8px;
-            min-height: 40px;
+            color: #bbb;
+            min-height: 32px
         }
 
-        .column-actions {
-            display: flex;
-            gap: 5px;
-        }
-
+        /* BUTTONS */
         .btn {
-            padding: 6px 12px;
-            background: rgba(241, 100, 46, 0.2);
-            border: 1px solid rgba(241, 100, 46, 0.3);
-            color: #F1642E;
-            border-radius: 4px;
+            padding: 7px 14px;
+            background: rgba(241, 100, 46, .15);
+            border: 1px solid var(--border);
+            color: var(--accent);
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 11px;
-            transition: all 0.3s;
+            font-size: 12px;
+            font-family: var(--font);
+            transition: .2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px
         }
 
         .btn:hover {
-            background: rgba(241, 100, 46, 0.4);
-            border-color: #F1642E;
+            background: rgba(241, 100, 46, .3);
+            border-color: var(--accent)
         }
 
         .btn.primary {
-            background: #F1642E;
-            color: white;
-            border-color: #F1642E;
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent)
         }
 
         .btn.primary:hover {
-            background: #d9511d;
+            background: #d9511d
         }
 
-        /* Loading state */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #999;
+        .btn.danger {
+            background: rgba(244, 67, 54, .15);
+            color: var(--red);
+            border-color: rgba(244, 67, 54, .3)
         }
 
-        .spinner {
-            border: 3px solid rgba(241, 100, 46, 0.1);
-            border-top: 3px solid #F1642E;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+        .btn.danger:hover {
+            background: rgba(244, 67, 54, .3)
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .btn:disabled {
+            opacity: .4;
+            cursor: not-allowed
         }
 
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+        .btn.lg {
+            padding: 14px 32px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 10px
+        }
+
+        /* PREVIEW TABLE */
+        .preview-table {
             width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 10px
+        }
+
+        .preview-table th {
+            background: rgba(241, 100, 46, .1);
+            color: var(--accent);
+            padding: 8px 10px;
+            text-align: left;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 500;
+            position: sticky;
+            top: 0
+        }
+
+        .preview-table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, .04);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap
+        }
+
+        .preview-table tr:hover td {
+            background: rgba(241, 100, 46, .03)
+        }
+
+        .preview-wrap {
+            max-height: 300px;
+            overflow: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-top: 10px
+        }
+
+        /* OSM TAB */
+        .osm-panel {
+            flex-direction: column;
+            padding: 28px;
+            gap: 24px;
+            overflow-y: auto;
+            width: 100%
+        }
+
+        .osm-hero {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border: 1px solid var(--border);
+            border-radius: 16px
+        }
+
+        .osm-hero h2 {
+            font-size: 24px;
+            margin-bottom: 8px
+        }
+
+        .osm-hero p {
+            color: var(--text2);
+            font-size: 13px;
+            margin-bottom: 24px
+        }
+
+        .progress-bar {
+            width: 100%;
+            max-width: 500px;
+            height: 8px;
+            background: rgba(255, 255, 255, .06);
+            border-radius: 4px;
+            margin: 16px auto 8px;
+            overflow: hidden
+        }
+
+        .progress-fill {
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 4px;
+            transition: width .4s;
+            width: 0
+        }
+
+        .osm-log {
+            background: rgba(0, 0, 0, .3);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            max-height: 350px;
+            overflow-y: auto;
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.8;
+            text-align: left;
+            max-width: 700px;
+            margin: 0 auto
+        }
+
+        .cat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+            max-width: 900px;
+            margin: 0 auto
+        }
+
+        .cat-chip {
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .cat-chip i {
+            color: var(--accent);
+            font-size: 10px
+        }
+
+        /* CHANGELOG TAB */
+        .log-panel {
+            flex-direction: column;
+            padding: 28px;
+            gap: 16px;
+            overflow-y: auto;
+            width: 100%
+        }
+
+        .log-filters {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .log-filters select,
+        .log-filters input {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13px;
+            font-family: var(--font)
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 14px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, .02);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            align-items: flex-start;
+            transition: .2s
+        }
+
+        .log-entry:hover {
+            border-color: var(--border-h);
+            background: rgba(241, 100, 46, .03)
+        }
+
+        .log-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px
+        }
+
+        .log-icon.upload {
+            background: rgba(76, 175, 80, .15);
+            color: var(--green)
+        }
+
+        .log-icon.osm {
+            background: rgba(241, 100, 46, .15);
+            color: var(--accent)
+        }
+
+        .log-icon.delete {
+            background: rgba(244, 67, 54, .15);
+            color: var(--red)
+        }
+
+        .log-icon.desc {
+            background: rgba(255, 152, 0, .15);
+            color: var(--yellow)
+        }
+
+        .log-body {
+            flex: 1;
+            min-width: 0
+        }
+
+        .log-body .action {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 2px
+        }
+
+        .log-body .meta {
+            font-size: 11px;
+            color: var(--text2)
+        }
+
+        .log-body .det {
+            font-size: 12px;
+            color: #bbb;
+            margin-top: 4px
+        }
+
+        .pagination {
+            display: flex;
+            gap: 8px;
             justify-content: center;
             align-items: center;
+            padding: 12px
         }
 
-        .modal.active {
-            display: flex;
+        .pagination .btn {
+            min-width: 36px;
+            justify-content: center
         }
 
-        .modal-content {
-            background: linear-gradient(135deg, #0f0d1a 0%, #251f35 100%);
-            border: 1px solid rgba(241, 100, 46, 0.3);
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
+        /* UPLOAD TAB */
+        .upload-panel {
+            flex-direction: column;
+            align-items: center;
+            padding: 28px;
+            gap: 20px;
             overflow-y: auto;
+            width: 100%
         }
 
-        .modal-content h3 {
-            margin-bottom: 15px;
-            color: #F1642E;
+        .drop-zone {
+            width: 100%;
+            max-width: 600px;
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: .3s;
+            background: rgba(255, 255, 255, .01)
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(241, 100, 46, .04)
+        }
+
+        .drop-zone i {
+            font-size: 48px;
+            color: var(--accent);
+            margin-bottom: 16px;
+            opacity: .6
+        }
+
+        .drop-zone h3 {
+            font-size: 16px;
+            margin-bottom: 6px
+        }
+
+        .drop-zone p {
+            font-size: 12px;
+            color: var(--text2)
+        }
+
+        .upload-form {
+            width: 100%;
+            max-width: 600px;
+            display: none
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 14px
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 5px;
             font-size: 12px;
-            color: #F1642E;
+            color: var(--accent);
+            margin-bottom: 5px;
+            font-weight: 500
         }
 
         .form-group input,
-        .form-group textarea {
+        .form-group select {
             width: 100%;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 13px;
+            font-family: var(--font)
+        }
+
+        .upload-result {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            background: rgba(76, 175, 80, .08);
+            border: 1px solid rgba(76, 175, 80, .3);
+            border-radius: 12px;
+            display: none
+        }
+
+        /* MODAL */
+        .modal-bg {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .65);
+            z-index: 200;
+            justify-content: center;
+            align-items: center
+        }
+
+        .modal-bg.active {
+            display: flex
+        }
+
+        .modal {
+            background: linear-gradient(145deg, var(--bg1), var(--bg2));
+            border: 1px solid var(--border-h);
+            border-radius: 14px;
+            padding: 28px;
+            max-width: 480px;
+            width: 92%;
+            max-height: 80vh;
+            overflow-y: auto
+        }
+
+        .modal h3 {
+            color: var(--accent);
+            margin-bottom: 14px;
+            font-size: 16px
+        }
+
+        .modal textarea {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            resize: vertical;
+            font-family: var(--font);
+            font-size: 13px;
+            min-height: 80px
         }
 
         .modal-actions {
             display: flex;
             gap: 10px;
-            margin-top: 20px;
-            justify-content: flex-end;
+            margin-top: 16px;
+            justify-content: flex-end
         }
 
-        /* Scrollbar styling */
+        /* EMPTY / LOADING */
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text2)
+        }
+
+        .empty i {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: .4;
+            display: block
+        }
+
+        .spinner {
+            border: 3px solid rgba(241, 100, 46, .1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            animation: spin .8s linear infinite;
+            margin: 0 auto 12px
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn .3s ease
+        }
+
+        /* SCROLLBAR */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
+            height: 6px
         }
 
         ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.02);
+            background: transparent
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(241, 100, 46, 0.3);
-            border-radius: 4px;
+            background: rgba(241, 100, 46, .2);
+            border-radius: 3px
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(241, 100, 46, 0.5);
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
-
-        /* Back button */
-        .back-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 15px;
-            background: rgba(241, 100, 46, 0.2);
-            border: 1px solid rgba(241, 100, 46, 0.3);
-            color: #F1642E;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-
-        .back-button:hover {
-            background: rgba(241, 100, 46, 0.3);
-            border-color: #F1642E;
+            background: rgba(241, 100, 46, .4)
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div>
-                <h1><i class="fas fa-database"></i> Database Inspector</h1>
-                <p style="font-size: 12px; color: #999; margin-top: 5px;">View and document all available tables and columns</p>
-            </div>
-            <a href="index.html" class="back-button">
-                <i class="fas fa-arrow-left"></i> Back to Map
-            </a>
+    <!-- TOP BAR -->
+    <div class="top-bar">
+        <div>
+            <h1><i class="fas fa-database"></i> Database Inspector</h1>
+            <div class="sub">Manage tables, update OSM data, view change log & upload datasets</div>
         </div>
+        <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Map</a>
+    </div>
 
-        <!-- Search -->
-        <div style="margin-bottom: 20px;">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search tables...">
-            </div>
-        </div>
+    <!-- TABS -->
+    <div class="tab-bar">
+        <div class="tab active" data-tab="tables"><i class="fas fa-table"></i> Tables <span id="tableCount"
+                class="badge">0</span></div>
+        <div class="tab" data-tab="osm"><i class="fas fa-globe"></i> OSM Update</div>
+        <div class="tab" data-tab="changelog"><i class="fas fa-clock-rotate-left"></i> Change Log</div>
+        <div class="tab" data-tab="upload"><i class="fas fa-cloud-arrow-up"></i> Upload Dataset</div>
+    </div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Tables List -->
-            <div class="tables-list">
-                <h2><i class="fas fa-table"></i> Tables</h2>
-                <div id="tablesList">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Loading tables...</p>
+    <!-- ========== TABLES TAB ========== -->
+    <div class="panel active" id="panel-tables">
+        <div class="tables-panel">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div class="search-wrap">
+                        <i class="fas fa-search"></i>
+                        <input class="search-input" id="searchInput" placeholder="Search tables...">
+                    </div>
+                </div>
+                <div class="table-list" id="tablesList">
+                    <div class="empty">
+                        <div class="spinner"></div>Loading tables...
                     </div>
                 </div>
             </div>
-
-            <!-- Table Details -->
-            <div class="table-details">
-                <div id="tableDetails">
-                    <div class="empty-state">
-                        <i class="fas fa-arrow-left"></i>
-                        <p>Select a table to view and edit its documentation</p>
-                    </div>
+            <div class="detail-pane" id="detailPane">
+                <div class="empty"><i class="fas fa-arrow-left"></i>
+                    <p>Select a table to view details</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div class="modal" id="editModal">
-        <div class="modal-content">
+    <!-- ========== OSM TAB ========== -->
+    <div class="panel" id="panel-osm">
+        <div class="osm-panel">
+            <div class="osm-hero" id="osmHero">
+                <i class="fas fa-globe" style="font-size:48px;color:var(--accent);opacity:.6;margin-bottom:16px"></i>
+                <h2>OpenStreetMap Data Update</h2>
+                <p>Download the complete Berlin PBF extract from Geofabrik (~70 MB), extract all categories
+                    (landuse, buildings, roads, water, amenities …) and ingest into PostGIS.</p>
+                <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+                    <button class="btn lg primary" id="osmStartBtn" onclick="startOsmUpdate()"><i
+                            class="fas fa-download"></i> Update All OSM Data</button>
+                    <button class="btn lg" id="osmSupermarketsBtn" onclick="startOsmSupermarketsUpdate()" style="background:rgba(241,100,46,0.1);color:var(--accent);border-color:rgba(241,100,46,0.3)"><i
+                            class="fas fa-shopping-cart"></i> Download Supermarkets</button>
+                    <button class="btn lg" id="osmTransportStopsBtn" onclick="startOsmTransportStopsUpdate()" style="background:rgba(33,150,243,0.1);color:#2196F3;border-color:rgba(33,150,243,0.3)"><i
+                            class="fas fa-bus"></i> Download Transport Stops</button>
+                </div>
+                <div class="progress-bar" id="osmProgressBar" style="display:none">
+                    <div class="progress-fill" id="osmProgressFill"></div>
+                </div>
+                <div id="osmStatus" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+            </div>
+            <div class="osm-log" id="osmLog" style="display:none"></div>
+            <div id="osmCategories"></div>
+        </div>
+    </div>
+
+    <!-- ========== CHANGELOG TAB ========== -->
+    <div class="panel" id="panel-changelog">
+        <div class="log-panel">
+            <h2 style="font-size:18px;color:var(--accent)"><i class="fas fa-clock-rotate-left"></i> Change Log</h2>
+            <div class="log-filters">
+                <select id="logActionFilter" onchange="loadChangelog()">
+                    <option value="">All Actions</option>
+                    <option value="osm_update">OSM Update</option>
+                    <option value="osm_update_batch">OSM Batch</option>
+                    <option value="upload">Upload</option>
+                    <option value="delete">Delete</option>
+                    <option value="rename">Rename</option>
+                    <option value="description_update">Description</option>
+                </select>
+                <input id="logTableFilter" placeholder="Filter by table..." onchange="loadChangelog()">
+                <button class="btn" onclick="loadChangelog()"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+            <div id="changelogEntries">
+                <div class="empty">
+                    <div class="spinner"></div>Loading...
+                </div>
+            </div>
+            <div class="pagination" id="changelogPagination"></div>
+        </div>
+    </div>
+
+    <!-- ========== UPLOAD TAB ========== -->
+    <div class="panel" id="panel-upload">
+        <div class="upload-panel">
+            <div class="drop-zone" id="dropZone">
+                <i class="fas fa-cloud-arrow-up"></i>
+                <h3>Drop your file here</h3>
+                <p>GeoJSON, Shapefile (.zip), or CSV &mdash; or click to browse</p>
+                <input type="file" id="fileInput" accept=".geojson,.json,.zip,.csv" style="display:none">
+            </div>
+            <div class="upload-form" id="uploadForm">
+                <div class="form-group">
+                    <label>Selected File</label>
+                    <input id="uploadFileName" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Table Name (optional – auto-generated if empty)</label>
+                    <input id="uploadTableName" placeholder="e.g. my_custom_data">
+                </div>
+                <div style="display:flex;gap:10px">
+                    <button class="btn" onclick="cancelUpload()"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn primary" id="uploadBtn" onclick="doUpload()"><i class="fas fa-upload"></i> Upload
+                        & Ingest</button>
+                </div>
+                <div id="uploadProgress" style="margin-top:12px;font-size:12px;color:var(--text2);display:none">
+                    <div class="spinner"></div>Uploading...
+                </div>
+            </div>
+            <div class="upload-result" id="uploadResult"></div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal-bg" id="editModal">
+        <div class="modal">
             <h3>Edit Column Description</h3>
-            <div class="form-group">
-                <label>Column Name</label>
-                <div class="detail-value" id="editColumnName" style="cursor: default;"></div>
+            <div class="form-group"><label>Column</label>
+                <div id="editColName"
+                    style="font-family:var(--mono);font-size:13px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px">
+                </div>
             </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="editColumnDescription" placeholder="What does this column contain?"></textarea>
-            </div>
-            <div class="form-group">
-                <label>English Name (for German columns)</label>
-                <input type="text" id="editColumnEnglish" placeholder="e.g., 'Description' for 'beschreibung'">
-            </div>
-            <div class="form-group">
-                <label>Example Value</label>
-                <input type="text" id="editColumnExample" placeholder="e.g., 'Hospital Name'">
-            </div>
+            <div class="form-group"><label>Description</label><textarea id="editColDesc"
+                    placeholder="What does this column contain?"></textarea></div>
+            <div class="form-group"><label>English Name</label><input id="editColEnglish"
+                    placeholder="e.g. 'Description' for 'beschreibung'"></div>
+            <div class="form-group"><label>Example Value</label><input id="editColExample"
+                    placeholder="e.g. 'Hospital Name'"></div>
             <div class="modal-actions">
-                <button class="btn" onclick="closeEditModal()">Cancel</button>
-                <button class="btn primary" onclick="saveColumnDescription()">Save</button>
+                <button class="btn" onclick="closeModal('editModal')">Cancel</button>
+                <button class="btn primary" onclick="saveColumnDesc()">Save</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-bg" id="tableDescModal">
+        <div class="modal">
+            <h3>Edit Table Description</h3>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">This description is used by the LLM to
+                understand what data is available.</p>
+            <div class="form-group"><label>Table</label>
+                <div id="editTblName"
+                    style="font-family:var(--mono);font-size:13px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px">
+                </div>
+            </div>
+            <div class="form-group"><label>Description</label><textarea id="editTblDesc"
+                    placeholder="What data does this table contain?" style="min-height:120px"></textarea></div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal('tableDescModal')">Cancel</button>
+                <button class="btn primary" onclick="saveTableDesc()">Save</button>
             </div>
         </div>
     </div>
 
-    <div class="modal" id="tableDescModal">
-        <div class="modal-content">
-            <h3>Edit Table Description</h3>
-            <p style="margin-bottom: 15px; color: #888; font-size: 12px;">
-                This description is used by the LLM to understand what data is available.
-                Make it clear and concise so the AI knows when to use this table.
-            </p>
-            <div class="form-group">
-                <label>Table Name</label>
-                <div class="detail-value" id="editTableName" style="cursor: default;"></div>
+    <!-- CONTEXT MENU -->
+    <div class="context-menu" id="tableContextMenu">
+        <div class="context-item" id="ctxRenameBtn">
+            <i class="fas fa-pen"></i> Rename Table
+        </div>
+        <div class="context-item danger" id="ctxDeleteBtn">
+            <i class="fas fa-trash"></i> Delete Table
+        </div>
+    </div>
+
+    <!-- RENAME MODAL -->
+    <div class="modal-bg" id="renameModal">
+        <div class="modal">
+            <h3>Rename Table</h3>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Enter a new name for the table. Only lowercase letters, numbers and underscores are allowed.</p>
+            <div class="form-group"><label>Current Name</label>
+                <div id="renameOldName" style="font-family:var(--mono);font-size:13px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px"></div>
             </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="editTableDesc" placeholder="What data does this table contain? Who should use it? What are its key features?" style="height: 150px;"></textarea>
-            </div>
+            <div class="form-group"><label>New Name</label><input id="renameNewName" placeholder="e.g. my_table_name" autocomplete="off"></div>
             <div class="modal-actions">
-                <button class="btn" onclick="closeTableDescriptionModal()">Cancel</button>
-                <button class="btn primary" onclick="saveTableDescriptionModal()">Save</button>
+                <button class="btn" onclick="closeModal('renameModal')">Cancel</button>
+                <button class="btn primary" onclick="doRenameTable()">Rename</button>
             </div>
         </div>
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8000/api';
-        let tables = [];
-        let selectedTable = null;
-        let editingColumn = null;
-        let editingTable = null;
+        const API = '/api/database';
+        let tables = [], selectedTable = null, editingTable = null, editingColumn = null;
+        let changelogPage = 1, uploadFile = null;
 
-        // Load tables on page load
-        window.addEventListener('load', loadTables);
+        // ── Tab switching ──
+        document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+            if (t.dataset.tab === 'changelog') loadChangelog();
+            if (t.dataset.tab === 'osm') loadOsmCategories();
+        }));
 
-        // Search functionality
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            document.querySelectorAll('.table-item').forEach(item => {
-                const text = item.textContent.toLowerCase();
-                item.style.display = text.includes(query) ? 'flex' : 'none';
-            });
-        });
-
+        // ── TABLES TAB ──
         async function loadTables() {
             try {
-                const response = await fetch(`${API_BASE}/database/tables`);
-                const data = await response.json();
-
-                if (data.success) {
-                    tables = data.tables;
-                    renderTablesList();
-                }
-            } catch (error) {
-                console.error('Error loading tables:', error);
-                document.getElementById('tablesList').innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <p>Error loading tables. Please try again.</p>
-                    </div>
-                `;
-            }
+                const r = await fetch(API + '/tables');
+                const d = await r.json();
+                if (d.success) { tables = d.tables; renderTableList(); document.getElementById('tableCount').textContent = tables.length; }
+            } catch (e) { document.getElementById('tablesList').innerHTML = '<div class="empty"><i class="fas fa-exclamation-circle"></i><p>Error loading tables</p></div>'; }
         }
 
-        function renderTablesList() {
-            const list = document.getElementById('tablesList');
-            list.innerHTML = tables.map(table => `
-                <div class="table-item ${selectedTable === table.table_name ? 'active' : ''}" onclick="selectTable('${table.table_name}')">
-                    <div class="status-badge ${getStatusBadge(table)}">
-                        ${getStatusIcon(table)}
-                    </div>
-                    <div class="table-item-name">${table.table_name}</div>
-                    <div style="font-size: 11px; color: #999;">${table.row_count?.toLocaleString() || '?'} rows</div>
-                </div>
-            `).join('');
+        function renderTableList() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = tables.filter(t => t.table_name.toLowerCase().includes(q));
+            document.getElementById('tablesList').innerHTML = filtered.map(t => {
+                const dot = t.description ? 'green' : (t.category || t.source) ? 'yellow' : 'red';
+                const active = selectedTable === t.table_name ? 'active' : '';
+                return `<div class="t-item ${active}" onclick="selectTable('${t.table_name}')" oncontextmenu="showContextMenu(event, '${t.table_name}')">
+            <div class="dot ${dot}"></div>
+            <div class="name">${t.table_name}</div>
+            <div class="rows">${(t.row_count || 0).toLocaleString()}</div>
+        </div>`;
+            }).join('');
         }
 
-        function getStatusBadge(table) {
-            if (table.description) return 'documented';
-            if (table.category || table.source) return 'partial';
-            return 'empty';
-        }
+        document.getElementById('searchInput').addEventListener('input', renderTableList);
 
-        function getStatusIcon(table) {
-            const status = getStatusBadge(table);
-            if (status === 'documented') return '✓';
-            if (status === 'partial') return '◐';
-            return '◯';
-        }
-
-        async function selectTable(tableName) {
-            selectedTable = tableName;
-            renderTablesList();
-
+        async function selectTable(name) {
+            selectedTable = name; renderTableList();
+            const pane = document.getElementById('detailPane');
+            pane.innerHTML = '<div class="empty"><div class="spinner"></div>Loading...</div>';
             try {
-                const response = await fetch(`${API_BASE}/database/tables/${tableName}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    renderTableDetails(data.table);
-                }
-            } catch (error) {
-                console.error('Error loading table details:', error);
-            }
+                const r = await fetch(API + '/tables/' + name);
+                const d = await r.json();
+                if (d.success) renderDetails(d.table);
+            } catch (e) { pane.innerHTML = '<div class="empty"><i class="fas fa-exclamation-circle"></i><p>Error</p></div>'; }
         }
 
-        function renderTableDetails(table) {
-            const details = document.getElementById('tableDetails');
-            const geometry = table.geometry_type ? `${table.geometry_type}` : 'None';
+        async function renderDetails(t) {
+            const pane = document.getElementById('detailPane');
+            const geom = t.geometry_type || 'None';
+            const descEsc = (t.description || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
+            let h = `<div class="d-head fade-in"><h2>${t.table_name}</h2><div style="display:flex;gap:8px">
+        <button class="btn" onclick="openTableDescModal('${t.table_name}','${descEsc}')"><i class="fas fa-edit"></i> Edit Desc</button>
+        <button class="btn" onclick="loadPreview('${t.table_name}')"><i class="fas fa-eye"></i> Preview</button>
+        <button class="btn" onclick="loadStats('${t.table_name}')"><i class="fas fa-chart-bar"></i> Stats</button>
+    </div></div>`;
 
-            let html = `<h2>${table.table_name}</h2>`;
+            h += `<div class="d-section fade-in"><div class="d-label">Description</div>
+        <p style="line-height:1.6;color:#bbb">${t.description || '<em style="color:#666">No description</em>'}</p></div>`;
 
-            // Table info
-            html += `
-                <div class="detail-section">
-                    <div class="detail-label">
-                        Description
-                        <button class="btn" style="float: right; padding: 5px 10px; font-size: 11px;" onclick="openTableDescriptionModal('${table.table_name}', '${(table.description || '').replace(/'/g, "\\'")}')">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                    <p style="margin-top: 10px; line-height: 1.5; color: #bbb;">${table.description || '<em style="color: #666;">No description provided</em>'}</p>
-                </div>
-            `;
+            h += `<div class="d-section fade-in"><div class="d-label">Table Info</div><div class="d-grid">
+        <div><strong>Schema:</strong> ${t.schema}</div>
+        <div><strong>Records:</strong> ${(t.row_count || 0).toLocaleString()}</div>
+        <div><strong>Geometry:</strong> ${geom}</div>
+        <div><strong>Columns:</strong> ${t.columns.length}</div>
+    </div></div>`;
 
-            // Table metadata
-            html += `
-                <div class="detail-section">
-                    <div class="detail-label">Table Information</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
-                        <div>
-                            <strong>Schema:</strong> ${table.schema}
-                        </div>
-                        <div>
-                            <strong>Records:</strong> ${table.row_count?.toLocaleString() || 'Unknown'}
-                        </div>
-                        <div>
-                            <strong>Geometry:</strong> ${geometry}
-                        </div>
-                        <div>
-                            <strong>Columns:</strong> ${table.columns.length}
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Columns
-            html += `
-                <div class="detail-section">
-                    <div class="detail-label">Columns</div>
-                    <div class="columns-grid">
-            `;
-
-            table.columns.forEach(col => {
-                const isMissing = !col.metadata || !col.metadata.description;
-                html += `
-                    <div class="column-item" style="border-color: ${isMissing ? 'rgba(244, 67, 54, 0.3)' : 'rgba(241, 100, 46, 0.2)'};">
-                        <div class="column-name">${col.name}</div>
-                        <div class="column-type">${col.type}</div>
-                        <div class="column-description">
-                            ${col.metadata?.description || '<em style="color: #999;">No description</em>'}
-                        </div>
-                        <div class="column-actions">
-                            <button class="btn" onclick="openEditModal('${table.table_name}', '${col.name}', ${JSON.stringify(col.metadata || {})})">
-                                <i class="fas fa-edit"></i> Edit
-                            </button>
-                        </div>
-                    </div>
-                `;
+            h += `<div class="d-section fade-in"><div class="d-label">Columns</div><div class="col-grid">`;
+            t.columns.forEach(c => {
+                const miss = !c.metadata || !c.metadata.description;
+                const bd = miss ? 'rgba(244,67,54,.2)' : 'var(--border)';
+                const meta = JSON.stringify(c.metadata || {}).replace(/"/g, '&quot;');
+                h += `<div class="col-card" style="border-color:${bd}">
+            <div class="cn">${c.name}</div><div class="ct">${c.type}</div>
+            <div class="cd">${c.metadata?.description || '<em style="color:#666">No description</em>'}</div>
+            <button class="btn" style="margin-top:6px" onclick="openColModal('${t.table_name}','${c.name}',${meta})"><i class="fas fa-edit"></i> Edit</button>
+        </div>`;
             });
-
-            html += `
-                    </div>
-                </div>
-            `;
-
-            details.innerHTML = html;
+            h += '</div></div>';
+            h += '<div id="previewSection"></div><div id="statsSection"></div>';
+            pane.innerHTML = h;
         }
 
-        async function saveTableDescription(tableName) {
-            const description = document.getElementById('tableDesc').value;
-
+        async function loadPreview(name) {
+            const sec = document.getElementById('previewSection');
+            sec.innerHTML = '<div class="d-section fade-in"><div class="d-label">Data Preview</div><div class="spinner"></div></div>';
             try {
-                const params = new URLSearchParams();
-                params.append('table_name', tableName);
-                params.append('description', description);
-
-                const url = `${API_BASE}/database/table-description?${params.toString()}`;
-                console.log('Saving table description to:', url);
-
-                const response = await fetch(url, {
-                    method: 'POST'
-                });
-
-                const text = await response.text();
-                console.log('Response status:', response.status);
-                console.log('Response text:', text);
-
-                const data = JSON.parse(text);
-                if (data.success) {
-                    alert('Table description saved!');
-                    await loadTables();
-                } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Error saving table description:', error);
-                alert('Error saving description: ' + error.message);
-            }
+                const r = await fetch(API + '/tables/' + name + '/preview?limit=20');
+                const d = await r.json();
+                if (!d.success || !d.rows.length) { sec.innerHTML = '<div class="d-section"><div class="d-label">Preview</div><p style="color:var(--text2)">No data</p></div>'; return; }
+                let th = d.columns.map(c => `<th>${c}</th>`).join('');
+                let tb = d.rows.map(row => '<tr>' + d.columns.map(c => `<td title="${String(row[c] || '')}">${String(row[c] || '').substring(0, 80)}</td>`).join('') + '</tr>').join('');
+                sec.innerHTML = `<div class="d-section fade-in"><div class="d-label">Data Preview (${d.count} rows)</div><div class="preview-wrap"><table class="preview-table"><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table></div></div>`;
+            } catch (e) { sec.innerHTML = '<div class="d-section"><p style="color:var(--red)">Error loading preview</p></div>'; }
         }
 
-        function openTableDescriptionModal(tableName, currentDescription = '') {
-            editingTable = tableName;
-            document.getElementById('editTableName').textContent = tableName;
-            document.getElementById('editTableDesc').value = currentDescription;
-            document.getElementById('tableDescModal').classList.add('active');
-        }
-
-        function closeTableDescriptionModal() {
-            document.getElementById('tableDescModal').classList.remove('active');
-            editingTable = null;
-        }
-
-        async function saveTableDescriptionModal() {
-            const description = document.getElementById('editTableDesc').value;
-
+        async function loadStats(name) {
+            const sec = document.getElementById('statsSection');
+            sec.innerHTML = '<div class="d-section fade-in"><div class="d-label">Column Statistics</div><div class="spinner"></div></div>';
             try {
-                const params = new URLSearchParams();
-                params.append('table_name', editingTable);
-                params.append('description', description);
-
-                const url = `${API_BASE}/database/table-description?${params.toString()}`;
-                const response = await fetch(url, {
-                    method: 'POST'
+                const r = await fetch(API + '/tables/' + name + '/stats');
+                const d = await r.json();
+                if (!d.success) { sec.innerHTML = ''; return; }
+                let h = `<div class="d-section fade-in"><div class="d-label">Column Statistics (${d.total_rows.toLocaleString()} rows)</div><div class="col-grid">`;
+                d.columns.forEach(c => {
+                    let info = `<div class="cn">${c.column}</div><div class="ct">${c.type}</div>`;
+                    if (c.is_geometry) { info += '<div class="cd">Geometry column</div>'; }
+                    else {
+                        info += `<div class="cd" style="font-size:11px">Non-null: ${c.non_null?.toLocaleString() || '?'} | Null: ${c.null_count?.toLocaleString() || '?'} | Distinct: ${c.distinct?.toLocaleString() || '?'}`;
+                        if (c.min !== undefined) info += `<br>Min: ${c.min} | Max: ${c.max} | Avg: ${c.avg}`;
+                        if (c.samples) info += `<br>Samples: ${c.samples.map(s => s.substring(0, 30)).join(', ')}`;
+                        info += '</div>';
+                    }
+                    h += `<div class="col-card">${info}</div>`;
                 });
-
-                const data = await response.json();
-                if (data.success) {
-                    closeTableDescriptionModal();
-                    await loadTables();
-                    alert('Table description updated!');
-                } else {
-                    alert('Error: ' + (data.detail || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Error saving table description:', error);
-                alert('Error: ' + error.message);
-            }
+                h += '</div></div>';
+                sec.innerHTML = h;
+            } catch (e) { sec.innerHTML = ''; }
         }
 
-        function openEditModal(tableName, columnName, metadata = {}) {
-            editingTable = tableName;
-            editingColumn = columnName;
-
-            document.getElementById('editColumnName').textContent = `${tableName}.${columnName}`;
-            document.getElementById('editColumnDescription').value = metadata.description || '';
-            document.getElementById('editColumnEnglish').value = metadata.english_name || '';
-            document.getElementById('editColumnExample').value = metadata.example_value || '';
-
+        // ── MODALS ──
+        function openColModal(tbl, col, meta) {
+            editingTable = tbl; editingColumn = col;
+            document.getElementById('editColName').textContent = tbl + '.' + col;
+            document.getElementById('editColDesc').value = meta?.description || '';
+            document.getElementById('editColEnglish').value = meta?.english_name || '';
+            document.getElementById('editColExample').value = meta?.example_value || '';
             document.getElementById('editModal').classList.add('active');
         }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('active');
-            editingTable = null;
-            editingColumn = null;
+        function openTableDescModal(tbl, desc) {
+            editingTable = tbl;
+            document.getElementById('editTblName').textContent = tbl;
+            document.getElementById('editTblDesc').value = desc || '';
+            document.getElementById('tableDescModal').classList.add('active');
         }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); }));
 
-        async function saveColumnDescription() {
-            const description = document.getElementById('editColumnDescription').value;
-            const englishName = document.getElementById('editColumnEnglish').value;
-            const exampleValue = document.getElementById('editColumnExample').value;
-
+        async function saveColumnDesc() {
+            const p = new URLSearchParams({
+                table_name: editingTable, column_name: editingColumn,
+                description: document.getElementById('editColDesc').value,
+                english_name: document.getElementById('editColEnglish').value,
+                example_value: document.getElementById('editColExample').value
+            });
             try {
-                const params = new URLSearchParams();
-                params.append('table_name', editingTable);
-                params.append('column_name', editingColumn);
-                params.append('description', description);
-                params.append('english_name', englishName);
-                params.append('example_value', exampleValue);
+                const r = await fetch(API + '/columns?' + p, { method: 'POST' });
+                const d = await r.json();
+                if (d.success) { closeModal('editModal'); selectTable(editingTable); }
+                else alert('Error: ' + (d.detail || 'Unknown'));
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+        async function saveTableDesc() {
+            const p = new URLSearchParams({ table_name: editingTable, description: document.getElementById('editTblDesc').value });
+            try {
+                const r = await fetch(API + '/table-description?' + p, { method: 'POST' });
+                const d = await r.json();
+                if (d.success) { closeModal('tableDescModal'); loadTables(); selectTable(editingTable); }
+                else alert('Error: ' + (d.detail || 'Unknown'));
+            } catch (e) { alert('Error: ' + e.message); }
+        }
 
-                const url = `${API_BASE}/database/columns?${params.toString()}`;
-                console.log('Saving column to:', url);
+        // ── CONTEXT MENU & DELETION ──
+        let contextTable = null;
+        const ctxMenu = document.getElementById('tableContextMenu');
 
-                const response = await fetch(url, {
-                    method: 'POST'
-                });
+        function showContextMenu(e, tableName) {
+            e.preventDefault();
+            contextTable = tableName;
+            ctxMenu.style.left = e.pageX + 'px';
+            ctxMenu.style.top = e.pageY + 'px';
+            ctxMenu.classList.add('active');
+        }
 
-                const text = await response.text();
-                console.log('Response status:', response.status);
-                console.log('Response text:', text);
+        document.addEventListener('click', () => {
+            ctxMenu.classList.remove('active');
+        });
 
-                const data = JSON.parse(text);
-                if (data.success) {
-                    closeEditModal();
-                    await selectTable(editingTable);
-                    alert('Column description saved!');
+        document.getElementById('ctxRenameBtn').addEventListener('click', () => {
+            if (!contextTable) return;
+            document.getElementById('renameOldName').textContent = contextTable;
+            document.getElementById('renameNewName').value = contextTable;
+            document.getElementById('renameModal').classList.add('active');
+            setTimeout(() => document.getElementById('renameNewName').focus(), 100);
+        });
+
+        async function doRenameTable() {
+            const oldName = document.getElementById('renameOldName').textContent;
+            const newName = document.getElementById('renameNewName').value.trim();
+            if (!newName) { alert('Please enter a new table name.'); return; }
+            if (newName === oldName) { closeModal('renameModal'); return; }
+            if (!/^[a-z][a-z0-9_]*$/.test(newName)) { alert('Table name must start with a letter and contain only lowercase letters, numbers and underscores.'); return; }
+            try {
+                const r = await fetch(API + '/tables/' + oldName + '/rename?' + new URLSearchParams({ new_name: newName }), { method: 'PUT' });
+                const d = await r.json();
+                if (d.success) {
+                    closeModal('renameModal');
+                    if (selectedTable === oldName) selectedTable = newName;
+                    loadTables();
+                    if (selectedTable === newName) selectTable(newName);
                 } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
+                    alert('Error renaming table: ' + (d.detail || 'Unknown error'));
                 }
-            } catch (error) {
-                console.error('Error saving column description:', error);
-                alert('Error saving description: ' + error.message);
+            } catch (e) {
+                alert('Error: ' + e.message);
             }
         }
 
-        // Close modals on background click
-        document.getElementById('editModal').addEventListener('click', (e) => {
-            if (e.target.id === 'editModal') {
-                closeEditModal();
+        document.getElementById('ctxDeleteBtn').addEventListener('click', async () => {
+            if (!contextTable) return;
+            const confirmDelete = confirm(`Are you sure you want to completely DELETE table '${contextTable}'?\n\nThis cannot be undone!`);
+            if (confirmDelete) {
+                try {
+                    const r = await fetch(API + '/tables/' + contextTable, { method: 'DELETE' });
+                    const d = await r.json();
+                    if (d.success) {
+                        if (selectedTable === contextTable) {
+                            selectedTable = null;
+                            document.getElementById('detailPane').innerHTML = '<div class="empty"><i class="fas fa-arrow-left"></i><p>Select a table to view details</p></div>';
+                        }
+                        contextTable = null;
+                        loadTables();
+                    } else {
+                        alert('Error deleting table: ' + (d.detail || 'Unknown error'));
+                    }
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                }
             }
         });
 
-        document.getElementById('tableDescModal').addEventListener('click', (e) => {
-            if (e.target.id === 'tableDescModal') {
-                closeTableDescriptionModal();
-            }
-        });
+        // ── OSM UPDATE TAB ──
+        let osmPolling = null;
 
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', async () => {
-            await loadTables();
-        });
+        async function loadOsmCategories() {
+            try {
+                const r = await fetch(API + '/osm-update/categories');
+                const d = await r.json();
+                if (d.success) {
+                    // Group by category
+                    const groups = {};
+                    d.categories.forEach(c => {
+                        if (!groups[c.category]) groups[c.category] = [];
+                        groups[c.category].push(c);
+                    });
+                    let html = '<div class="d-label" style="margin-bottom:10px;text-align:center">Categories (' + d.total + ') — extracted from Geofabrik PBF</div>';
+                    for (const [group, items] of Object.entries(groups)) {
+                        html += '<div style="font-size:11px;color:var(--accent);margin:12px 0 4px;text-transform:uppercase;letter-spacing:1px">' + group + '</div>';
+                        html += '<div class="cat-grid">' + items.map(c => `<div class="cat-chip"><i class="fas fa-circle"></i>${c.description}<span style="font-size:10px;color:var(--text2);margin-left:auto">${c.layer}</span></div>`).join('') + '</div>';
+                    }
+                    document.getElementById('osmCategories').innerHTML = html;
+                }
+            } catch (e) { }
+            // Also check if an update is already running
+            checkOsmStatus();
+        }
+
+        async function startOsmUpdate() {
+            document.getElementById('osmStartBtn').disabled = true;
+            document.getElementById('osmSupermarketsBtn').disabled = true;
+            document.getElementById('osmTransportStopsBtn').disabled = true;
+            try {
+                const r = await fetch(API + '/osm-update', { method: 'POST' });
+                const d = await r.json();
+                if (d.success) {
+                    document.getElementById('osmProgressBar').style.display = 'block';
+                    document.getElementById('osmLog').style.display = 'block';
+                    osmPolling = setInterval(checkOsmStatus, 2000);
+                } else { 
+                    alert(d.detail || 'Error'); 
+                    document.getElementById('osmStartBtn').disabled = false; 
+                    document.getElementById('osmSupermarketsBtn').disabled = false;
+                    document.getElementById('osmTransportStopsBtn').disabled = false;
+                }
+            } catch (e) { 
+                alert('Error: ' + e.message); 
+                document.getElementById('osmStartBtn').disabled = false; 
+                document.getElementById('osmSupermarketsBtn').disabled = false;
+                document.getElementById('osmTransportStopsBtn').disabled = false;
+            }
+        }
+
+        async function startOsmSupermarketsUpdate() {
+            document.getElementById('osmStartBtn').disabled = true;
+            document.getElementById('osmSupermarketsBtn').disabled = true;
+            document.getElementById('osmTransportStopsBtn').disabled = true;
+            const statusDiv = document.getElementById('osmStatus');
+            statusDiv.textContent = '📥 Downloading supermarkets via Overpass API...';
+            document.getElementById('osmProgressBar').style.display = 'block';
+            document.getElementById('osmProgressFill').style.width = '50%';
+            
+            try {
+                const r = await fetch(API + '/osm-update/supermarkets', { method: 'POST' });
+                const d = await r.json();
+                if (d.success) {
+                    statusDiv.innerHTML = `<span style="color:var(--green)">✅ ${d.message}</span>`;
+                    document.getElementById('osmProgressFill').style.width = '100%';
+                    loadTables();
+                } else {
+                    alert('Error: ' + (d.message || d.detail || 'Unknown error'));
+                    statusDiv.textContent = '❌ Update failed';
+                    document.getElementById('osmProgressBar').style.display = 'none';
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+                statusDiv.textContent = '❌ Update error';
+                document.getElementById('osmProgressBar').style.display = 'none';
+            } finally {
+                document.getElementById('osmStartBtn').disabled = false;
+                document.getElementById('osmSupermarketsBtn').disabled = false;
+                document.getElementById('osmTransportStopsBtn').disabled = false;
+            }
+        }
+
+        async function startOsmTransportStopsUpdate() {
+            document.getElementById('osmStartBtn').disabled = true;
+            document.getElementById('osmSupermarketsBtn').disabled = true;
+            document.getElementById('osmTransportStopsBtn').disabled = true;
+            const statusDiv = document.getElementById('osmStatus');
+            statusDiv.textContent = '📥 Downloading transport stops via Overpass API...';
+            document.getElementById('osmProgressBar').style.display = 'block';
+            document.getElementById('osmProgressFill').style.width = '50%';
+            
+            try {
+                const r = await fetch(API + '/osm-update/transport_stops', { method: 'POST' });
+                const d = await r.json();
+                if (d.success) {
+                    statusDiv.innerHTML = `<span style="color:var(--green)">✅ ${d.message}</span>`;
+                    document.getElementById('osmProgressFill').style.width = '100%';
+                    loadTables();
+                } else {
+                    alert('Error: ' + (d.message || d.detail || 'Unknown error'));
+                    statusDiv.textContent = '❌ Update failed';
+                    document.getElementById('osmProgressBar').style.display = 'none';
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+                statusDiv.textContent = '❌ Update error';
+                document.getElementById('osmProgressBar').style.display = 'none';
+            } finally {
+                document.getElementById('osmStartBtn').disabled = false;
+                document.getElementById('osmSupermarketsBtn').disabled = false;
+                document.getElementById('osmTransportStopsBtn').disabled = false;
+            }
+        }
+
+        async function checkOsmStatus() {
+            try {
+                const r = await fetch(API + '/osm-update/status');
+                const d = await r.json();
+                if (d.running) {
+                    document.getElementById('osmStartBtn').disabled = true;
+                    document.getElementById('osmSupermarketsBtn').disabled = true;
+                    document.getElementById('osmTransportStopsBtn').disabled = true;
+                    document.getElementById('osmProgressBar').style.display = 'block';
+                    document.getElementById('osmLog').style.display = 'block';
+
+                    let pct = 0;
+                    let statusText = 'Starting...';
+
+                    if (d.phase === 'downloading') {
+                        // Show download progress based on bytes
+                        if (d.download_total > 0) {
+                            pct = (d.download_progress / d.download_total) * 100;
+                            const dlMB = (d.download_progress / 1048576).toFixed(1);
+                            const totalMB = (d.download_total / 1048576).toFixed(1);
+                            statusText = `📥 Downloading PBF: ${dlMB} / ${totalMB} MB`;
+                        } else {
+                            statusText = '📥 Downloading PBF from Geofabrik...';
+                        }
+                    } else if (d.phase === 'extracting') {
+                        pct = d.total > 0 ? ((d.progress / d.total) * 100) : 0;
+                        statusText = d.current_category
+                            ? `🔧 Extracting: ${d.current_category} (${d.progress}/${d.total})`
+                            : '🔧 Extracting categories...';
+                    } else if (d.phase === 'done') {
+                        pct = 100;
+                        statusText = '✅ Update complete!';
+                    }
+
+                    document.getElementById('osmProgressFill').style.width = pct + '%';
+                    document.getElementById('osmStatus').textContent = statusText;
+                    document.getElementById('osmLog').innerHTML = d.log.map(l => '<div>' + l + '</div>').join('');
+                    document.getElementById('osmLog').scrollTop = document.getElementById('osmLog').scrollHeight;
+                    if (!osmPolling) osmPolling = setInterval(checkOsmStatus, 2000);
+                } else {
+                    if (osmPolling) { clearInterval(osmPolling); osmPolling = null; }
+                    document.getElementById('osmStartBtn').disabled = false;
+                    document.getElementById('osmSupermarketsBtn').disabled = false;
+                    document.getElementById('osmTransportStopsBtn').disabled = false;
+                    if (d.log && d.log.length) {
+                        document.getElementById('osmProgressFill').style.width = '100%';
+                        document.getElementById('osmLog').style.display = 'block';
+                        document.getElementById('osmLog').innerHTML = d.log.map(l => '<div>' + l + '</div>').join('');
+                        document.getElementById('osmStatus').textContent = d.last_run ? 'Last run: ' + new Date(d.last_run).toLocaleString() : 'Ready';
+                    }
+                    if (d.last_run) loadTables();
+                }
+            } catch (e) { }
+        }
+
+        // ── CHANGELOG TAB ──
+        async function loadChangelog(page) {
+            if (page) changelogPage = page;
+            const action = document.getElementById('logActionFilter').value;
+            const table = document.getElementById('logTableFilter').value;
+            const container = document.getElementById('changelogEntries');
+            container.innerHTML = '<div class="empty"><div class="spinner"></div>Loading...</div>';
+            try {
+                let url = API + `/changelog?page=${changelogPage}&per_page=30`;
+                if (action) url += '&action=' + action;
+                if (table) url += '&table_name=' + table;
+                const r = await fetch(url);
+                const d = await r.json();
+                if (!d.success || !d.entries.length) { container.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><p>No changelog entries</p></div>'; document.getElementById('changelogPagination').innerHTML = ''; return; }
+                container.innerHTML = d.entries.map(e => {
+                    const iconClass = e.action.includes('osm') ? 'osm' : e.action === 'upload' ? 'upload' : e.action === 'delete' ? 'delete' : 'desc';
+                    const iconFA = e.action.includes('osm') ? 'fa-globe' : e.action === 'upload' ? 'fa-upload' : e.action === 'delete' ? 'fa-trash' : 'fa-pen';
+                    const det = e.details ? Object.entries(e.details).map(([k, v]) => `<span style="margin-right:10px"><strong>${k}:</strong> ${typeof v === 'object' ? JSON.stringify(v) : v}</span>`).join('') : '';
+                    return `<div class="log-entry fade-in">
+                <div class="log-icon ${iconClass}"><i class="fas ${iconFA}"></i></div>
+                <div class="log-body">
+                    <div class="action">${e.action}</div>
+                    <div class="meta">${e.table_name || '—'} · ${e.performed_by} · ${new Date(e.created_at).toLocaleString()}</div>
+                    ${det ? '<div class="det">' + det + '</div>' : ''}
+                </div>
+            </div>`;
+                }).join('');
+                // Pagination
+                let pg = '';
+                if (d.total_pages > 1) {
+                    pg += `<button class="btn" ${changelogPage <= 1 ? 'disabled' : ''} onclick="loadChangelog(${changelogPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+                    pg += `<span style="font-size:12px;color:var(--text2)">Page ${d.page} of ${d.total_pages}</span>`;
+                    pg += `<button class="btn" ${changelogPage >= d.total_pages ? 'disabled' : ''} onclick="loadChangelog(${changelogPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
+                }
+                document.getElementById('changelogPagination').innerHTML = pg;
+            } catch (e) { container.innerHTML = '<div class="empty"><i class="fas fa-exclamation-circle"></i><p>Error loading changelog</p></div>'; }
+        }
+
+        // ── UPLOAD TAB ──
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+        fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+        function handleFile(f) {
+            uploadFile = f;
+            document.getElementById('uploadFileName').value = f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)';
+            document.getElementById('uploadTableName').value = '';
+            document.getElementById('uploadForm').style.display = 'block';
+            document.getElementById('uploadResult').style.display = 'none';
+            dropZone.style.display = 'none';
+        }
+        function cancelUpload() {
+            uploadFile = null;
+            document.getElementById('uploadForm').style.display = 'none';
+            dropZone.style.display = 'block';
+            fileInput.value = '';
+        }
+        async function doUpload() {
+            if (!uploadFile) return;
+            document.getElementById('uploadBtn').disabled = true;
+            document.getElementById('uploadProgress').style.display = 'block';
+            const fd = new FormData();
+            fd.append('file', uploadFile);
+            const tn = document.getElementById('uploadTableName').value.trim();
+            let url = API + '/upload';
+            if (tn) url += '?table_name=' + encodeURIComponent(tn);
+            try {
+                const r = await fetch(url, { method: 'POST', body: fd });
+                const d = await r.json();
+                document.getElementById('uploadProgress').style.display = 'none';
+                document.getElementById('uploadBtn').disabled = false;
+                if (d.success) {
+                    document.getElementById('uploadResult').style.display = 'block';
+                    document.getElementById('uploadResult').innerHTML = `<h3 style="color:var(--green);margin-bottom:8px"><i class="fas fa-check-circle"></i> Upload Successful</h3>
+                <p style="font-size:13px">${d.message}</p>
+                <div style="font-size:12px;color:var(--text2);margin-top:8px">Table: <strong>${d.table_name}</strong> · Rows: ${d.row_count.toLocaleString()} · Columns: ${d.column_count} · Geometry: ${d.has_geometry ? 'Yes' : 'No'}</div>`;
+                    document.getElementById('uploadForm').style.display = 'none';
+                    loadTables();
+                    setTimeout(() => { dropZone.style.display = 'block'; }, 3000);
+                } else {
+                    alert('Error: ' + (d.detail || 'Unknown error'));
+                }
+            } catch (e) {
+                document.getElementById('uploadProgress').style.display = 'none';
+                document.getElementById('uploadBtn').disabled = false;
+                alert('Upload failed: ' + e.message);
+            }
+        }
+
+        // ── INIT ──
+        window.addEventListener('DOMContentLoaded', () => { loadTables(); });
     </script>
 </body>
+
 </html>

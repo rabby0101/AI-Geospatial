@@ -1,5 +1,9 @@
 # Detailnetz (Berlin Detailed Road Network) Integration
 
+> [!CAUTION]
+> **DEPRECATED / REPLACED**: As of 2026-02-03, the `vector.detailnetz_road_segments` table has been replaced by `vector.custom_roads` for all routing and analysis queries. This document remains for historical context on the original Detailnetz import.
+
+
 ## Overview
 
 This document describes the integration of Berlin's comprehensive street and road network from the GDI Berlin WFS service. The Detailnetz represents a detailed digital node-edge model of Berlin's traffic-related road infrastructure.
