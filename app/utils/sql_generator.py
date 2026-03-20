@@ -159,14 +159,64 @@ class SQLQueryGenerator:
             print(f"   Recommendation: Consider filtering results by specific criteria or region")
             logger.warning(f"Heavy query detected with {join_count} JOINs - this may be slow")
 
-        # Remove unnecessary ST_Transform in certain contexts
+        # CRITICAL OPTIMIZATION FOR BERLIN DATA:
+        # LLMs often add ::geography casting or use 'geometry' instead of the pre-projected 'geom_25833'.
+        # Geography casting completely bypasses spatial indexes and forces full table scans (extremely slow).
+        # We strip ::geography and swap to geom_25833 inside ST_ functions for fast metric calculations.
+        
+        # 1. Strip ::geography casting
+        sql = re.sub(r'::\s*geography\b', '', sql, flags=re.IGNORECASE)
+
+        # 2. Extract ST_ functions before injecting geom_25833 to SELECTs, so we don't accidentally
+        # modify geometry inside ST_ functions during the SELECT injection
+        st_matches = []
+        
+        def save_st_func(match):
+            st_matches.append(match.group(0))
+            return f"__ST_FUNC_{len(st_matches)-1}__"
+            
+        sql = re.sub(r'ST_[A-Za-z0-9_]+\([^)]+\)', save_st_func, sql, flags=re.IGNORECASE)
+
+        # 3. Inject geom_25833 into CTE SELECT statements if geometry is selected
+        # This ensures the column exists for the ST_ function replacements
+        def inject_geom25833(match):
+            select_clause = match.group(0)
+            # If geometry is selected but geom_25833 is not
+            if re.search(r'\bgeometry\b', select_clause, re.IGNORECASE) and not re.search(r'\bgeom_25833\b', select_clause, re.IGNORECASE):
+                # Replace "alias.geometry" with "alias.geometry, alias.geom_25833"
+                select_clause = re.sub(r'([a-zA-Z0-9_]+)\.geometry\b', r'\1.geometry, \1.geom_25833', select_clause, flags=re.IGNORECASE)
+                # Replace raw "geometry" with "geometry, geom_25833" (if no alias)
+                # But only if it's not already handled by the alias regex
+                if not re.search(r'[a-zA-Z0-9_]+\.geometry, [a-zA-Z0-9_]+\.geom_25833', select_clause, re.IGNORECASE):
+                    # Negative lookbehind to avoid dot
+                    select_clause = re.sub(r'(?<!\.)\bgeometry\b', r'geometry, geom_25833', select_clause, flags=re.IGNORECASE)
+            return select_clause
+
+        # Apply to all SELECT ... FROM blocks
+        sql = re.sub(r'\bSELECT\b.*?\bFROM\b', inject_geom25833, sql, flags=re.IGNORECASE | re.DOTALL)
+        
+        # 4. Restore ST_ functions and replace geometry -> geom_25833 inside them
+        for i, st_func in enumerate(st_matches):
+            optimized_st = re.sub(r'\bgeometry\b', 'geom_25833', st_func, flags=re.IGNORECASE)
+            sql = sql.replace(f"__ST_FUNC_{i}__", optimized_st)
+
+        # 5. Remove unnecessary ST_Transform in certain contexts
         # If we're only doing COUNT/aggregation, don't need geometry transforms
         if re.search(r'COUNT\s*\(\s*DISTINCT', sql, re.IGNORECASE) and 'ST_Transform' in sql:
             # Check if ST_Transform is for distance calculations
             if not re.search(r'ST_DWithin|ST_Distance', sql, re.IGNORECASE):
                 # Remove unnecessary ST_Transform
-                sql = re.sub(r'ST_Transform\s*\(\s*(\w+)\.geometry,\s*3857\s*\)', r'\1.geometry', sql)
+                sql = re.sub(r'ST_Transform\s*\(\s*([a-zA-Z0-9_\.]+),\s*3857\s*\)', r'\1', sql)
                 logger.info("Removed unnecessary ST_Transform from aggregation query")
+                
+        # 6. Fix osm_id datatype mismatches in UNION queries
+        # Some tables use bigint for osm_id, others use text. PostgreSQL strict typing causes
+        # DatatypeMismatch errors when UNION ALL combines them. Cast to text to be safe.
+        if "UNION" in sql.upper() and "osm_id" in sql.lower():
+            # Replace simple osm_id selects that aren't already cast
+            sql = re.sub(r'\bSELECT\s+osm_id(?!\s*::\s*text)\b', 'SELECT osm_id::text as osm_id', sql, flags=re.IGNORECASE)
+            # Replace aliased osm_id selects (e.g. SELECT s.osm_id)
+            sql = re.sub(r'\bSELECT\s+([a-zA-Z0-9_]+)\.osm_id(?!\s*::\s*text)\b', r'SELECT \1.osm_id::text as osm_id', sql, flags=re.IGNORECASE)
 
         return sql
 

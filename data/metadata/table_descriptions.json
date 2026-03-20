@@ -1,6 +1,7 @@
 {
   "abstell_mikromob": "Parking locations for small vehicles like bikes and scooters.",
   "admin_boundaries": "National and regional administrative borders with country codes and names.",
+  "alkis_buildings": "Alkis Buildings area boundaries",
   "berlin_crime_stats": "Crime statistics for Berlin, categorized by district and type of offense.",
   "berlin_districts": "Berlin administrative districts (Bezirke) with official boundaries",
   "berlin_subdivision_population": "Population of Berlin's subdivisions, including districts and neighborhoods.",

@@ -221,9 +221,9 @@ async def get_mitte_buildings_sample():
         SELECT
             ST_AsGeoJSON(geometry) as geometry,
             'building' as type
-        FROM vector.osm_buildings
-        WHERE ST_DWithin(geometry, 
-            (SELECT geometry FROM vector.berlin_districts WHERE name = 'Mitte'), 
+        FROM vector.alkis_buildings
+        WHERE ST_DWithin(geometry,
+            (SELECT geometry FROM vector.berlin_districts WHERE name = 'Mitte'),
             0.001)
         LIMIT 500
         """

@@ -455,22 +455,43 @@ class DatabaseManager:
 
         try:
             with self.engine.connect() as conn:
-                # Get metadata from metadata.table_descriptions (UI-managed source of truth)
-                query = text("""
-                    SELECT
-                        table_name,
-                        description,
-                        row_count,
-                        geometry_type
-                    FROM metadata.table_descriptions
-                    ORDER BY table_name
-                """)
-                result = conn.execute(query)
-                metadata = {row[0]: {
-                    "description": row[1],
-                    "row_count": row[2],
-                    "geometry_type": row[3]
-                } for row in result}
+                # Try to fetch usage_hint if the column exists (added by Step 1 migration)
+                try:
+                    query = text("""
+                        SELECT
+                            table_name,
+                            description,
+                            row_count,
+                            geometry_type,
+                            usage_hint
+                        FROM metadata.table_descriptions
+                        ORDER BY table_name
+                    """)
+                    result = conn.execute(query)
+                    metadata = {row[0]: {
+                        "description": row[1],
+                        "row_count": row[2],
+                        "geometry_type": row[3],
+                        "usage_hint": row[4] or "",
+                    } for row in result}
+                except Exception:
+                    # usage_hint column not yet added; fall back to basic columns
+                    query = text("""
+                        SELECT
+                            table_name,
+                            description,
+                            row_count,
+                            geometry_type
+                        FROM metadata.table_descriptions
+                        ORDER BY table_name
+                    """)
+                    result = conn.execute(query)
+                    metadata = {row[0]: {
+                        "description": row[1],
+                        "row_count": row[2],
+                        "geometry_type": row[3],
+                        "usage_hint": "",
+                    } for row in result}
 
             # Build result with column info
             tables_data = []
@@ -481,6 +502,7 @@ class DatabaseManager:
                     tables_data.append({
                         "table": table_name,
                         "description": metadata[table_name]["description"],
+                        "usage_hint": metadata[table_name]["usage_hint"],
                         "row_count": table_info["row_count"],
                         "geometry": metadata[table_name]["geometry_type"] or "NONE",
                         "columns": table_info["columns"]
@@ -730,9 +752,36 @@ class DatabaseManager:
                 columns = result.keys()
                 
             if not candidates:
-                return {"success": False, "error": f"No features found within {max_radius_m}m"}
-            
-            print(f"📍 Found {len(candidates)} candidate(s) within {max_radius_m}m")
+                # Radius produced nothing — fall back to unconstrained nearest-N search
+                fallback_query = f"""
+                SELECT
+                    t.*,
+                    ST_X(ST_Centroid(t.geometry)) as poi_lon,
+                    ST_Y(ST_Centroid(t.geometry)) as poi_lat,
+                    ST_Distance(
+                        ST_Transform(t.geometry, 3857),
+                        ST_Transform(ST_SetSRID(ST_MakePoint(:origin_lon, :origin_lat), 4326), 3857)
+                    ) as straight_line_m
+                FROM {target_table} t
+                {('WHERE ' + where_clause) if where_clause else ''}
+                ORDER BY straight_line_m
+                LIMIT :max_candidates
+                """
+                with self.engine.connect() as conn:
+                    result = conn.execute(
+                        text(fallback_query),
+                        {"origin_lon": origin_lon, "origin_lat": origin_lat,
+                         "max_candidates": max_candidates}
+                    )
+                    candidates = result.fetchall()
+                    columns = result.keys()
+
+                if not candidates:
+                    return {"success": False, "error": f"No features found in table {target_table}"}
+
+                print(f"📍 Radius fallback: found {len(candidates)} candidate(s) (no radius limit)")
+            else:
+                print(f"📍 Found {len(candidates)} candidate(s) within {max_radius_m}m")
             
             # Step 2: Use Valhalla to compute road distance to each candidate
             from app.utils.valhalla_routing import valhalla_service

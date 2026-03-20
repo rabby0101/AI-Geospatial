@@ -1,6 +1,11 @@
 """
 Location Resolver - Dynamically resolve location names to geometries and bounding boxes.
 Replaces hardcoded district bounding boxes with real database queries.
+
+Resolution tiers (in order):
+  Tier 1: Landmarks DB  — exact + fuzzy ILIKE (~<10ms, always works)
+  Tier 2: Nominatim     — OSM geocoder for addresses/unknown places (~100-500ms)
+  Tier 3: None + warning log
 """
 
 import logging
@@ -33,13 +38,66 @@ class LocationResolver:
                 - bbox: [min_lon, min_lat, max_lon, max_lat]
             Or None if not found
         """
-        # Use centralized landmarks table for unified location lookup
+        # Tier 1: Landmarks DB (exact + fuzzy ILIKE)
         result = self._resolve_from_landmarks(location_name)
         if result:
             return result
 
+        # Tier 2: Nominatim geocoder (addresses, unknown places)
+        try:
+            from app.utils.geocoder import geocoder_service
+            geocode_results = geocoder_service.search(location_name, limit=1)
+            if geocode_results:
+                return self._geocode_result_to_location(geocode_results[0])
+        except Exception as e:
+            logger.warning(f"Nominatim geocoding failed for '{location_name}': {e}")
+
         logger.warning(f"Location not found: {location_name}")
         return None
+
+    def _geocode_result_to_location(self, result) -> Dict[str, Any]:
+        """Convert a GeocodeResult to the standard location dict format."""
+        lon, lat = result.lon, result.lat
+        address = result.address
+
+        # Derive parent district from address fields
+        parent_bezirk = (
+            address.get("suburb")
+            or address.get("borough")
+            or address.get("city_district")
+            or address.get("county")
+            or None
+        )
+
+        # Build a minimal WKT point geometry
+        geometry = f"POINT({lon} {lat})"
+
+        return {
+            "name": result.name or result.display_name,
+            "type": self._classify_nominatim_type(result.osm_type, result.type),
+            "parent_bezirk": parent_bezirk,
+            "geometry": geometry,
+            "bbox": result.bbox if result.bbox else [lon, lat, lon, lat],
+            "match_type": "geocoded",
+            "source": "nominatim",
+        }
+
+    @staticmethod
+    def _classify_nominatim_type(osm_type: str, feature_type: str) -> str:
+        """Map Nominatim osm_type/type to internal location type."""
+        type_map = {
+            "amenity": "poi",
+            "highway": "street",
+            "railway": "transit_stop",
+            "public_transport": "transit_stop",
+            "leisure": "park",
+            "natural": "park",
+            "place": "place",
+            "building": "building",
+            "shop": "poi",
+            "tourism": "poi",
+        }
+        return type_map.get(feature_type, type_map.get(osm_type, "place"))
 
     def _resolve_from_landmarks(self, location_name: str) -> Optional[Dict[str, Any]]:
         """

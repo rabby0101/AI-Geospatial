@@ -16,7 +16,7 @@ DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 
 # Gemini API Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
 # Simple in-memory cache (max 100 entries)
@@ -109,6 +109,7 @@ def _get_database_schema_for_llm() -> str:
         for table_info in sorted(tables_data, key=lambda x: x["table"]):
             table_name = table_info["table"]
             description = table_info["description"]
+            usage_hint = table_info.get("usage_hint", "")
             row_count = table_info.get("row_count", 0)
             geometry = table_info.get("geometry", "NONE")
             columns = table_info.get("columns", [])
@@ -116,9 +117,11 @@ def _get_database_schema_for_llm() -> str:
             # Format table entry
             schema_text += f"**{table_name}**\n"
             schema_text += f"  Description: {description}\n"
+            if usage_hint:
+                schema_text += f"  Usage: {usage_hint}\n"
             schema_text += f"  Records: {row_count} | Geometry: {geometry}\n"
             schema_text += "  Columns:\n"
-            
+
             # Format each column with its metadata
             for col in columns:
                 if isinstance(col, dict):
@@ -126,7 +129,7 @@ def _get_database_schema_for_llm() -> str:
                     col_type = col.get("type", "")
                     col_desc = col.get("description", "")
                     col_examples = col.get("example_values", "")
-                    
+
                     line = f"    - {col_name} ({col_type})"
                     if col_desc:
                         line += f": {col_desc}"
@@ -831,6 +834,17 @@ def clear_query_cache() -> None:
     global _query_cache
     _query_cache.clear()
     print("✅ Query cache cleared")
+
+
+def invalidate_query_cache() -> None:
+    """
+    Invalidate (clear) the in-memory query cache.
+    Called by SchemaWatcher when the database schema changes so stale
+    cached responses referencing dropped or newly added tables are evicted.
+    """
+    global _query_cache
+    _query_cache.clear()
+    print("✅ Query cache invalidated (schema change detected)")
 
 
 def get_available_datasets() -> List[Dict[str, Any]]:

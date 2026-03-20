@@ -108,7 +108,7 @@ async def find_buildings_within_walking_time(request: Dict[str, Any]) -> Dict[st
     lat = request.get("lat")
     lon = request.get("lon")
     time_minutes = request.get("time_minutes", 10)
-    building_table = request.get("building_table", "osm_buildings")
+    building_table = request.get("building_table", "alkis_buildings")
     buffer_m = request.get("buffer_m", 30)
     limit = request.get("limit", 5000)
     
@@ -138,15 +138,15 @@ async def find_buildings_within_walking_time(request: Dict[str, Any]) -> Dict[st
     
     # Sanitize table name to prevent SQL injection
     allowed_tables = [
-        "osm_buildings",
-        "osm_supermarkets", 
+        "alkis_buildings",
+        "osm_supermarkets",
         "osm_restaurants",
         "osm_hospitals",
         "osm_schools",
         "osm_parks",
         "osm_pharmacies"
     ]
-    
+
     # Also allow any table that starts with osm_ as a fallback
     if building_table not in allowed_tables and not building_table.startswith("osm_"):
         raise HTTPException(

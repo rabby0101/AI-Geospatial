@@ -196,7 +196,7 @@ class SafetyDataLoader:
                         'buildings' as layer_type,
                         COUNT(*) as feature_count,
                         ST_Union(geometry) as combined_geometry
-                    FROM vector.osm_buildings b
+                    FROM vector.alkis_buildings b
                     WHERE ST_DWithin(b.geometry, (SELECT geometry FROM vector.berlin_districts WHERE name = 'Mitte'), 0.001);
                 """
                 conn.execute(text(sql))

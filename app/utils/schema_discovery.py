@@ -281,6 +281,43 @@ class SchemaDiscovery:
         self.get_all_tables()
         self.get_all_descriptions()
 
+    def remove_table(self, table_name: str) -> None:
+        """
+        Remove a dropped table from the in-memory cache and schema_cache.json.
+        Does NOT remove from the DB metadata table (kept as historical record).
+
+        Args:
+            table_name: Name of the table to remove
+        """
+        # Remove from in-memory cache
+        if self._tables_cache and table_name in self._tables_cache:
+            del self._tables_cache[table_name]
+            self._save_cache(self._tables_cache)
+            print(f"✅ Removed {table_name} from schema cache")
+
+        # Remove from descriptions cache (in-memory only)
+        if self._descriptions_cache and table_name in self._descriptions_cache:
+            del self._descriptions_cache[table_name]
+
+    def get_current_table_set(self) -> set:
+        """
+        Directly query pg_tables for the current set of vector tables.
+        Sub-millisecond, bypasses the schema cache. Used by SchemaWatcher.
+
+        Returns:
+            Set of table names currently in the vector schema
+        """
+        try:
+            from sqlalchemy import text
+            with db_manager.engine.connect() as conn:
+                result = conn.execute(
+                    text("SELECT tablename FROM pg_tables WHERE schemaname = 'vector'")
+                )
+                return {row[0] for row in result}
+        except Exception as e:
+            print(f"⚠️ get_current_table_set failed: {e}")
+            return set()
+
     def _save_cache(self, tables: Dict[str, Any]) -> None:
         """
         Save schema cache to file.
