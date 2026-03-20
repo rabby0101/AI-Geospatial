@@ -3712,6 +3712,26 @@
         <div class="modal-box bg-base-200">
             <h3 class="font-bold text-lg mb-4">Style: <span id="styleLayerName">Layer</span></h3>
 
+            <div class="flex gap-4 mb-4">
+                <div class="form-control flex-1">
+                    <label class="label">
+                        <span class="label-text">Fill Opacity</span>
+                        <span class="label-text-alt" id="fillOpacityValue">0.8</span>
+                    </label>
+                    <input type="range" id="fillOpacity" min="0" max="1" step="0.1" class="range range-primary range-sm"
+                        value="0.8">
+                </div>
+
+                <div class="form-control flex-1">
+                    <label class="label">
+                        <span class="label-text">Border Width</span>
+                        <span class="label-text-alt" id="borderWidthValue">2</span>
+                    </label>
+                    <input type="range" id="borderWidth" min="0" max="5" step="1" class="range range-primary range-sm"
+                        value="2">
+                </div>
+            </div>
+
             <div class="tabs tabs-boxed bg-base-300 mb-4">
                 <a class="tab tab-active" data-tab="basic" onclick="switchStyleTab(this)">
                     <i data-lucide="palette" class="w-4 h-4 mr-2"></i>Basic
@@ -3735,24 +3755,6 @@
                         <span class="label-text">Border Color</span>
                     </label>
                     <input type="color" id="borderColor" class="w-full h-10 cursor-pointer rounded-lg">
-                </div>
-
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Fill Opacity</span>
-                        <span class="label-text-alt" id="fillOpacityValue">0.8</span>
-                    </label>
-                    <input type="range" id="fillOpacity" min="0" max="1" step="0.1" class="range range-primary range-sm"
-                        value="0.8">
-                </div>
-
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Border Width</span>
-                        <span class="label-text-alt" id="borderWidthValue">2</span>
-                    </label>
-                    <input type="range" id="borderWidth" min="0" max="5" step="1" class="range range-primary range-sm"
-                        value="2">
                 </div>
 
                 <div class="form-control">
@@ -5907,6 +5909,38 @@ LIMIT 10</textarea>
                 infoHtml = `<i data-lucide="map-pin" class="w-3 h-3"></i><span>${layerInfo.featureCount} features</span>`;
             }
 
+            let gradientLegendHtml = '';
+            if (style.isGradient && style.gradientProperty && style.gradientRange) {
+                const colors = [];
+                for (let i = 0; i <= 10; i++) {
+                    const normalized = i / 10;
+                    colors.push(interpolateColor(normalized, style.gradientScheme || 'viridis'));
+                }
+                const gradientBarStyle = 'linear-gradient(to right, ' + colors.join(', ') + ')';
+                
+                let minLabel = style.gradientRange.min?.toFixed(2) || '0';
+                let maxLabel = style.gradientRange.max?.toFixed(2) || '10';
+                let legendTitle = style.gradientProperty;
+                
+                if (style.gradientProperty === 'composite_score') {
+                    minLabel = '0.0'; maxLabel = '1.0';
+                    legendTitle = 'Suitability Score';
+                } else if (style.gradientProperty === 'amenities_per_km2' || style.gradientProperty === 'density_per_sq_km') {
+                    legendTitle = 'Density (amenities/km²)';
+                }
+
+                gradientLegendHtml = `
+                    <div class="mt-3 w-full">
+                        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${legendTitle}</div>
+                        <div style="width: 100%; height: 8px; background: ${gradientBarStyle}; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.15); margin-bottom: 4px;"></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-secondary);">
+                            <span>${minLabel}</span>
+                            <span>${maxLabel}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
             layerItem.innerHTML = `
                 <div class="card-body p-3">
                     <div class="flex justify-between items-start mb-2">
@@ -5936,6 +5970,7 @@ LIMIT 10</textarea>
                         </div>
                         <span>${timeAgo}</span>
                     </div>
+                    ${gradientLegendHtml}
                 </div>
             `;
 
@@ -7397,10 +7432,28 @@ LIMIT 10</textarea>
                     } else {
                         // Multiple points - create cluster
                         const center = this.getClusterCenter(items.map(i => i.point));
+                        
+                        let avgGradientValue = null;
+                        if (this.styleConfig.isGradient && this.styleConfig.gradientProperty) {
+                            let sum = 0;
+                            let validCount = 0;
+                            items.forEach(item => {
+                                const val = item.feature.properties?.[this.styleConfig.gradientProperty];
+                                if (typeof val === 'number' && !isNaN(val)) {
+                                    sum += val;
+                                    validCount++;
+                                }
+                            });
+                            if (validCount > 0) {
+                                avgGradientValue = sum / validCount;
+                            }
+                        }
+
                         this.clusters.set(gridKey, {
                             center,
                             points: items,
-                            count: items.length
+                            count: items.length,
+                            avgGradientValue
                         });
                     }
                 });
@@ -7500,10 +7553,22 @@ LIMIT 10</textarea>
                 // Render individual markers
                 let markerIndex = 0;
                 this.markers.forEach(markerData => {
+                    let iconColor = this.styleConfig.iconColor || this.styleConfig.fillColor;
+
+                    if (this.styleConfig.isGradient && this.styleConfig.gradientProperty) {
+                        const value = markerData.feature.properties?.[this.styleConfig.gradientProperty];
+                        if (typeof value === 'number' && !isNaN(value)) {
+                            const minVal = this.styleConfig.gradientRange.min;
+                            const maxVal = this.styleConfig.gradientRange.max;
+                            const normalized = (value - minVal) / (maxVal - minVal);
+                            iconColor = interpolateColor(Math.max(0, Math.min(1, normalized)), this.styleConfig.gradientScheme);
+                        }
+                    }
+
                     const marker = createMarkerWithIcon(
                         markerData.point,
                         markerData.feature,
-                        this.styleConfig.iconColor || this.styleConfig.fillColor,
+                        iconColor,
                         this.styleConfig.selectedIcon,
                         this.currentZoom
                     );
@@ -7529,7 +7594,7 @@ LIMIT 10</textarea>
                         marker: marker,
                         size: getMarkerSize(this.currentZoom),
                         feature: markerData.feature,
-                        iconColor: this.styleConfig.iconColor || this.styleConfig.fillColor
+                        iconColor: iconColor
                     });
 
                     this.markerLayer.addLayer(marker);
@@ -7541,7 +7606,14 @@ LIMIT 10</textarea>
                     const radius = circleSize / 2;
 
                     // Get layer color (default to orange if not specified)
-                    const layerColor = this.styleConfig.fillColor || this.styleConfig.color || '#F1642E';
+                    let layerColor = this.styleConfig.fillColor || this.styleConfig.color || '#F1642E';
+                    
+                    if (this.styleConfig.isGradient && clusterData.avgGradientValue !== null) {
+                        const minVal = this.styleConfig.gradientRange.min;
+                        const maxVal = this.styleConfig.gradientRange.max;
+                        const normalized = (clusterData.avgGradientValue - minVal) / (maxVal - minVal);
+                        layerColor = interpolateColor(Math.max(0, Math.min(1, normalized)), this.styleConfig.gradientScheme);
+                    }
 
                     // Convert hex to RGB for rgba transparency
                     const rgb = this.hexToRgb(layerColor);
@@ -7824,10 +7896,10 @@ LIMIT 10</textarea>
             }
 
             if (html) {
-                content.innerHTML = html;
-                container.style.display = 'block';
-                // Re-init Lucide icons
-                if (typeof lucide !== 'undefined') lucide.createIcons();
+                // To display in old panel (optional, we could remove it since it's now in the cards)
+                // content.innerHTML = html;
+                // container.style.display = 'block';
+                // if (typeof lucide !== 'undefined') lucide.createIcons();
             }
         }
 
@@ -9187,20 +9259,29 @@ LIMIT 10</textarea>
                 }
 
                 // Check for street light coverage visualization query
-                // More flexible matching: check for word combinations instead of exact phrases
+                // Only match explicit visualization intent — NOT queries that merely mention
+                // "light" or "lighting" as a scoring criterion (e.g. site-selection queries)
                 const queryLower = query.toLowerCase();
-                const isCoverageQuery = (
-                    // Pattern 1: "turn" + "light/lights" + "on"
-                    (queryLower.includes('turn') && (queryLower.includes('light') || queryLower.includes('lights')) && queryLower.includes('on')) ||
-                    // Pattern 2: "show" + "light/lights"
-                    (queryLower.includes('show') && (queryLower.includes('light') || queryLower.includes('lights'))) ||
-                    // Pattern 3: Coverage-related terms
+                const isSiteSelection = queryLower.includes('site-selection') ||
+                    queryLower.includes('site selection') ||
+                    queryLower.includes('top ') ||
+                    queryLower.includes('criteria') ||
+                    queryLower.includes('scored locations') ||
+                    queryLower.includes('best location') ||
+                    queryLower.includes('rank') ||
+                    queryLower.includes('analysis for berlin');
+                const isCoverageQuery = !isSiteSelection && (
+                    // Pattern 1: "turn" + "street light/lights" + "on"
+                    (queryLower.includes('turn') && (queryLower.includes('street light') || queryLower.includes('street lights')) && queryLower.includes('on')) ||
+                    // Pattern 2: "show" + "street light/lights" (must be "street light", not just "light")
+                    (queryLower.includes('show') && (queryLower.includes('street light') || queryLower.includes('street lights'))) ||
+                    // Pattern 3: Explicit coverage/illumination visualization terms
                     queryLower.includes('light coverage') ||
-                    queryLower.includes('coverage area') ||
-                    queryLower.includes('illumination') ||
+                    queryLower.includes('illumination coverage') ||
                     queryLower.includes('visualize lighting') ||
-                    // Pattern 4: "display" + "light/lights"
-                    (queryLower.includes('display') && (queryLower.includes('light') || queryLower.includes('lights')))
+                    queryLower.includes('visualize street light') ||
+                    // Pattern 4: "display" + "street light/lights"
+                    (queryLower.includes('display') && (queryLower.includes('street light') || queryLower.includes('street lights')))
                 );
 
                 // Check if user is asking for lights without context
@@ -9299,6 +9380,7 @@ LIMIT 10</textarea>
                 console.log(`📊 Query Mode: ${queryMode.toUpperCase()}`);
 
                 let response;
+                let geocodePromise = Promise.resolve(null);
 
                 if (isDEM) {
                     // DEM query
@@ -9344,6 +9426,11 @@ LIMIT 10</textarea>
                     }
 
                     console.log(`💬 Conversation Mode - Session: ${sessionId}`);
+
+                    // Fire geocoding in parallel — used as fallback if LLM returns no features
+                    geocodePromise = fetch(`${API_URL}/geocode/feature?q=${encodeURIComponent(query)}`)
+                        .then(r => r.ok ? r.json() : null)
+                        .catch(() => null);
 
                     response = await fetch(`${API_URL}/query`, {
                         method: 'POST',
@@ -9467,7 +9554,58 @@ LIMIT 10</textarea>
                         // Refresh available layers for multi-step queries
                         await refreshAvailableLayers();
                     } else {
-                        showNotification(data.error || 'No results found', 'error');
+                        // LLM returned no spatial features — try geocoder feature fallback
+                        const geocodeData = await geocodePromise;
+
+                        if (geocodeData?.success && geocodeData.feature?.geometry) {
+                            const feat = geocodeData.feature;
+                            const geojson = { type: 'FeatureCollection', features: [feat] };
+                            const layerName = geocodeData.name || query;
+                            const isPolygon = geocodeData.source === 'building_polygon';
+
+                            if (queryMode === 'single') clearAllQueries();
+
+                            addLayer(
+                                layerName, geojson, query, [],
+                                `Geocoded location: ${geocodeData.display_name}`,
+                                [geocodeData.source],
+                                { source: geocodeData.source, geocoded: true },
+                                0
+                            );
+
+                            // Fly to the resolved location
+                            const bbox = geocodeData.bbox;
+                            if (bbox) {
+                                const [minLon, minLat, maxLon, maxLat] = bbox;
+                                const bboxArea = (maxLon - minLon) * (maxLat - minLat);
+                                if (bboxArea > 0.0001) {
+                                    map.fitBounds([[minLat, minLon], [maxLat, maxLon]], { padding: [60, 60], maxZoom: 17 });
+                                } else {
+                                    const cLon = isPolygon ? (minLon + maxLon) / 2 : feat.geometry.coordinates[0];
+                                    const cLat = isPolygon ? (minLat + maxLat) / 2 : feat.geometry.coordinates[1];
+                                    map.flyTo([cLat, cLon], 17, { duration: 1.2, easeLinearity: 0.5 });
+                                }
+                            }
+
+                            const sourceLabel = isPolygon ? 'building polygon' : 'place';
+                            showNotification(`📍 ${layerName} (${sourceLabel}) — click to select for follow-up queries`, 'success');
+
+                            if (queryMode === 'multi-step') {
+                                addQueryToChain(query, {
+                                    layer_name: layerName,
+                                    data: geojson,
+                                    operations: [],
+                                    reasoning: `Geocoded location: ${geocodeData.display_name}`,
+                                    datasets_used: [geocodeData.source],
+                                    metadata: { source: geocodeData.source, geocoded: true },
+                                    execution_time: 0
+                                });
+                            }
+
+                            await refreshAvailableLayers();
+                        } else {
+                            showNotification(data.error || 'No results found', 'error');
+                        }
                     }
                 }
 

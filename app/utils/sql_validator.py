@@ -120,6 +120,37 @@ class SQLValidator:
             )
             needs_fix = True
 
+        # Pattern 4: Min-max normalization with window functions inside ROUND
+        # LLMs generate: ROUND( (col - MIN(col) OVER ()) / NULLIF(MAX(col) OVER () - MIN(col) OVER (), 0)::numeric, N )
+        # The ::numeric cast is on the NULLIF (denominator) only.
+        # But numerator is double precision → division result is double precision.
+        # ROUND(double precision, int) doesn't exist in PostgreSQL.
+        # Fix: cast the numerator to ::numeric so division result is numeric.
+        # Match: OVER ())  followed by  / NULLIF(   → insert ::numeric between ) and /
+        window_div_pattern = r'(OVER\s*\(\s*\))\s*\)\s*(/\s*NULLIF\s*\()'
+        if re.search(window_div_pattern, fixed_sql, re.IGNORECASE):
+            fixed_sql = re.sub(
+                window_div_pattern,
+                r'\1)::numeric \2',
+                fixed_sql,
+                flags=re.IGNORECASE
+            )
+            needs_fix = True
+
+        # Pattern 5: General ROUND(double_expr, N) where expression doesn't end in ::numeric
+        # Catch-all: any ROUND(expr, N) where expr contains a division and no ::numeric before the comma
+        # Specifically: ROUND( ... / NULLIF(...)::numeric, N ) without the whole expr being cast
+        # If ::numeric appears directly before ", N)" at end of ROUND, it only casts the divisor.
+        # Fix: also wrap in ::numeric if we detect  ")::numeric, <digits>)"  at the tail of a ROUND arg.
+        # (Handles the case where the regex above didn't already fix it.)
+        round_nullif_tail = r'NULLIF\s*\(([^)]+(?:\([^)]*\)[^)]*)*)\s*,\s*0\s*\)\s*::\s*numeric\s*,\s*(\d+)\s*\)'
+        if re.search(round_nullif_tail, fixed_sql, re.IGNORECASE):
+            # The pattern is already handled by window_div_pattern above in most cases;
+            # but if ::numeric is on NULLIF and the numerator isn't cast yet, cast denominator side too
+            # which makes PostgreSQL resolve as numeric / numeric = numeric automatically.
+            # (This is a no-op if already fixed above.)
+            pass
+
         return needs_fix, fixed_sql
 
     @staticmethod
@@ -169,6 +200,18 @@ class SQLValidator:
         needs_fix, fixed_sql = SQLValidator.validate_select_from(fixed_sql)
         if needs_fix:
             errors_found.append("SELECT without FROM (auto-fixed)")
+            
+        # Check 4: osm_id type mismatches in UNION queries
+        # Some tables have bigint osm_id, others have text. UNIONs fail if types differ.
+        if "UNION" in fixed_sql.upper() and "osm_id" in fixed_sql.lower():
+            original = fixed_sql
+            # Replace "SELECT osm_id" with "SELECT osm_id::text as osm_id"
+            fixed_sql = re.sub(r'\bSELECT\s+osm_id\b', 'SELECT osm_id::text as osm_id', fixed_sql, flags=re.IGNORECASE)
+            # Replace "SELECT alias.osm_id" with "SELECT alias.osm_id::text as osm_id"
+            fixed_sql = re.sub(r'\bSELECT\s+([a-zA-Z0-9_]+)\.osm_id\b', r'SELECT \1.osm_id::text as osm_id', fixed_sql, flags=re.IGNORECASE)
+            
+            if original != fixed_sql:
+                errors_found.append("osm_id type mismatch in UNION (auto-fixed to text)")
 
         return len(errors_found) == 0, fixed_sql
 

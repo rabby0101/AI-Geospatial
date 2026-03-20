@@ -639,29 +639,19 @@ class SpatialEngine:
                     "reasoning": plan.reasoning if hasattr(plan, 'reasoning') else ""
                 }
             
-            # Build GeoJSON response with both the POI and the route
+            # Build GeoJSON response with only the POI (route LineString suppressed for nearest queries)
             features = []
-            
-            # Feature 1: The route geometry
-            route_feature = {
-                "type": "Feature",
-                "geometry": result["route_geometry"],
-                "properties": {
-                    "type": "route",
-                    "road_distance_m": result["road_distance_m"],
-                    "straight_line_m": result["straight_line_m"],
-                    "total_distance_m": result["total_distance_m"]
-                }
-            }
-            features.append(route_feature)
-            
-            # Feature 2: The POI itself
+
             poi_feature = result["feature"]
             if poi_feature.get("geometry"):
+                poi_properties = {k: v for k, v in poi_feature.items() if k != "geometry"}
+                poi_properties["road_distance_m"] = result["road_distance_m"]
+                poi_properties["straight_line_m"] = result["straight_line_m"]
+                poi_properties["duration_minutes"] = result.get("duration_minutes")
                 poi_geojson = {
                     "type": "Feature",
                     "geometry": poi_feature["geometry"],
-                    "properties": {k: v for k, v in poi_feature.items() if k != "geometry"}
+                    "properties": poi_properties
                 }
                 features.append(poi_geojson)
             
@@ -710,7 +700,7 @@ class SpatialEngine:
         Parameters expected:
             - location: {lat, lon} or session_id to extract from selected feature
             - time_minutes: Walking time in minutes (default 10)
-            - target_table: Table to search (e.g., 'osm_supermarkets', 'osm_buildings')
+            - target_table: Table to search (e.g., 'osm_supermarkets', 'alkis_buildings')
             - buffer_m: Buffer distance from roads (default 30m)
             - limit: Max results (default 5000)
             - session_id: Optional session ID to extract coordinates from selected feature
@@ -725,7 +715,7 @@ class SpatialEngine:
             lat = location.get("lat")
             lon = location.get("lon")
             time_minutes = params.get("time_minutes", 10)
-            target_table = params.get("target_table", "osm_buildings")
+            target_table = params.get("target_table", "alkis_buildings")
             building_filter = params.get("building_filter")  # e.g., "building IN ('commercial', 'retail')"
             buffer_m = params.get("buffer_m", 30)
             limit = params.get("limit", 5000)

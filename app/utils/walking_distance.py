@@ -110,7 +110,7 @@ class WalkingDistanceService:
         lat: float,
         lon: float,
         time_minutes: float,
-        building_table: str = "osm_buildings",
+        building_table: str = "alkis_buildings",
         building_filter: str = None,
         buffer_m: float = DEFAULT_BUILDING_BUFFER_M,
         limit: int = 5000

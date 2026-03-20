@@ -28,6 +28,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-geoassist}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-geoassist_password}
       - POSTGRES_DB=${POSTGRES_DB:-geospatial_db}
+      - NOMINATIM_HOST=nominatim
+      - NOMINATIM_PORT=8080
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -63,8 +65,32 @@ services:
       retries: 5
       start_period: 300s  # Allow 5 min for initial tile building
 
+  # Self-hosted Nominatim geocoder — no external API required
+  nominatim:
+    image: mediagis/nominatim:4.4
+    container_name: aigeospatial_nominatim
+    ports:
+      - "${NOMINATIM_PORT:-7070}:8080"
+    environment:
+      PBF_URL: https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
+      REPLICATION_URL: ""
+      FREEZE: "true"
+      IMPORT_WIKIPEDIA: "false"
+      IMPORT_TIGER_ADDRESSES: "false"
+    volumes:
+      - nominatim_data:/var/lib/postgresql/14/main
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 600s  # Allow 10 min for initial OSM import
+    restart: unless-stopped
+
 volumes:
   aigeospatial_postgis_data:
     external: true
   valhalla_tiles:
     name: aigeospatial_valhalla_tiles
+  nominatim_data:
+    name: aigeospatial_nominatim_data

@@ -63,7 +63,7 @@ class BusinessScorer:
                     'factor_type': FactorType.POSITIVE,
                 },
                 'residential_base': {
-                    'tables': ['osm_buildings'],
+                    'tables': ['alkis_buildings'],
                     'filter': "RESIDENTIAL",
                     'weight': 0.20,
                     'radius': 500,
@@ -133,7 +133,7 @@ class BusinessScorer:
                     'factor_type': FactorType.POSITIVE,
                 },
                 'office_workers': {
-                    'tables': ['osm_buildings'],
+                    'tables': ['alkis_buildings'],
                     'filter': 'COMMERCIAL',
                     'weight': 0.25,
                     'radius': 400,
@@ -171,7 +171,7 @@ class BusinessScorer:
                     'factor_type': FactorType.POSITIVE,
                 },
                 'residential_base': {
-                    'tables': ['osm_buildings'],
+                    'tables': ['alkis_buildings'],
                     'filter': 'RESIDENTIAL',
                     'weight': 0.25,
                     'radius': 600,
@@ -208,7 +208,7 @@ class BusinessScorer:
                     'factor_type': FactorType.POSITIVE,
                 },
                 'residential_base': {
-                    'tables': ['osm_buildings'],
+                    'tables': ['alkis_buildings'],
                     'filter': 'RESIDENTIAL',
                     'weight': 0.25,
                     'radius': 800,
@@ -237,7 +237,7 @@ class BusinessScorer:
             'description': 'Grocery store / Supermarket',
             'criteria': {
                 'residential_density': {
-                    'tables': ['osm_buildings'],
+                    'tables': ['alkis_buildings'],
                     'filter': 'RESIDENTIAL',
                     'weight': 0.40,
                     'radius': 800,
@@ -266,7 +266,7 @@ class BusinessScorer:
             'description': 'Fitness center / Gym',
             'criteria': {
                 'office_workers': {
-                    'tables': ['osm_buildings'],
+                    'tables': ['alkis_buildings'],
                     'filter': 'COMMERCIAL',
                     'weight': 0.25,
                     'radius': 600,
@@ -275,7 +275,7 @@ class BusinessScorer:
                     'factor_type': FactorType.POSITIVE,
                 },
                 'residential_base': {
-                    'tables': ['osm_buildings'],
+                    'tables': ['alkis_buildings'],
                     'filter': 'RESIDENTIAL',
                     'weight': 0.30,
                     'radius': 1000,
@@ -645,7 +645,7 @@ class BusinessScorer:
                     if building_filter == 'COMMERCIAL':
                         where_conditions.append(f"{table_alias}.building IN ('commercial', 'retail', 'office')")
                     elif building_filter == 'RESIDENTIAL':
-                        where_conditions.append(f"{table_alias}.building IN ('residential', 'apartments', 'house', 'detached')")
+                        where_conditions.append(f"{table_alias}.building IN ('residential')")
                     else:
                         where_conditions.append(f"'{building_filter}' = {table_alias}.building")
                 
@@ -699,18 +699,18 @@ class BusinessScorer:
         sql = f"""
 WITH scored AS (
     SELECT 
-        b.ogc_fid,
+        b.uuid,
         b.nam as name,
         b.geometry,
         b.geom_25833,
         {', '.join(all_columns)}
-    FROM vector.osm_buildings b
+    FROM vector.alkis_buildings b
     {district_join}
     WHERE b.building IN ('commercial', 'retail', 'office')
     {district_where}
 )
-SELECT 
-    ogc_fid,
+SELECT
+    uuid,
     name,
     geometry,
     {', '.join(score_names)},

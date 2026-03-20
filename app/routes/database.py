@@ -2,7 +2,7 @@
 Database schema and metadata management endpoints
 """
 
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, UploadFile, File
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, UploadFile, File, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import Session
@@ -1836,4 +1836,85 @@ async def table_stats(table_name: str):
         raise
     except Exception as e:
         logger.error(f"Stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Schema management endpoints
+# ---------------------------------------------------------------------------
+
+def _run_schema_refresh():
+    """Background task: run full schema re-discovery and cache invalidation."""
+    try:
+        from app.utils.auto_discovery import AutoTableDiscovery
+        from app.utils.schema_discovery import schema_discovery
+        from app.utils.deepseek import invalidate_query_cache
+
+        result = AutoTableDiscovery.auto_discover_and_update()
+        schema_discovery.refresh_cache()
+        invalidate_query_cache()
+        logger.info(f"Schema refresh complete: {result}")
+    except Exception as e:
+        logger.error(f"Schema refresh error: {e}")
+
+
+@router.post("/schema/refresh")
+async def refresh_schema(background_tasks: BackgroundTasks, request: Request):
+    """
+    Manually trigger a full schema re-discovery and cache invalidation.
+
+    Runs asynchronously in the background. Returns immediately.
+    Optionally protected by X-Admin-Token header when SCHEMA_REFRESH_TOKEN env var is set.
+    """
+    # Optional token guard
+    refresh_token = os.getenv("SCHEMA_REFRESH_TOKEN")
+    if refresh_token:
+        provided = request.headers.get("X-Admin-Token", "")
+        if provided != refresh_token:
+            raise HTTPException(status_code=403, detail="Invalid or missing X-Admin-Token header")
+
+    background_tasks.add_task(_run_schema_refresh)
+    return {"success": True, "message": "Schema refresh started in background"}
+
+
+@router.get("/schema/status")
+async def schema_status():
+    """
+    Return a summary of schema discovery status.
+
+    Returns total_tables, described_tables, and undescribed_tables list.
+    Useful for monitoring that all tables have LLM-generated descriptions.
+    """
+    try:
+        engine = get_db_engine()
+
+        # Get all tables in vector schema
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT tablename FROM pg_tables WHERE schemaname = 'vector' ORDER BY tablename")
+            )
+            all_tables = [row[0] for row in result]
+
+        # Get tables that have descriptions in metadata
+        described_tables = set()
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(
+                    text("SELECT table_name FROM metadata.table_descriptions")
+                )
+                described_tables = {row[0] for row in result}
+        except Exception:
+            # metadata schema/table may not exist yet
+            pass
+
+        undescribed = [t for t in all_tables if t not in described_tables]
+
+        return {
+            "success": True,
+            "total_tables": len(all_tables),
+            "described_tables": len(all_tables) - len(undescribed),
+            "undescribed_tables": undescribed,
+        }
+    except Exception as e:
+        logger.error(f"Schema status error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

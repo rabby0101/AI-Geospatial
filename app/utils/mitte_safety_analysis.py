@@ -192,7 +192,7 @@ class MitteSafetyAnalyzer:
             SELECT
                 'buildings_for_ground_floor' as metric,
                 COUNT(*)::int as value
-            FROM vector.osm_buildings b, mitte_bounds mb
+            FROM vector.alkis_buildings b, mitte_bounds mb
             WHERE ST_DWithin(b.geometry, mb.geometry, 0.001)
             LIMIT 1
         )

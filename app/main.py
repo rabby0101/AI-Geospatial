@@ -6,14 +6,13 @@ from pathlib import Path
 import os
 
 from app.routes import query_router
-from app.routes.raster import router as raster_router
-from app.routes.dem_query import router as dem_router
 from app.routes.database import router as database_router
 from app.routes.routing import router as routing_router
 from app.routes.safety import router as safety_router
 from app.routes.semantic import router as semantic_router
 from app.routes.gdi_berlin import router as gdi_berlin_router
 from app.routes.walking_distance import router as walking_distance_router
+from app.routes.geocoding import router as geocoding_router
 from app.utils.database import db_manager
 from app.utils.auto_discovery import auto_discovery
 
@@ -41,7 +40,7 @@ app.add_middleware(
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database connection and auto-discover new tables on startup"""
+    """Initialize database connection, auto-discover tables, and start SchemaWatcher"""
     print("🚀 Starting Cognitive Geospatial Assistant API...")
     print("📊 Initializing database connection...")
 
@@ -50,25 +49,23 @@ async def startup_event():
         if db_manager.test_connection():
             print("✅ Database connection successful")
 
-            # Auto-discover new tables and generate descriptions
+            # Auto-discover new tables and generate rich descriptions
             print("🔍 Auto-discovering tables...")
             result = auto_discovery.auto_discover_and_update()
             if result.get("new_tables_found", 0) > 0:
                 print(f"✅ Found and added {result['new_tables_found']} new table(s)")
             else:
                 print("✅ All tables are already documented")
+
+            # Start background schema watcher
+            from app.utils.schema_watcher import SchemaWatcher
+            schema_watcher = SchemaWatcher()
+            await schema_watcher.start()
+            app.state.schema_watcher = schema_watcher
         else:
             print("⚠️  Database connection failed - some features may not work")
     except Exception as e:
         print(f"❌ Database initialization error: {e}")
-
-    # Check DEM availability
-    dem_path = Path("data/raster/dem/berlin_dem.tif")
-    if dem_path.exists():
-        print(f"✅ Berlin DEM available: {dem_path} ({dem_path.stat().st_size / 1024 / 1024:.1f} MB)")
-        print("📍 DEM Query endpoints available at /api/dem/*")
-    else:
-        print("⚠️  Berlin DEM not found. Run: python scripts/download_berlin_dem.py")
 
 
 # Shutdown event
@@ -76,18 +73,19 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown"""
     print("👋 Shutting down Cognitive Geospatial Assistant API...")
+    if hasattr(app.state, "schema_watcher"):
+        await app.state.schema_watcher.stop()
 
 
 # Include routers
 app.include_router(query_router)
-app.include_router(raster_router)  # NDVI, terrain, land cover endpoints
-app.include_router(dem_router)  # DEM (Digital Elevation Model) endpoints
-app.include_router(database_router)  # Database metadata and schema endpoints
-app.include_router(routing_router)  # Road routing and connectivity endpoints
-app.include_router(safety_router)  # Safety analysis endpoints
-app.include_router(semantic_router)  # Semantic/Knowledge Graph endpoints
+app.include_router(database_router)    # Database metadata and schema endpoints
+app.include_router(routing_router)     # Road routing and connectivity endpoints
+app.include_router(safety_router)      # Safety analysis endpoints
+app.include_router(semantic_router)    # Semantic/Knowledge Graph endpoints
 app.include_router(gdi_berlin_router)  # GDI Berlin WFS import endpoints
 app.include_router(walking_distance_router)  # Walking distance analysis endpoints
+app.include_router(geocoding_router)         # Geocoding endpoints (Nominatim)
 
 
 # Serve static files (dashboards, assets)
