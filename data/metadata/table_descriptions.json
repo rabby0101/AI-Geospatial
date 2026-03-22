@@ -2,6 +2,7 @@
   "abstell_mikromob": "Parking locations for small vehicles like bikes and scooters.",
   "admin_boundaries": "National and regional administrative borders with country codes and names.",
   "alkis_buildings": "Alkis Buildings area boundaries",
+  "alkis_landuse": "This table contains land use polygons from the German ALKIS cadastral system, including categories like residential areas, agriculture, and water bodies.",
   "berlin_crime_stats": "Crime statistics for Berlin, categorized by district and type of offense.",
   "berlin_districts": "Berlin administrative districts (Bezirke) with official boundaries",
   "berlin_subdivision_population": "Population of Berlin's subdivisions, including districts and neighborhoods.",
@@ -97,5 +98,6 @@
   },
   "vegetation_ndvi": "Normalized Difference Vegetation Index (NDVI) data from Sentinel-2 for vegetation monitoring",
   "vertex_components": "Vertex connectivity and hierarchy for network junctions.",
-  "wasserschutzgebiete": "Water protection zones for waterworks, including legal ordinance details and boundaries."
+  "wasserschutzgebiete": "Water protection zones for waterworks, including legal ordinance details and boundaries.",
+  "wfs_alkis_tatsaechlichenutzungflaechen": "This table contains actual land use polygons from the German ALKIS system, including categories like residential areas, agriculture, vegetation, and water bodies."
 }

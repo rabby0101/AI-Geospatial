@@ -17,14 +17,14 @@
         }
 
         :root {
-            --bg1: #0a0914;
-            --bg2: #151024;
-            --bg3: rgba(80, 78, 118, .18);
-            --glass: rgba(80, 78, 118, .25);
-            --border: rgba(241, 100, 46, .15);
-            --border-h: rgba(241, 100, 46, .4);
-            --accent: #F1642E;
-            --accent2: #ff8a57;
+            --bg1: #0c0c0f;
+            --bg2: #111114;
+            --bg3: rgba(255, 255, 255, .04);
+            --glass: rgba(255, 255, 255, .03);
+            --border: rgba(255, 255, 255, .08);
+            --border-h: rgba(255, 255, 255, .18);
+            --accent: #3ecf8e;
+            --accent2: #2dd4bf;
             --text: #e0e0e0;
             --text2: #999;
             --green: #4CAF50;
@@ -76,7 +76,7 @@
             align-items: center;
             gap: 6px;
             padding: 8px 14px;
-            background: rgba(241, 100, 46, .12);
+            background: rgba(62, 207, 142, .12);
             border: 1px solid var(--border);
             color: var(--accent);
             border-radius: 8px;
@@ -87,7 +87,7 @@
         }
 
         .back-btn:hover {
-            background: rgba(241, 100, 46, .25);
+            background: rgba(62, 207, 142, .25);
             border-color: var(--accent)
         }
 
@@ -115,13 +115,13 @@
 
         .tab:hover {
             color: var(--text);
-            background: rgba(241, 100, 46, .04)
+            background: rgba(62, 207, 142, .04)
         }
 
         .tab.active {
             color: var(--accent);
             border-bottom-color: var(--accent);
-            background: rgba(241, 100, 46, .06)
+            background: rgba(62, 207, 142, .06)
         }
 
         .tab .badge {
@@ -195,7 +195,7 @@
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            background: rgba(0, 0, 0, .15)
+            background: rgba(0, 0, 0, .28)
         }
 
         .sidebar-header {
@@ -218,7 +218,7 @@
 
         .search-input:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(241, 100, 46, .1)
+            box-shadow: 0 0 0 3px rgba(62, 207, 142, .1)
         }
 
         .search-wrap {
@@ -255,13 +255,13 @@
         }
 
         .t-item:hover {
-            background: rgba(241, 100, 46, .06);
+            background: rgba(62, 207, 142, .06);
             border-color: var(--border);
             transform: translateX(3px)
         }
 
         .t-item.active {
-            background: rgba(241, 100, 46, .12);
+            background: rgba(62, 207, 142, .12);
             border-color: var(--accent)
         }
 
@@ -322,7 +322,7 @@
         .d-section {
             margin-bottom: 22px;
             padding-bottom: 18px;
-            border-bottom: 1px solid rgba(241, 100, 46, .08)
+            border-bottom: 1px solid rgba(255, 255, 255, .06)
         }
 
         .d-section:last-child {
@@ -392,7 +392,7 @@
         /* BUTTONS */
         .btn {
             padding: 7px 14px;
-            background: rgba(241, 100, 46, .15);
+            background: rgba(62, 207, 142, .15);
             border: 1px solid var(--border);
             color: var(--accent);
             border-radius: 6px;
@@ -406,7 +406,7 @@
         }
 
         .btn:hover {
-            background: rgba(241, 100, 46, .3);
+            background: rgba(62, 207, 142, .3);
             border-color: var(--accent)
         }
 
@@ -417,7 +417,7 @@
         }
 
         .btn.primary:hover {
-            background: #d9511d
+            background: #2db574
         }
 
         .btn.danger {
@@ -451,7 +451,7 @@
         }
 
         .preview-table th {
-            background: rgba(241, 100, 46, .1);
+            background: rgba(62, 207, 142, .1);
             color: var(--accent);
             padding: 8px 10px;
             text-align: left;
@@ -472,7 +472,7 @@
         }
 
         .preview-table tr:hover td {
-            background: rgba(241, 100, 46, .03)
+            background: rgba(62, 207, 142, .03)
         }
 
         .preview-wrap {
@@ -609,7 +609,7 @@
 
         .log-entry:hover {
             border-color: var(--border-h);
-            background: rgba(241, 100, 46, .03)
+            background: rgba(62, 207, 142, .03)
         }
 
         .log-icon {
@@ -629,7 +629,7 @@
         }
 
         .log-icon.osm {
-            background: rgba(241, 100, 46, .15);
+            background: rgba(62, 207, 142, .15);
             color: var(--accent)
         }
 
@@ -641,6 +641,11 @@
         .log-icon.desc {
             background: rgba(255, 152, 0, .15);
             color: var(--yellow)
+        }
+
+        .log-icon.wfs {
+            background: rgba(45, 212, 191, .15);
+            color: var(--accent2)
         }
 
         .log-body {
@@ -703,7 +708,7 @@
         .drop-zone:hover,
         .drop-zone.drag-over {
             border-color: var(--accent);
-            background: rgba(241, 100, 46, .04)
+            background: rgba(62, 207, 142, .04)
         }
 
         .drop-zone i {
@@ -830,7 +835,7 @@
         }
 
         .spinner {
-            border: 3px solid rgba(241, 100, 46, .1);
+            border: 3px solid rgba(62, 207, 142, .1);
             border-top-color: var(--accent);
             border-radius: 50%;
             width: 28px;
@@ -872,12 +877,12 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(241, 100, 46, .2);
+            background: rgba(62, 207, 142, .2);
             border-radius: 3px
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(241, 100, 46, .4)
+            background: rgba(62, 207, 142, .4)
         }
     </style>
 </head>
@@ -887,7 +892,7 @@
     <div class="top-bar">
         <div>
             <h1><i class="fas fa-database"></i> Database Inspector</h1>
-            <div class="sub">Manage tables, update OSM data, view change log & upload datasets</div>
+            <div class="sub">Manage tables, update OSM data, import WFS services, view change log &amp; upload datasets</div>
         </div>
         <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Map</a>
     </div>
@@ -899,6 +904,7 @@
         <div class="tab" data-tab="osm"><i class="fas fa-globe"></i> OSM Update</div>
         <div class="tab" data-tab="changelog"><i class="fas fa-clock-rotate-left"></i> Change Log</div>
         <div class="tab" data-tab="upload"><i class="fas fa-cloud-arrow-up"></i> Upload Dataset</div>
+        <div class="tab" data-tab="wfs"><i class="fas fa-link"></i> WFS Import</div>
     </div>
 
     <!-- ========== TABLES TAB ========== -->
@@ -964,6 +970,7 @@
                     <option value="delete">Delete</option>
                     <option value="rename">Rename</option>
                     <option value="description_update">Description</option>
+                    <option value="wfs_import">WFS Import</option>
                 </select>
                 <input id="logTableFilter" placeholder="Filter by table..." onchange="loadChangelog()">
                 <button class="btn" onclick="loadChangelog()"><i class="fas fa-sync"></i> Refresh</button>
@@ -1008,6 +1015,56 @@
         </div>
     </div>
 
+    <!-- ========== WFS IMPORT TAB ========== -->
+    <div class="panel" id="panel-wfs">
+        <div class="osm-panel">
+            <div class="osm-hero">
+                <i class="fas fa-link" style="font-size:48px;color:var(--accent);opacity:.6;margin-bottom:16px"></i>
+                <h2>WFS Service Import</h2>
+                <p>Paste any OGC Web Feature Service URL, discover its layers, and import directly into PostGIS.</p>
+            </div>
+
+            <div style="width:100%;max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+
+                <!-- Step 1: URL + Fetch -->
+                <div style="background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:20px">
+                    <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:12px;letter-spacing:.5px">STEP 1 — WFS SERVICE URL</div>
+                    <div style="display:flex;gap:10px">
+                        <input id="wfsUrl" placeholder="https://example.com/wfs?..." style="flex:1;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--mono)" onkeydown="if(event.key==='Enter')fetchWfsLayers()">
+                        <button class="btn primary" id="wfsFetchBtn" onclick="fetchWfsLayers()"><i class="fas fa-search"></i> Fetch Layers</button>
+                    </div>
+                    <div id="wfsFetchStatus" style="margin-top:8px;font-size:12px;color:var(--text2);display:none"></div>
+                </div>
+
+                <!-- Step 2: Layer selection + config -->
+                <div id="wfsLayerSection" style="background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:20px;display:none">
+                    <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:12px;letter-spacing:.5px">STEP 2 — SELECT LAYER &amp; CONFIGURE</div>
+                    <div class="form-group">
+                        <label>Layer</label>
+                        <select id="wfsLayerSelect" onchange="wfsLayerChanged()" style="width:100%;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--font)">
+                        </select>
+                    </div>
+                    <div id="wfsLayerAbstract" style="font-size:12px;color:var(--text2);margin:-6px 0 12px;padding:8px 10px;background:rgba(255,255,255,.02);border-radius:6px;display:none"></div>
+                    <div class="form-group">
+                        <label>Table Name (auto-generated if empty)</label>
+                        <input id="wfsTableName" placeholder="e.g. wfs_my_layer">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Features <span style="font-size:11px;color:var(--text2)">(cap to avoid large downloads)</span></label>
+                        <input id="wfsMaxFeatures" type="number" value="50000" min="1" max="200000">
+                    </div>
+                    <button class="btn primary lg" id="wfsImportBtn" onclick="doWfsImport()"><i class="fas fa-download"></i> Import Layer</button>
+                    <div id="wfsImportProgress" style="margin-top:14px;font-size:12px;color:var(--text2);display:none">
+                        <div class="spinner" style="display:inline-block;margin-right:8px"></div>Downloading and ingesting features — this may take a moment…
+                    </div>
+                </div>
+
+                <!-- Result -->
+                <div id="wfsResult" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODALS -->
     <div class="modal-bg" id="editModal">
         <div class="modal">
@@ -1041,6 +1098,8 @@
             </div>
             <div class="form-group"><label>Description</label><textarea id="editTblDesc"
                     placeholder="What data does this table contain?" style="min-height:120px"></textarea></div>
+            <div class="form-group"><label>LLM Usage Hint <span style="font-size:11px;color:var(--text2)">(tells the AI how to query this table correctly)</span></label><textarea id="editTblUsageHint"
+                    placeholder="e.g. Use bezirk column for district filtering, not name..." style="min-height:100px"></textarea></div>
             <div class="modal-actions">
                 <button class="btn" onclick="closeModal('tableDescModal')">Cancel</button>
                 <button class="btn primary" onclick="saveTableDesc()">Save</button>
@@ -1129,14 +1188,20 @@
             const pane = document.getElementById('detailPane');
             const geom = t.geometry_type || 'None';
             const descEsc = (t.description || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
+            const hintEsc = (t.usage_hint || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
             let h = `<div class="d-head fade-in"><h2>${t.table_name}</h2><div style="display:flex;gap:8px">
-        <button class="btn" onclick="openTableDescModal('${t.table_name}','${descEsc}')"><i class="fas fa-edit"></i> Edit Desc</button>
+        <button class="btn" onclick="openTableDescModal('${t.table_name}','${descEsc}','${hintEsc}')"><i class="fas fa-edit"></i> Edit Desc</button>
         <button class="btn" onclick="loadPreview('${t.table_name}')"><i class="fas fa-eye"></i> Preview</button>
         <button class="btn" onclick="loadStats('${t.table_name}')"><i class="fas fa-chart-bar"></i> Stats</button>
     </div></div>`;
 
             h += `<div class="d-section fade-in"><div class="d-label">Description</div>
         <p style="line-height:1.6;color:#bbb">${t.description || '<em style="color:#666">No description</em>'}</p></div>`;
+
+            if (t.usage_hint) {
+                h += `<div class="d-section fade-in"><div class="d-label" style="color:#f0a500"><i class="fas fa-robot" style="margin-right:5px"></i>LLM Usage Hint</div>
+        <p style="line-height:1.6;color:#bbb;font-size:12px;white-space:pre-wrap">${t.usage_hint}</p></div>`;
+            }
 
             h += `<div class="d-section fade-in"><div class="d-label">Table Info</div><div class="d-grid">
         <div><strong>Schema:</strong> ${t.schema}</div>
@@ -1161,17 +1226,70 @@
             pane.innerHTML = h;
         }
 
+        function _buildPreviewTable(d, columns) {
+            let th = columns.map(c => `<th>${c}</th>`).join('');
+            let tb = d.rows.length
+                ? d.rows.map(row => '<tr>' + columns.map(c => `<td title="${String(row[c] ?? '')}">${String(row[c] ?? '').substring(0, 80)}</td>`).join('') + '</tr>').join('')
+                : `<tr><td colspan="${columns.length}" style="text-align:center;color:var(--text2);padding:16px">No rows match</td></tr>`;
+            return `<table class="preview-table"><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table>`;
+        }
+
         async function loadPreview(name) {
             const sec = document.getElementById('previewSection');
             sec.innerHTML = '<div class="d-section fade-in"><div class="d-label">Data Preview</div><div class="spinner"></div></div>';
             try {
                 const r = await fetch(API + '/tables/' + name + '/preview?limit=20');
                 const d = await r.json();
-                if (!d.success || !d.rows.length) { sec.innerHTML = '<div class="d-section"><div class="d-label">Preview</div><p style="color:var(--text2)">No data</p></div>'; return; }
-                let th = d.columns.map(c => `<th>${c}</th>`).join('');
-                let tb = d.rows.map(row => '<tr>' + d.columns.map(c => `<td title="${String(row[c] || '')}">${String(row[c] || '').substring(0, 80)}</td>`).join('') + '</tr>').join('');
-                sec.innerHTML = `<div class="d-section fade-in"><div class="d-label">Data Preview (${d.count} rows)</div><div class="preview-wrap"><table class="preview-table"><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table></div></div>`;
+                if (!d.success) { sec.innerHTML = '<div class="d-section"><div class="d-label">Preview</div><p style="color:var(--text2)">No data</p></div>'; return; }
+                const colOpts = d.columns.map(c => `<option value="${c}">${c}</option>`).join('');
+                sec.innerHTML = `
+                  <div class="d-section fade-in">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+                      <div class="d-label" style="margin:0" id="previewLabel">Data Preview (${d.count} rows)</div>
+                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" class="log-filters">
+                        <select id="filterCol" style="padding:4px 6px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:12px">
+                          <option value="">— column —</option>${colOpts}
+                        </select>
+                        <input id="filterVal" placeholder="Filter value…" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:12px;width:160px"
+                          onkeydown="if(event.key==='Enter')filterPreview('${name}')"/>
+                        <button class="btn" onclick="filterPreview('${name}')">Filter</button>
+                        <button class="btn" onclick="clearFilter('${name}')">Clear</button>
+                        <span id="filterSpinner" style="display:none" class="spinner" style="width:14px;height:14px"></span>
+                      </div>
+                    </div>
+                    <div class="preview-wrap" id="previewTableWrap">${_buildPreviewTable(d, d.columns)}</div>
+                  </div>`;
             } catch (e) { sec.innerHTML = '<div class="d-section"><p style="color:var(--red)">Error loading preview</p></div>'; }
+        }
+
+        async function filterPreview(name) {
+            const col = document.getElementById('filterCol')?.value;
+            const val = document.getElementById('filterVal')?.value ?? '';
+            if (!col) { document.getElementById('previewLabel').textContent = 'Select a column to filter'; return; }
+            const spinner = document.getElementById('filterSpinner');
+            if (spinner) spinner.style.display = 'inline-block';
+            try {
+                const params = new URLSearchParams({ limit: 500, filter_col: col, filter_val: val });
+                const r = await fetch(`${API}/tables/${name}/preview?${params}`);
+                const d = await r.json();
+                if (!d.success) return;
+                document.getElementById('previewTableWrap').innerHTML = _buildPreviewTable(d, d.columns);
+                document.getElementById('previewLabel').textContent = d.rows.length
+                    ? `${d.count} row${d.count !== 1 ? 's' : ''} matching "${val}"`
+                    : `No rows matching "${val}"`;
+            } catch (e) {
+                document.getElementById('previewLabel').textContent = 'Filter error';
+            } finally {
+                if (spinner) spinner.style.display = 'none';
+            }
+        }
+
+        async function clearFilter(name) {
+            const colEl = document.getElementById('filterCol');
+            const valEl = document.getElementById('filterVal');
+            if (colEl) colEl.value = '';
+            if (valEl) valEl.value = '';
+            await loadPreview(name);
         }
 
         async function loadStats(name) {
@@ -1207,10 +1325,11 @@
             document.getElementById('editColExample').value = meta?.example_value || '';
             document.getElementById('editModal').classList.add('active');
         }
-        function openTableDescModal(tbl, desc) {
+        function openTableDescModal(tbl, desc, hint) {
             editingTable = tbl;
             document.getElementById('editTblName').textContent = tbl;
             document.getElementById('editTblDesc').value = desc || '';
+            document.getElementById('editTblUsageHint').value = hint || '';
             document.getElementById('tableDescModal').classList.add('active');
         }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -1231,7 +1350,7 @@
             } catch (e) { alert('Error: ' + e.message); }
         }
         async function saveTableDesc() {
-            const p = new URLSearchParams({ table_name: editingTable, description: document.getElementById('editTblDesc').value });
+            const p = new URLSearchParams({ table_name: editingTable, description: document.getElementById('editTblDesc').value, usage_hint: document.getElementById('editTblUsageHint').value });
             try {
                 const r = await fetch(API + '/table-description?' + p, { method: 'POST' });
                 const d = await r.json();
@@ -1494,8 +1613,8 @@
                 const d = await r.json();
                 if (!d.success || !d.entries.length) { container.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><p>No changelog entries</p></div>'; document.getElementById('changelogPagination').innerHTML = ''; return; }
                 container.innerHTML = d.entries.map(e => {
-                    const iconClass = e.action.includes('osm') ? 'osm' : e.action === 'upload' ? 'upload' : e.action === 'delete' ? 'delete' : 'desc';
-                    const iconFA = e.action.includes('osm') ? 'fa-globe' : e.action === 'upload' ? 'fa-upload' : e.action === 'delete' ? 'fa-trash' : 'fa-pen';
+                    const iconClass = e.action.includes('osm') ? 'osm' : e.action === 'upload' ? 'upload' : e.action === 'delete' ? 'delete' : e.action === 'wfs_import' ? 'wfs' : 'desc';
+                    const iconFA = e.action.includes('osm') ? 'fa-globe' : e.action === 'upload' ? 'fa-upload' : e.action === 'delete' ? 'fa-trash' : e.action === 'wfs_import' ? 'fa-link' : 'fa-pen';
                     const det = e.details ? Object.entries(e.details).map(([k, v]) => `<span style="margin-right:10px"><strong>${k}:</strong> ${typeof v === 'object' ? JSON.stringify(v) : v}</span>`).join('') : '';
                     return `<div class="log-entry fade-in">
                 <div class="log-icon ${iconClass}"><i class="fas ${iconFA}"></i></div>
@@ -1569,6 +1688,132 @@
                 document.getElementById('uploadProgress').style.display = 'none';
                 document.getElementById('uploadBtn').disabled = false;
                 alert('Upload failed: ' + e.message);
+            }
+        }
+
+        // ── WFS IMPORT TAB ──
+        let wfsLayers = [];
+
+        async function fetchWfsLayers() {
+            const url = document.getElementById('wfsUrl').value.trim();
+            if (!url) { alert('Please enter a WFS service URL.'); return; }
+
+            const btn = document.getElementById('wfsFetchBtn');
+            const status = document.getElementById('wfsFetchStatus');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="display:inline-block;width:14px;height:14px;margin-right:6px"></div> Fetching…';
+            status.style.display = 'block';
+            status.style.color = 'var(--text2)';
+            status.textContent = 'Connecting to WFS service…';
+            document.getElementById('wfsLayerSection').style.display = 'none';
+            document.getElementById('wfsResult').style.display = 'none';
+
+            try {
+                const r = await fetch(API + '/wfs-capabilities', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const d = await r.json();
+                if (!r.ok) {
+                    status.style.color = 'var(--red)';
+                    status.textContent = 'Error: ' + (d.detail || 'Could not fetch capabilities.');
+                    return;
+                }
+                wfsLayers = d.layers || [];
+                status.style.color = 'var(--green)';
+                status.textContent = `Found ${wfsLayers.length} layer${wfsLayers.length !== 1 ? 's' : ''}${d.version ? ' (WFS ' + d.version + ')' : ''}.`;
+
+                const sel = document.getElementById('wfsLayerSelect');
+                sel.innerHTML = wfsLayers.map(l =>
+                    `<option value="${l.name}" data-abstract="${(l.abstract || '').replace(/"/g, '&quot;')}">${l.title || l.name}</option>`
+                ).join('');
+                document.getElementById('wfsLayerSection').style.display = 'block';
+                wfsLayerChanged();
+            } catch (e) {
+                status.style.color = 'var(--red)';
+                status.textContent = 'Request failed: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search"></i> Fetch Layers';
+            }
+        }
+
+        function wfsLayerChanged() {
+            const sel = document.getElementById('wfsLayerSelect');
+            const opt = sel.options[sel.selectedIndex];
+            const layerName = opt ? opt.value : '';
+            const abstract = opt ? opt.dataset.abstract : '';
+
+            // Auto-fill table name
+            const safe = 'wfs_' + layerName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').substring(0, 55);
+            document.getElementById('wfsTableName').value = safe;
+
+            const abstractEl = document.getElementById('wfsLayerAbstract');
+            if (abstract) {
+                abstractEl.textContent = abstract;
+                abstractEl.style.display = 'block';
+            } else {
+                abstractEl.style.display = 'none';
+            }
+        }
+
+        async function doWfsImport() {
+            const url = document.getElementById('wfsUrl').value.trim();
+            const layerName = document.getElementById('wfsLayerSelect').value;
+            const tableName = document.getElementById('wfsTableName').value.trim();
+            const maxFeatures = parseInt(document.getElementById('wfsMaxFeatures').value) || 50000;
+
+            if (!url || !layerName) { alert('Please fetch layers first and select one.'); return; }
+
+            const btn = document.getElementById('wfsImportBtn');
+            const progress = document.getElementById('wfsImportProgress');
+            const resultEl = document.getElementById('wfsResult');
+            btn.disabled = true;
+            progress.style.display = 'block';
+            resultEl.style.display = 'none';
+
+            try {
+                const r = await fetch(API + '/wfs-import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, layer_name: layerName, table_name: tableName || null, max_features: maxFeatures })
+                });
+                const d = await r.json();
+                progress.style.display = 'none';
+                resultEl.style.display = 'block';
+
+                if (r.ok && d.success) {
+                    resultEl.innerHTML = `
+                        <div style="background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.25);border-radius:12px;padding:20px">
+                            <h3 style="color:var(--green);margin-bottom:8px"><i class="fas fa-check-circle"></i> Import Successful</h3>
+                            <p style="font-size:13px">${d.message}</p>
+                            <div style="font-size:12px;color:var(--text2);margin-top:8px">
+                                Table: <strong style="color:var(--text)">${d.table_name}</strong> &nbsp;·&nbsp;
+                                Rows: <strong style="color:var(--text)">${d.row_count.toLocaleString()}</strong> &nbsp;·&nbsp;
+                                Columns: <strong style="color:var(--text)">${d.column_count}</strong> &nbsp;·&nbsp;
+                                Geometry: <strong style="color:var(--text)">${d.has_geometry ? 'Yes' : 'No'}</strong>
+                            </div>
+                            ${d.warning ? `<div style="margin-top:10px;font-size:12px;color:var(--yellow)"><i class="fas fa-exclamation-triangle"></i> ${d.warning}</div>` : ''}
+                        </div>`;
+                    loadTables();
+                } else {
+                    resultEl.innerHTML = `
+                        <div style="background:rgba(244,67,54,.08);border:1px solid rgba(244,67,54,.25);border-radius:12px;padding:20px">
+                            <h3 style="color:var(--red);margin-bottom:8px"><i class="fas fa-times-circle"></i> Import Failed</h3>
+                            <p style="font-size:13px">${d.detail || 'Unknown error'}</p>
+                        </div>`;
+                }
+            } catch (e) {
+                progress.style.display = 'none';
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = `
+                    <div style="background:rgba(244,67,54,.08);border:1px solid rgba(244,67,54,.25);border-radius:12px;padding:20px">
+                        <h3 style="color:var(--red);margin-bottom:8px"><i class="fas fa-times-circle"></i> Request Failed</h3>
+                        <p style="font-size:13px">${e.message}</p>
+                    </div>`;
+            } finally {
+                btn.disabled = false;
             }
         }
 

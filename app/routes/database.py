@@ -4,6 +4,7 @@ Database schema and metadata management endpoints
 
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, UploadFile, File, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import Session
 import os
@@ -159,7 +160,7 @@ async def get_table_details(table_name: str):
             # Table metadata
             result = conn.execute(
                 text("""
-                    SELECT id, description, category, source, geometry_type
+                    SELECT id, description, category, source, geometry_type, usage_hint
                     FROM metadata.table_descriptions
                     WHERE table_name = :table_name
                 """),
@@ -173,11 +174,13 @@ async def get_table_details(table_name: str):
                 table_info['category'] = table_meta[2]
                 table_info['source'] = table_meta[3]
                 table_info['geometry_type'] = table_meta[4] or table_info['geometry_type']
+                table_info['usage_hint'] = table_meta[5]
             else:
                 table_info['metadata_id'] = None
                 table_info['description'] = None
                 table_info['category'] = None
                 table_info['source'] = None
+                table_info['usage_hint'] = None
 
             # Column metadata
             column_descriptions = {}
@@ -466,15 +469,16 @@ async def get_schema_for_prompt():
 
 
 @router.post("/table-description")
-async def update_table_description(table_name: str, description: str):
+async def update_table_description(table_name: str, description: str, usage_hint: Optional[str] = None):
     """
-    Update the description for a table in metadata.table_descriptions.
+    Update the description and usage_hint for a table in metadata.table_descriptions.
 
     This is the single source of truth for table descriptions displayed in the UI.
 
     Args:
         table_name: Name of the table to update
         description: New description text
+        usage_hint: Optional LLM hint — tells the AI how to query this table correctly
 
     Returns:
         Success message with updated description
@@ -504,6 +508,7 @@ async def update_table_description(table_name: str, description: str):
                     text("""
                         UPDATE metadata.table_descriptions
                         SET description = :description,
+                            usage_hint = COALESCE(:usage_hint, usage_hint),
                             updated_at = CURRENT_TIMESTAMP,
                             row_count = :row_count,
                             geometry_type = :geometry_type
@@ -512,6 +517,7 @@ async def update_table_description(table_name: str, description: str):
                     {
                         'table_name': table_name,
                         'description': description,
+                        'usage_hint': usage_hint,
                         'row_count': table_info['row_count'],
                         'geometry_type': table_info['geometry_type']
                     }
@@ -521,12 +527,13 @@ async def update_table_description(table_name: str, description: str):
                 conn.execute(
                     text("""
                         INSERT INTO metadata.table_descriptions
-                        (table_name, description, row_count, geometry_type, updated_by)
-                        VALUES (:table_name, :description, :row_count, :geometry_type, :updated_by)
+                        (table_name, description, usage_hint, row_count, geometry_type, updated_by)
+                        VALUES (:table_name, :description, :usage_hint, :row_count, :geometry_type, :updated_by)
                     """),
                     {
                         'table_name': table_name,
                         'description': description,
+                        'usage_hint': usage_hint,
                         'row_count': table_info['row_count'],
                         'geometry_type': table_info['geometry_type'],
                         'updated_by': 'ui_user'
@@ -539,6 +546,7 @@ async def update_table_description(table_name: str, description: str):
             'success': True,
             'table_name': table_name,
             'description': description,
+            'usage_hint': usage_hint,
             'message': f"Description updated for table: {table_name}"
         }
     except HTTPException:
@@ -1725,8 +1733,17 @@ async def delete_any_table(table_name: str):
 # ---------------------------------------------------------------------------
 
 @router.get("/tables/{table_name}/preview")
-async def preview_table(table_name: str, limit: int = Query(50, ge=1, le=500)):
-    """Return the first N rows of a table, with geometry converted to WKT."""
+async def preview_table(
+    table_name: str,
+    limit: int = Query(50, ge=1, le=500),
+    filter_col: Optional[str] = None,
+    filter_val: Optional[str] = None,
+):
+    """Return the first N rows of a table, with geometry converted to WKT.
+
+    When filter_col and filter_val are provided, returns all rows (up to 500)
+    where filter_col::text ILIKE '%filter_val%'.
+    """
     engine = get_db_engine()
 
     # Validate table exists
@@ -1738,6 +1755,12 @@ async def preview_table(table_name: str, limit: int = Query(50, ge=1, le=500)):
         with engine.connect() as conn:
             # Get column info to detect geometry columns
             cols = inspector.get_columns(table_name, schema="vector")
+            col_names = [c["name"] for c in cols]
+
+            # Validate filter_col against real column names to prevent SQL injection
+            if filter_col and filter_col not in col_names:
+                raise HTTPException(status_code=400, detail=f"Unknown column: {filter_col}")
+
             select_parts = []
             for col in cols:
                 col_type = str(col["type"]).lower()
@@ -1747,7 +1770,16 @@ async def preview_table(table_name: str, limit: int = Query(50, ge=1, le=500)):
                     select_parts.append(f'"{col["name"]}"')
 
             select_sql = ", ".join(select_parts)
-            result = conn.execute(text(f'SELECT {select_sql} FROM vector."{table_name}" LIMIT :lim'), {"lim": limit})
+
+            # Build WHERE clause and params
+            params: dict = {"lim": 500 if filter_col else limit}
+            where_sql = ""
+            if filter_col and filter_val is not None:
+                where_sql = f'WHERE "{filter_col}"::text ILIKE :fval'
+                params["fval"] = f"%{filter_val}%"
+
+            query = f'SELECT {select_sql} FROM vector."{table_name}" {where_sql} LIMIT :lim'
+            result = conn.execute(text(query), params)
 
             columns = list(result.keys())
             rows = [dict(zip(columns, row)) for row in result.fetchall()]
@@ -1760,7 +1792,14 @@ async def preview_table(table_name: str, limit: int = Query(50, ge=1, le=500)):
                     elif v is not None and not isinstance(v, (str, int, float, bool)):
                         row[k] = str(v)
 
-        return {"success": True, "table_name": table_name, "columns": columns, "rows": rows, "count": len(rows)}
+        return {
+            "success": True,
+            "table_name": table_name,
+            "columns": columns,
+            "rows": rows,
+            "count": len(rows),
+            "filtered": bool(filter_col),
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -1918,3 +1957,300 @@ async def schema_status():
     except Exception as e:
         logger.error(f"Schema status error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# WFS IMPORT  –  Discover layers and ingest from any OGC WFS endpoint
+# ---------------------------------------------------------------------------
+
+class WfsCapabilitiesRequest(BaseModel):
+    url: str
+
+class WfsImportRequest(BaseModel):
+    url: str
+    layer_name: str
+    table_name: Optional[str] = None
+    max_features: int = 50000
+
+
+@router.post("/wfs-capabilities")
+async def wfs_capabilities(body: WfsCapabilitiesRequest):
+    """Fetch GetCapabilities from a WFS URL and return available layers."""
+    import httpx
+    import xml.etree.ElementTree as ET
+    from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+
+    url = body.url.strip()
+
+    # Build a clean GetCapabilities URL (strip existing SERVICE/REQUEST params if present)
+    parsed = urlparse(url)
+    base_url = urlunparse(parsed._replace(query=""))
+    caps_url = f"{base_url}?SERVICE=WFS&REQUEST=GetCapabilities"
+
+    try:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            resp = await client.get(caps_url)
+            resp.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=502, detail=f"WFS server error: {e.response.status_code}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not reach WFS server: {str(e)}")
+
+    xml_text = resp.text
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as e:
+        raise HTTPException(status_code=502, detail=f"Invalid XML from WFS server: {str(e)}")
+
+    # Detect version from root element
+    version = root.attrib.get("version", "")
+
+    # Namespace map – WFS 1.x and 2.0 use different namespace URIs
+    ns_candidates = [
+        "http://www.opengis.net/wfs/2.0",
+        "http://www.opengis.net/wfs",
+        "",
+    ]
+
+    layers = []
+
+    def _text(el, tag):
+        child = el.find(tag)
+        return child.text.strip() if child is not None and child.text else ""
+
+    for ns in ns_candidates:
+        prefix = f"{{{ns}}}" if ns else ""
+        feature_type_list = root.find(f".//{prefix}FeatureTypeList")
+        if feature_type_list is None:
+            continue
+        for ft in feature_type_list.findall(f"{prefix}FeatureType"):
+            name = _text(ft, f"{prefix}Name")
+            title = _text(ft, f"{prefix}Title")
+            abstract = _text(ft, f"{prefix}Abstract")
+            if name:
+                layers.append({"name": name, "title": title or name, "abstract": abstract})
+        if layers:
+            break
+
+    if not layers:
+        raise HTTPException(status_code=422, detail="No FeatureType layers found in WFS GetCapabilities response.")
+
+    return {"success": True, "layers": layers, "version": version, "total": len(layers)}
+
+
+@router.post("/wfs-import")
+async def wfs_import(body: WfsImportRequest):
+    """Download a WFS layer and ingest it into PostGIS."""
+    import httpx
+    import geopandas as gpd
+    import io
+    from urllib.parse import urlparse, urlunparse
+
+    url = body.url.strip()
+    layer_name = body.layer_name.strip()
+    max_features = min(body.max_features, 200_000)  # hard cap
+
+    if not layer_name:
+        raise HTTPException(status_code=400, detail="layer_name is required")
+
+    # Derive safe table name
+    if body.table_name:
+        safe_name = "".join(c if c.isalnum() or c == "_" else "_" for c in body.table_name.lower()).strip("_")
+    else:
+        safe_name = "wfs_" + "".join(c if c.isalnum() else "_" for c in layer_name.lower()).strip("_")
+
+    # Keep within PostgreSQL's 63-char identifier limit
+    safe_name = safe_name[:59]
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="Could not derive a valid table name")
+
+    # Build base URL
+    parsed = urlparse(url)
+    base_url = urlunparse(parsed._replace(query=""))
+
+    # Try WFS 2.0 (TYPENAMES) then fallback to WFS 1.x (TYPENAME)
+    geojson_bytes = None
+    last_error = None
+
+    for type_param, version in [("TYPENAMES", "2.0.0"), ("TYPENAME", "1.1.0"), ("TYPENAME", "1.0.0")]:
+        request_url = (
+            f"{base_url}?SERVICE=WFS&VERSION={version}&REQUEST=GetFeature"
+            f"&{type_param}={layer_name}&outputFormat=application%2Fjson"
+            f"&srsName=EPSG%3A4326&count={max_features}"
+        )
+        try:
+            async with httpx.AsyncClient(timeout=120, follow_redirects=True) as client:
+                resp = await client.get(request_url)
+                resp.raise_for_status()
+                ct = resp.headers.get("content-type", "")
+                # Accept if content looks like JSON/GeoJSON
+                if "json" in ct or resp.text.strip().startswith("{"):
+                    geojson_bytes = resp.content
+                    break
+                last_error = f"Unexpected content-type: {ct}"
+        except httpx.HTTPStatusError as e:
+            last_error = f"HTTP {e.response.status_code}"
+        except Exception as e:
+            last_error = str(e)
+
+    if geojson_bytes is None:
+        # Try alternate outputFormat=json (some servers)
+        request_url = (
+            f"{base_url}?SERVICE=WFS&REQUEST=GetFeature"
+            f"&TYPENAMES={layer_name}&outputFormat=json"
+            f"&srsName=EPSG%3A4326&count={max_features}"
+        )
+        try:
+            async with httpx.AsyncClient(timeout=120, follow_redirects=True) as client:
+                resp = await client.get(request_url)
+                resp.raise_for_status()
+                if resp.text.strip().startswith("{"):
+                    geojson_bytes = resp.content
+        except Exception as e:
+            last_error = str(e)
+
+    if geojson_bytes is None:
+        raise HTTPException(status_code=502, detail=f"Could not download WFS layer. Last error: {last_error}")
+
+    # Parse with GeoPandas
+    try:
+        gdf = gpd.read_file(io.BytesIO(geojson_bytes))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Failed to parse WFS response as GeoDataFrame: {str(e)}")
+
+    if gdf.empty:
+        raise HTTPException(status_code=422, detail="WFS layer returned no features.")
+
+    # Normalise CRS to EPSG:4326
+    if gdf.crs is None:
+        gdf = gdf.set_crs(epsg=4326)
+    elif str(gdf.crs) != "EPSG:4326":
+        gdf = gdf.to_crs(epsg=4326)
+
+    # Sanitise column names (lowercase, replace special chars)
+    rename_map = {}
+    seen = {}
+    for col in gdf.columns:
+        if col == "geometry":
+            continue
+        clean = "".join(c if c.isalnum() else "_" for c in col.lower()).strip("_") or "col"
+        if clean in seen:
+            seen[clean] += 1
+            clean = f"{clean}_{seen[clean]}"
+        else:
+            seen[clean] = 0
+        if clean != col:
+            rename_map[col] = clean
+    if rename_map:
+        gdf = gdf.rename(columns=rename_map)
+
+    has_geometry = "geometry" in gdf.columns
+    row_count = len(gdf)
+    col_count = len(gdf.columns)
+
+    # Check if there are more features than retrieved
+    warning = None
+    try:
+        geojson_dict = json.loads(geojson_bytes)
+        total_matched = geojson_dict.get("numberMatched") or geojson_dict.get("totalFeatures")
+        if total_matched and int(total_matched) > row_count:
+            warning = f"Only {row_count:,} of {int(total_matched):,} total features retrieved (max_features cap applied)."
+    except Exception:
+        pass
+
+    engine = get_db_engine()
+
+    # Write to PostGIS
+    if has_geometry:
+        gdf.to_postgis(safe_name, engine, schema="vector", if_exists="replace", index=False)
+
+        with engine.connect() as conn:
+            try:
+                conn.execute(text(f"""
+                    CREATE INDEX IF NOT EXISTS idx_{safe_name}_geom
+                    ON vector."{safe_name}" USING GIST(geometry)
+                """))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"Could not create spatial index for {safe_name}: {e}")
+
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(f"""
+                    ALTER TABLE vector."{safe_name}"
+                    ADD COLUMN IF NOT EXISTS geom_25833 geometry(Geometry, 25833)
+                """))
+                conn.execute(text(f"""
+                    UPDATE vector."{safe_name}"
+                    SET geom_25833 = ST_Transform(ST_SetSRID(geometry, 4326), 25833)
+                    WHERE geometry IS NOT NULL
+                """))
+                conn.execute(text(f"""
+                    CREATE INDEX IF NOT EXISTS idx_{safe_name}_geom25833
+                    ON vector."{safe_name}" USING GIST(geom_25833)
+                """))
+                conn.commit()
+        except Exception as e:
+            logger.warning(f"Could not create geom_25833 for {safe_name}: {e}")
+    else:
+        gdf.to_sql(safe_name, engine, schema="vector", if_exists="replace", index=False)
+
+    # Register in custom_datasets
+    with engine.connect() as conn:
+        conn.execute(text("""
+            INSERT INTO metadata.custom_datasets
+                (table_name, original_filename, file_format, row_count, column_count, has_geometry, uploaded_by)
+            VALUES (:tn, :fn, :ff, :rc, :cc, :hg, :ub)
+            ON CONFLICT (table_name) DO UPDATE SET
+                original_filename = EXCLUDED.original_filename,
+                file_format       = EXCLUDED.file_format,
+                row_count         = EXCLUDED.row_count,
+                column_count      = EXCLUDED.column_count,
+                has_geometry      = EXCLUDED.has_geometry,
+                uploaded_at       = CURRENT_TIMESTAMP,
+                uploaded_by       = EXCLUDED.uploaded_by
+        """), {
+            "tn": safe_name, "fn": layer_name, "ff": "WFS",
+            "rc": row_count, "cc": col_count, "hg": has_geometry, "ub": "wfs_import",
+        })
+        conn.commit()
+
+    # Upsert table_descriptions
+    with engine.connect() as conn:
+        conn.execute(text("""
+            INSERT INTO metadata.table_descriptions
+                (table_name, description, category, source, row_count, updated_by)
+            VALUES (:tn, :desc, 'WFS Import', :src, :rc, :ub)
+            ON CONFLICT (table_name) DO UPDATE SET
+                description = EXCLUDED.description,
+                row_count   = EXCLUDED.row_count,
+                source      = EXCLUDED.source,
+                updated_at  = CURRENT_TIMESTAMP
+        """), {
+            "tn": safe_name,
+            "desc": f"WFS layer '{layer_name}' imported from {url}",
+            "src": url,
+            "rc": row_count,
+            "ub": "wfs_import",
+        })
+        conn.commit()
+
+    _log_change(engine, safe_name, "wfs_import", {
+        "layer_name": layer_name,
+        "source_url": url,
+        "rows": row_count,
+        "columns": col_count,
+        "has_geometry": has_geometry,
+    }, performed_by="wfs_import")
+
+    result = {
+        "success": True,
+        "table_name": safe_name,
+        "row_count": row_count,
+        "column_count": col_count,
+        "has_geometry": has_geometry,
+        "message": f"Imported {row_count:,} features as vector.{safe_name}",
+    }
+    if warning:
+        result["warning"] = warning
+    return result

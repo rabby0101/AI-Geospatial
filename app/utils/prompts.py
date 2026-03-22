@@ -44,10 +44,6 @@ def get_system_prompt_minimal() -> str:
    - ✅ "diet:vegan", "operator:type", "addr:street"
    - ❌ diet_vegan, operator_type (wrong!)
 
-6. **Keep queries simple**
-   - Avoid CTEs, window functions, complex subqueries
-   - Use simple JOINs and GROUP BY
-   - Only add LIMIT if user explicitly asks for a number
 
 **RESPONSE FORMAT (MUST BE VALID JSON):**
 {
@@ -357,7 +353,6 @@ When a landmark lookup might return multiple results, use ST_Union() to combine 
 - ALWAYS use ST_Union() for multi-select temp tables (temp.temp_selected_*) to avoid SQL errors
 - NEVER select multiple columns in a subquery that needs to return geometry
 - Don't add LIMIT unless user explicitly asks for a number
-- Don't add complex calculations unless specifically asked
 - Always include geometry column for spatial visualization
 
 

@@ -107,6 +107,56 @@ MIT License — see LICENSE file for details.
 **Sk Fazla Rabby**
 MSc in Geodesy and Geoinformation Science — AI-driven geospatial data integration and analysis
 
-## Acknowledgments
+## Open Source Acknowledgments
 
-[DeepSeek](https://deepseek.com) · [Valhalla](https://github.com/valhalla/valhalla) · PostGIS · FastAPI · Leaflet · OpenStreetMap
+This project is built on the shoulders of these excellent open source projects:
+
+### Routing & Geocoding
+| Project | Purpose |
+|---------|---------|
+| [Valhalla](https://github.com/valhalla/valhalla) | Multi-mode routing engine (pedestrian, cycling, auto) with isochrone support |
+| [Nominatim](https://github.com/osm-search/Nominatim) | Self-hosted OpenStreetMap geocoding — forward, reverse, and autocomplete |
+
+### Data Sources & Tooling
+| Project | Purpose |
+|---------|---------|
+| [OpenStreetMap](https://www.openstreetmap.org) | Primary geospatial dataset for all Berlin features |
+| [Geofabrik](https://download.geofabrik.de) | OSM PBF download mirror used for Berlin data |
+| [ODIS WFS Explorer](https://github.com/technologiestiftung/odis-wfsexplorer) by Technologiestiftung Berlin | Reference implementation for fetching official Berlin open data via WFS endpoints |
+
+### Spatial Database
+| Project | Purpose |
+|---------|---------|
+| [PostGIS](https://postgis.net) | PostgreSQL extension for storing and querying vector geometry |
+| [pgRouting](https://pgrouting.org) | Graph routing extension (Dijkstra fallback when Valhalla is unavailable) |
+
+### Semantic Web & Knowledge Graph
+| Project | Purpose |
+|---------|---------|
+| [RDFLib](https://rdflib.readthedocs.io) | RDF/OWL ontology management and SPARQL queries |
+| [pySHACL](https://github.com/RDFLib/pySHACL) | SHACL shape validation for geospatial ontologies |
+| [owlready2](https://owlready2.readthedocs.io) | OWL 2 ontology API for class and property management |
+
+### Geospatial Processing
+| Project | Purpose |
+|---------|---------|
+| [GeoPandas](https://geopandas.org) | Vector geospatial data frames and analysis |
+| [Shapely](https://shapely.readthedocs.io) | Geometric operations (buffers, intersections, unions) |
+
+### Frontend & Visualization
+| Project | Purpose |
+|---------|---------|
+| [Leaflet](https://leafletjs.com) | Interactive web mapping and layer management |
+| [Turf.js](https://turfjs.org) | Browser-side spatial analysis (distance, bbox, buffer) |
+
+### Backend & LLMs
+| Project | Purpose |
+|---------|---------|
+| [FastAPI](https://fastapi.tiangolo.com) | REST API framework with automatic Swagger docs |
+| [DeepSeek](https://deepseek.com) | Primary LLM for natural language → SQL translation |
+| [Google Gemini](https://ai.google.dev) | Secondary LLM option (Gemini 2.5 Flash) |
+
+### Development Tools
+| Tool | Purpose |
+|------|---------|
+| [Claude Code](https://claude.ai/claude-code) by Anthropic | Partial code generation and development assistance used during implementation |
