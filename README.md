@@ -33,72 +33,129 @@ The Cognitive Geospatial Assistant API lets you query and analyze geospatial dat
 - **Interactive Map Viewer** — Leaflet-based frontend for result visualization
 - **RESTful API + Docker** — FastAPI with Swagger docs; full stack deployable via docker-compose
 
-## Pipeline Architecture
+## System Architecture
 
-Every query passes through six structured phases. Phases 0, Execution, and 5 involve no additional LLM calls — only the three reasoning phases (1+2, 3, 4) hit the API.
+The system has two tiers: **specialized direct endpoints** for specific operations (routing, NDVI, DEM, semantic) that bypass the AI pipeline, and the **main AI pipeline** (`/api/query`) that handles all natural-language queries through a multi-phase reasoning process.
 
 ```mermaid
 flowchart TD
-    Q["User Question\n(natural language)"] --> FE["Frontend\nLeaflet Map"]
-    FE -->|"POST /api/query"| API["FastAPI\n/api/query"]
+    USER(["User / Frontend\nLeaflet Map"]) -->|natural language| MAIN["POST /api/query"]
+    USER -->|"direct call"| SPEC
 
-    API --> P0
+    subgraph SPEC["Specialized Endpoints (no AI pipeline)"]
+        direction LR
+        EP1["POST /api/routing/connect-features\nValhalla multi-point routing"]
+        EP2["POST /api/walking-distance/find-buildings\nValhalla isochrones"]
+        EP3["POST /api/raster/ndvi/change-detection\nSentinel-2 NDVI diff"]
+        EP4["POST /api/dem/slope|aspect\nDEM terrain analysis"]
+        EP5["POST /api/semantic/sparql\nRDF/OWL SPARQL query"]
+    end
 
-    subgraph P0["Phase 0 — Business Intelligence"]
+    MAIN --> PRE
+
+    subgraph PRE["Pre-processing"]
         direction TB
-        P0A["Detect business type\n(keyword match)"] --> P0B["Lookup vector.business_profiles\n(legal zones · bezgfk · competitor radius · weights)"]
-        P0B --> P0C["Query metadata.knowledge_graph\n(BauNVO permitted / prohibited zones)"]
-        P0C --> P0D["Format profile section\n→ injected into system prompt"]
+        PRE1["Create temp PostGIS layer\nif drawn_geometry or selected_feature present\n→ temp.temp_selected_{session_id}"]
+    end
+
+    PRE --> RT_CHECK{"Routing keywords\ndetected AND\n2+ map features\nselected?"}
+
+    RT_CHECK -->|"Yes — skip AI"| VALHALLA_RT["Valhalla Routing\noptimal_tour TSP\n→ Route GeoJSON + maneuvers"]
+    RT_CHECK -->|"No"| P0
+
+    subgraph P0["Phase 0 — Business Intelligence (optional, no LLM call)"]
+        direction TB
+        P0A{"Business type\nkeyword detected?"}
+        P0A -->|"Yes"| P0B["Lookup vector.business_profiles\n(legal zones · bezgfk filters · competitor table · weights)"]
+        P0B --> P0C["Query metadata.knowledge_graph\n(BauNVO: permitted / prohibited / conditional zones)"]
+        P0C --> P0D["Format profile → injected into system prompt"]
+        P0A -->|"No"| P0E["Skip — no profile injected"]
     end
 
     P0 --> P12
 
-    subgraph P12["Phase 1+2 — Table Selection + Schema"]
+    subgraph P12["Phase 1+2 — Table Selection + Schema Discovery"]
         direction TB
-        P12A["LLM scans metadata.table_descriptions\n(auto-discovered catalog)"] --> P12B["Fetch full schema for\nselected tables only"]
+        P12A["LLM selects relevant tables\nfrom metadata.table_descriptions\n(auto-discovered catalog)"] --> P12B["Fetch full schema\nfor selected tables only\n(column names · types · real sample values)"]
     end
 
-    P12 --> P3
+    P12 --> P3_CHECK{"2+ tables OR\ncomplex data?"}
+    P3_CHECK -->|"Yes"| P3
 
     subgraph P3["Phase 3 — Query Planning"]
         direction TB
-        P3A["LLM validates filters\nagainst real column values"] --> P3B["Produces confirmed_tables\n+ filter_plan JSON"]
+        P3A["LLM validates filter values\nagainst real DB column values\n(prevents hallucination)"] --> P3B["Returns confirmed_tables\n+ filter_plan JSON"]
     end
 
+    P3_CHECK -->|"No — simple query"| P4
     P3 --> P4
 
-    subgraph P4["Phase 4 — SQL Generation"]
+    subgraph P4["Phase 4 — SQL / Operation Generation"]
         direction TB
-        P4A["DeepSeek / Gemini / Ollama"] --> P4B["Generates PostGIS SQL\n(Legal A + §34 · bezgfk filter · competitor exclusion · MCDA scoring)"]
+        P4A["LLM Provider\nDeepSeek · Gemini · Ollama"] --> P4B["System prompt =\nbase instructions\n+ schema (Phase 1+2)\n+ ontology context\n+ query plan (Phase 3)\n+ business profile (Phase 0)"]
+        P4B --> P4C["Returns OperationPlan JSON\n(list of typed operations)"]
     end
 
-    P4 --> EX
+    P4 --> SE
 
-    subgraph EX["Execution — PostGIS"]
+    subgraph SE["Spatial Engine — execute_plan()"]
         direction TB
-        EXA["SQL → PostGIS\n(ST_DWithin · ST_Intersects · CTE scoring)"] --> EXB["→ GeoJSON FeatureCollection"]
+        SE_CHECK{"Operation type?"}
+
+        SE_CHECK -->|"routing"| SE_RT["Valhalla\npairwise or optimal_tour\n→ Route GeoJSON"]
+        SE_CHECK -->|"nearest_by_road"| SE_NR["Valhalla road-distance\nfind nearest POI\n→ Feature + distance_m"]
+        SE_CHECK -->|"walking_time"| SE_WT["Valhalla isochrone\nintersect with target table\n→ Reachable buildings/POIs"]
+        SE_CHECK -->|"spatial_query"| SE_SQL["PostGIS SQL execution\nST_DWithin · ST_Intersects\nST_Buffer · CTE scoring"]
+        SE_CHECK -->|"load"| SE_LOAD["SELECT * FROM table\nor custom SQL"]
+        SE_CHECK -->|"buffer / intersection\nunion / difference\nfilter / aggregate / sort"| SE_CHAIN["Chained spatial ops\non previous result\n(multi-step queries)"]
+        SE_CHECK -->|"raster_analysis"| SE_RAST["Raster engine\nNDVI · DEM · land cover\nzonal stats · change detection"]
     end
 
-    EX --> P5
+    SE_SQL --> MCDA{"Multi-criteria\nscoring needed?"}
+    SE_LOAD --> MCDA
+    SE_CHAIN --> MCDA
 
-    subgraph P5["Phase 5 — Result Evaluation"]
+    MCDA -->|"Yes\n(2+ criteria, <100 rows)"| MCDA_CALC["MCDA Scoring\nExtract criteria from query\nCalculate dynamic weights\nCompute composite_score per feature"]
+    MCDA -->|"No"| FMT
+    MCDA_CALC --> FMT
+
+    SE_RT --> FMT
+    SE_NR --> FMT
+    SE_WT --> FMT
+    SE_RAST --> FMT
+
+    subgraph FMT["Result Formatting"]
         direction TB
-        P5A["Rule-based quality check\n(clustering · building type mismatch · empty results)"] --> P5B{"Pass?"}
-        P5B -->|"Yes"| OK["Return results"]
-        P5B -->|"No"| WARN["Surface issues + warnings"]
+        FMT1["Reproject to WGS84\nFilter invalid geometries\nSerialize to GeoJSON FeatureCollection"]
     end
 
-    P5 --> FE2["Frontend\nMap layer + export"]
+    FMT --> P5
+
+    subgraph P5["Phase 5 — Result Evaluation (site-selection queries only, no LLM call)"]
+        direction TB
+        P5A["Rule-based quality check"] --> P5B{"Issues found?"}
+        P5B -->|"geographic clustering\nbezgfk mismatch\nempty results"| P5C["Surface warnings + issues\nwith suggested fixes"]
+        P5B -->|"Pass"| P5D["Return results as-is"]
+    end
+
+    P5 --> RESP["QueryResponse\n{success · geojson · layer_name\nreasoning · metadata · datasets_used}"]
+    RESP --> USER
+    VALHALLA_RT --> RESP
+    EP1 & EP2 & EP3 & EP4 & EP5 --> RESP
 ```
 
-| Phase | Name | What it does | LLM call? |
-|-------|------|-------------|-----------|
-| 0 | Business Intelligence | Detects business type; loads profile + KG facts; injects into prompt | No (DB lookup) |
-| 1+2 | Table Selection + Schema | LLM selects relevant tables from auto-discovered catalog; fetches full schema | Yes |
-| 3 | Query Planning | LLM validates filters using real column values from Phase 2 | Yes |
-| 4 | SQL Generation | LLM produces PostGIS SQL with legal filters, bezgfk filters, MCDA scoring | Yes |
-| EX | Execution | SQL runs against PostGIS; GeoJSON FeatureCollection returned | No |
-| 5 | Result Evaluation | Rule-based quality check (geographic clustering, building type, empty results) | No |
+**Phase summary:**
+
+| Phase | Name | Trigger | LLM call? |
+|-------|------|---------|-----------|
+| Pre | Temp layer creation | `drawn_geometry` or `selected_feature` present | No |
+| 0 | Business Intelligence | Business keyword in question | No (DB lookup) |
+| 1+2 | Table Selection + Schema | Every AI query | Yes |
+| 3 | Query Planning | 2+ tables selected OR complex column values | Yes |
+| 4 | SQL/Operation Generation | Every AI query | Yes |
+| EX | Execution | Every query | No |
+| MCDA | Multi-criteria scoring | Multi-factor evaluation queries | No |
+| 5 | Result Evaluation | Site-selection queries only | No |
 
 ## Tech Stack
 
