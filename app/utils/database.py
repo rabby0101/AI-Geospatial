@@ -40,7 +40,8 @@ class DatabaseManager:
             max_overflow=10,      # Allow up to 10 additional connections
             pool_pre_ping=True,   # Verify connections before using
             pool_recycle=3600,    # Recycle connections after 1 hour
-            echo=False
+            echo=False,
+            connect_args={"options": "-csearch_path=vector,public"}
         )
         self.SessionLocal = sessionmaker(
             autocommit=False,
@@ -463,7 +464,8 @@ class DatabaseManager:
                             description,
                             row_count,
                             geometry_type,
-                            usage_hint
+                            usage_hint,
+                            key_columns
                         FROM metadata.table_descriptions
                         ORDER BY table_name
                     """)
@@ -473,9 +475,10 @@ class DatabaseManager:
                         "row_count": row[2],
                         "geometry_type": row[3],
                         "usage_hint": row[4] or "",
+                        "key_columns": list(row[5]) if row[5] else [],
                     } for row in result}
                 except Exception:
-                    # usage_hint column not yet added; fall back to basic columns
+                    # usage_hint/key_columns columns not yet added; fall back to basic columns
                     query = text("""
                         SELECT
                             table_name,
@@ -491,7 +494,17 @@ class DatabaseManager:
                         "row_count": row[2],
                         "geometry_type": row[3],
                         "usage_hint": "",
+                        "key_columns": [],
                     } for row in result}
+
+                # Use geometry_columns as ground truth — metadata.geometry_type is often stale/NULL
+                gc_result = conn.execute(text("""
+                    SELECT f_table_name, type
+                    FROM geometry_columns
+                    WHERE f_table_schema = :schema
+                    AND f_geometry_column = 'geometry'
+                """), {"schema": schema})
+                actual_geom_types = {row[0]: row[1] for row in gc_result}
 
             # Build result with column info
             tables_data = []
@@ -499,12 +512,20 @@ class DatabaseManager:
                 try:
                     table_info = self.get_table_info(table_name, schema)
 
+                    # geometry_columns is authoritative; fall back to metadata only if missing
+                    geometry_type = (
+                        actual_geom_types.get(table_name)
+                        or metadata[table_name]["geometry_type"]
+                        or "NONE"
+                    )
+
                     tables_data.append({
                         "table": table_name,
                         "description": metadata[table_name]["description"],
                         "usage_hint": metadata[table_name]["usage_hint"],
+                        "key_columns": metadata[table_name]["key_columns"],
                         "row_count": table_info["row_count"],
-                        "geometry": metadata[table_name]["geometry_type"] or "NONE",
+                        "geometry": geometry_type,
                         "columns": table_info["columns"]
                     })
                 except Exception as e:

@@ -37,12 +37,58 @@ def get_system_prompt_minimal() -> str:
    - ⚠️ SPECIAL CASE: User-selected features in `temp.temp_selected_*` tables ALWAYS need ST_Union()
      because they may contain multiple rows when multiple features are selected
 
-4. **Distance calculations use EPSG:3857**
-   - ST_DWithin(ST_Transform(geom1, 3857), ST_Transform(geom2, 3857), meters)
+4. **Distance calculations use geom_25833 (EPSG:25833) when available, otherwise EPSG:3857**
+   - Preferred: ST_DWithin(a.geom_25833, b.geom_25833, meters) — 800x faster
+   - Fallback: ST_DWithin(ST_Transform(geom1, 3857), ST_Transform(geom2, 3857), meters)
 
 5. **Column names with colons need quotes**
    - ✅ "diet:vegan", "operator:type", "addr:street"
    - ❌ diet_vegan, operator_type (wrong!)
+
+6. **WFS/ALKIS polygon layers may have invalid geometries — always use ST_MakeValid()**
+   - When using ST_Intersects() or ST_Within() with external polygon sources (wfs_*, alkis_*, bplan_*), wrap BOTH sides with ST_MakeValid() to prevent TopologyException crashes:
+   - ✅ ST_Intersects(ST_MakeValid(a.geom_25833), ST_MakeValid(b.geom_25833))
+   - ❌ ST_Intersects(a.geom_25833, b.geom_25833)  ← crashes on invalid geometries
+
+7. **Tables with "Geometry: NONE" have NO spatial columns whatsoever**
+   - If a table shows `Geometry: NONE` in the schema, it has NO `geometry`, `geom_25833`, or any other geometry column.
+   - ❌ NEVER select geometry/geom_25833 from a NONE-geometry table
+   - ❌ NEVER use ST_Distance(), ST_DWithin(), ST_Transform(), or any spatial function on a NONE-geometry table
+   - ✅ Use these tables only for attribute joins or WHERE filters (e.g., WHERE bezirk = 'Mitte')
+   - ✅ To add geometry context, JOIN to a spatial table instead
+
+8. **Use LATERAL joins for distance-weighted scoring queries — and always include inner geometry in SUM (CRITICAL)**
+   PostgreSQL raises GroupingError in two ways with correlated subqueries:
+   a) Using outer geometry inside SUM() in a scalar correlated subquery (not LATERAL)
+   b) LATERAL SUM() where the SUM expression references ONLY the outer table — no inner column in the SUM expression
+
+   ❌ WRONG — scalar correlated subquery (causes GroupingError):
+   ```sql
+   (SELECT SUM(ST_Distance(b.geom_25833, a.geom_25833)) FROM other_table a WHERE ...) as score
+   ```
+   ❌ WRONG — LATERAL where SUM has no inner table reference in the expression (PostgreSQL decorrelates and fails):
+   ```sql
+   CROSS JOIN LATERAL (
+       SELECT SUM(EXP(-ST_Distance(b.geom_25833, ST_MakePoint(13.4, 52.5)::geometry) / 300.0)) as val
+       FROM some_table a WHERE ST_DWithin(b.geom_25833, a.geom_25833, 500)
+   ) -- SUM only uses b.geom (outer) — inner table a has no column in SUM → fails
+   ```
+   ✅ CORRECT — LATERAL where SUM always uses the inner table's geometry:
+   ```sql
+   CROSS JOIN LATERAL (
+       SELECT COALESCE(SUM(EXP(-ST_Distance(b.geom_25833, a.geom_25833) / 300.0)), 0) as val
+       FROM other_table a
+       WHERE ST_DWithin(b.geom_25833, a.geom_25833, 800)
+   ) score_sub -- SUM uses both outer (b.geom) AND inner (a.geom) → works
+   ```
+   ✅ For Geometry: NONE tables (no geometry), use plain attribute aggregation (no spatial decay):
+   ```sql
+   CROSS JOIN LATERAL (
+       SELECT COALESCE(SUM(p.population::numeric), 0) as val
+       FROM berlin_subdivision_population p WHERE p.bezirk = 'Mitte'
+   ) pop_sub -- SUM uses inner column only → works
+   ```
+   Apply this pattern for ALL distance-decay scoring queries (site selection, best location analysis, etc.)
 
 
 **RESPONSE FORMAT (MUST BE VALID JSON):**
@@ -448,6 +494,10 @@ Ask yourself:
 Then SCAN the **"Available Tables in Database"** section and pick the base table whose features best match.
 **DO NOT assume any specific table exists.** Always verify against the actual schema listed.
 
+**⚠️ PERFORMANCE: The candidates CTE MUST return at most ~500 rows.**
+If the base table is large (>10K rows), add tight spatial filters AND attribute filters to narrow down.
+For alkis_buildings: filter by bezgfk (building function label) and always include namlag (street), hnr (house number) in SELECT.
+
 **STEP 1 - CRITICAL THINKING & GOAL ANALYSIS:**
 - **Base table choice:** Which table's features serve as candidate locations?
 - **Demographics:** Who is the target audience? What tables proxy for them?
@@ -474,39 +524,59 @@ Apply DISTANCE DECAY functions (closer = higher impact):
 - **⚠️ CRITICAL: EXCLUDE locations that already contain the target facility type!**
 
 **GENERAL SITE SELECTION SQL PATTERN:**
+
+⚠️ **MANDATORY: Use LATERAL joins for all distance-decay scoring.**
+PostgreSQL raises GroupingError if you reference an outer geometry column inside SUM() in
+a correlated scalar subquery. Use `CROSS JOIN LATERAL (...)` instead — always.
+
 ```sql
-WITH scored AS (
-    SELECT b.<id_col>, b.<name_col>, b.geometry, b.geom_25833,
-        -- Positive factor 1 (exponential decay, weight 0.25)
-        (SELECT COALESCE(SUM(EXP(-ST_Distance(b.geom_25833, t.geom_25833) / 100.0)), 0)
-         FROM vector.<relevant_table1> t
-         WHERE ST_DWithin(b.geom_25833, t.geom_25833, 300)) * 0.25 as positive_factor_1,
-
-        -- Positive factor 2 (linear decay, weight 0.35)
-        (SELECT COALESCE(SUM(GREATEST(0, 1 - ST_Distance(b.geom_25833, r.geom_25833) / 500.0)), 0)
-         FROM vector.<demographic_proxy_table> r
-         WHERE <demographic_filter> AND ST_DWithin(b.geom_25833, r.geom_25833, 500)) * 0.35 as demand_score,
-
-        -- Negative factor (inverse decay competition, weight 0.40)
-        (SELECT COALESCE(SUM(1.0 / (1 + ST_Distance(b.geom_25833, c.geom_25833) / 200.0)), 0)
-         FROM vector.<competition_table> c
-         WHERE ST_DWithin(b.geom_25833, c.geom_25833, 800)) * 0.40 as competition_penalty,
-
-        -- Raw counts for display
-        (SELECT COUNT(*) FROM vector.<factor1_table> t WHERE ST_DWithin(b.geom_25833, t.geom_25833, 300)) as factor1_count
+WITH candidates AS (
+    SELECT b.<id_col>, b.<name_col>, b.geometry, b.geom_25833
     FROM vector.<base_table> b
     WHERE <base_table_filter_condition_if_any>
     -- Restrict to area if specified
-    AND ST_Within(b.geometry, (SELECT ST_Union(geometry) FROM vector.<boundary_table> WHERE <name_column> = '<area>'))
+    AND ST_Within(ST_MakeValid(b.geom_25833), (SELECT ST_Union(ST_MakeValid(geom_25833)) FROM vector.<boundary_table> WHERE <name_column> = '<area>'))
     -- ALWAYS exclude existing locations of the same business type
     AND NOT EXISTS (
         SELECT 1 FROM vector.<competition_table> x
         WHERE ST_DWithin(b.geom_25833, x.geom_25833, 50)
     )
+    LIMIT 500  -- ⚠️ ALWAYS cap candidates for performance (large tables + LATERAL joins are slow)
+),
+scored AS (
+    SELECT c.<id_col>, c.<name_col>, c.geometry, c.geom_25833,
+        f1.val * 0.25 as positive_factor_1,
+        f2.val * 0.35 as demand_score,
+        comp.val * 0.40 as competition_penalty,
+        cnt.n as factor1_count
+    FROM candidates c
+    -- Positive factor 1: exponential decay (weight 0.25)
+    CROSS JOIN LATERAL (
+        SELECT COALESCE(SUM(EXP(-ST_Distance(c.geom_25833, t.geom_25833) / 100.0)), 0) as val
+        FROM vector.<relevant_table1> t
+        WHERE ST_DWithin(c.geom_25833, t.geom_25833, 300)
+    ) f1
+    -- Positive factor 2: linear decay (weight 0.35)
+    CROSS JOIN LATERAL (
+        SELECT COALESCE(SUM(GREATEST(0, 1 - ST_Distance(c.geom_25833, r.geom_25833) / 500.0)), 0) as val
+        FROM vector.<demographic_proxy_table> r
+        WHERE <demographic_filter> AND ST_DWithin(c.geom_25833, r.geom_25833, 500)
+    ) f2
+    -- Negative factor: inverse decay competition (weight 0.40)
+    CROSS JOIN LATERAL (
+        SELECT COALESCE(SUM(1.0 / (1 + ST_Distance(c.geom_25833, x.geom_25833) / 200.0)), 0) as val
+        FROM vector.<competition_table> x
+        WHERE ST_DWithin(c.geom_25833, x.geom_25833, 800)
+    ) comp
+    -- Raw count for display
+    CROSS JOIN LATERAL (
+        SELECT COUNT(*) as n
+        FROM vector.<factor1_table> t
+        WHERE ST_DWithin(c.geom_25833, t.geom_25833, 300)
+    ) cnt
 ),
 calculated AS (
-    SELECT *,
-    (positive_factor_1 + demand_score - competition_penalty) as total_score
+    SELECT *, (positive_factor_1 + demand_score - competition_penalty) as total_score
     FROM scored
 )
 SELECT <id_col>, <name_col>, geometry,
@@ -527,6 +597,13 @@ LIMIT 20;
 ```
 
 **NOTE:** If base table does NOT have `geom_25833`, compute inline: `ST_Transform(p.geometry, 25833) as geom_25833`.
+
+**STEP 5 - RESULT IDENTIFIABILITY (CRITICAL):**
+Results MUST include columns that let users identify each location:
+- Name column (if available and populated)
+- Address columns (street name, house number) when available
+- Building function/type/category for context
+Never return results with only an ID and score — users need to know WHERE each candidate is.
 
 **SCORING RULES (CRITICAL):**
 1. ALWAYS use distance decay functions (EXP, inverse, linear) - NOT simple COUNT

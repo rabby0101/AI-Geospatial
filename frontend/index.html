@@ -3497,6 +3497,16 @@
                                                         <span
                                                             class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
                                                         Gemini 3 Flash</a></li>
+                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('ollama', 'Qwen3.5 9b (Local)')"
+                                                        class="flex items-center gap-2">
+                                                        <span
+                                                            class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>
+                                                        Qwen3.5 9b (Local)</a></li>
+                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('ollama_small', 'Qwen3.5 4b (Local)')"
+                                                        class="flex items-center gap-2">
+                                                        <span
+                                                            class="w-2 h-2 rounded-full bg-violet-400 inline-block"></span>
+                                                        Qwen3.5 4b (Local)</a></li>
                                             </ul>
                                         </div>
 
@@ -9449,14 +9459,15 @@ LIMIT 10</textarea>
                 // Debug: Log the full response
                 console.log('📊 API Response:', data);
 
-                // 🔥 LOG DEEPSEEK PROMPTS TO BROWSER CONSOLE
+                // 🔥 LOG LLM PROMPTS TO BROWSER CONSOLE
                 if (data.system_prompt || data.user_prompt) {
+                    const providerLabel = (llmProvider || 'unknown').toUpperCase();
                     console.log('\n' + '='.repeat(80));
-                    console.log('%c📤 DEEPSEEK SYSTEM PROMPT', 'color: #FFB162; font-size: 14px; font-weight: bold;');
+                    console.log(`%c📤 ${providerLabel} SYSTEM PROMPT`, 'color: #FFB162; font-size: 14px; font-weight: bold;');
                     console.log('='.repeat(80));
                     console.log(data.system_prompt || '[No system prompt available]');
                     console.log('\n' + '='.repeat(80));
-                    console.log('%c📤 DEEPSEEK USER PROMPT', 'color: #FFB162; font-size: 14px; font-weight: bold;');
+                    console.log(`%c📤 ${providerLabel} USER PROMPT`, 'color: #FFB162; font-size: 14px; font-weight: bold;');
                     console.log('='.repeat(80));
                     console.log(data.user_prompt || '[No user prompt available]');
                     console.log('='.repeat(80) + '\n');

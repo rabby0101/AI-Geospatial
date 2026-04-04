@@ -892,7 +892,7 @@
     <div class="top-bar">
         <div>
             <h1><i class="fas fa-database"></i> Database Inspector</h1>
-            <div class="sub">Manage tables, update OSM data, import WFS services, view change log &amp; upload datasets</div>
+            <div class="sub">Manage tables, query Overpass OSM data, import WFS services, view change log &amp; upload datasets</div>
         </div>
         <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Map</a>
     </div>
@@ -901,7 +901,7 @@
     <div class="tab-bar">
         <div class="tab active" data-tab="tables"><i class="fas fa-table"></i> Tables <span id="tableCount"
                 class="badge">0</span></div>
-        <div class="tab" data-tab="osm"><i class="fas fa-globe"></i> OSM Update</div>
+        <div class="tab" data-tab="osm"><i class="fas fa-globe"></i> Overpass Import</div>
         <div class="tab" data-tab="changelog"><i class="fas fa-clock-rotate-left"></i> Change Log</div>
         <div class="tab" data-tab="upload"><i class="fas fa-cloud-arrow-up"></i> Upload Dataset</div>
         <div class="tab" data-tab="wfs"><i class="fas fa-link"></i> WFS Import</div>
@@ -931,29 +931,90 @@
         </div>
     </div>
 
-    <!-- ========== OSM TAB ========== -->
+    <!-- ========== OVERPASS IMPORT TAB ========== -->
     <div class="panel" id="panel-osm">
         <div class="osm-panel">
-            <div class="osm-hero" id="osmHero">
+            <div class="osm-hero">
                 <i class="fas fa-globe" style="font-size:48px;color:var(--accent);opacity:.6;margin-bottom:16px"></i>
-                <h2>OpenStreetMap Data Update</h2>
-                <p>Download the complete Berlin PBF extract from Geofabrik (~70 MB), extract all categories
-                    (landuse, buildings, roads, water, amenities …) and ingest into PostGIS.</p>
-                <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-                    <button class="btn lg primary" id="osmStartBtn" onclick="startOsmUpdate()"><i
-                            class="fas fa-download"></i> Update All OSM Data</button>
-                    <button class="btn lg" id="osmSupermarketsBtn" onclick="startOsmSupermarketsUpdate()" style="background:rgba(241,100,46,0.1);color:var(--accent);border-color:rgba(241,100,46,0.3)"><i
-                            class="fas fa-shopping-cart"></i> Download Supermarkets</button>
-                    <button class="btn lg" id="osmTransportStopsBtn" onclick="startOsmTransportStopsUpdate()" style="background:rgba(33,150,243,0.1);color:#2196F3;border-color:rgba(33,150,243,0.3)"><i
-                            class="fas fa-bus"></i> Download Transport Stops</button>
-                </div>
-                <div class="progress-bar" id="osmProgressBar" style="display:none">
-                    <div class="progress-fill" id="osmProgressFill"></div>
-                </div>
-                <div id="osmStatus" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+                <h2>Overpass QL Query Builder</h2>
+                <p>Write or generate an Overpass QL query to fetch OpenStreetMap data for Berlin, preview results, and import directly into PostGIS.</p>
             </div>
-            <div class="osm-log" id="osmLog" style="display:none"></div>
-            <div id="osmCategories"></div>
+
+            <div style="width:100%;max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+
+                <!-- Card 1: Query builder -->
+                <div style="background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:20px">
+                    <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:14px;letter-spacing:.5px">STEP 1 — BUILD YOUR QUERY</div>
+
+                    <!-- Presets row -->
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+                        <label style="font-size:12px;color:var(--text2);white-space:nowrap">Quick preset:</label>
+                        <select id="ovPreset" onchange="ovApplyPreset()" style="flex:1;min-width:180px;padding:8px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+                            <option value="">— choose a preset —</option>
+                            <option value="cafes">Cafes</option>
+                            <option value="hospitals">Hospitals</option>
+                            <option value="schools">Schools</option>
+                            <option value="supermarkets">Supermarkets</option>
+                            <option value="transport_stops">Transport Stops</option>
+                            <option value="parks">Parks</option>
+                            <option value="restaurants">Restaurants</option>
+                            <option value="pharmacies">Pharmacies</option>
+                            <option value="banks">Banks</option>
+                            <option value="atms">ATMs</option>
+                            <option value="bicycle_parking">Bicycle Parking</option>
+                            <option value="playgrounds">Playgrounds</option>
+                        </select>
+                    </div>
+
+                    <!-- AI generate row -->
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+                        <label style="font-size:12px;color:var(--text2);white-space:nowrap">AI generate:</label>
+                        <input id="ovNlInput" placeholder="e.g. all bicycle repair shops in Berlin" style="flex:1;min-width:200px;padding:8px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px" onkeydown="if(event.key==='Enter')ovGenerateQuery()">
+                        <button class="btn" id="ovGenBtn" onclick="ovGenerateQuery()" style="white-space:nowrap"><i class="fas fa-magic"></i> Generate with AI</button>
+                    </div>
+
+                    <!-- Query editor -->
+                    <div style="margin-bottom:10px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                            <label style="font-size:12px;color:var(--text2)">Overpass QL</label>
+                            <span style="font-size:11px;color:var(--text2);font-family:var(--mono)">Berlin bbox (fixed): 52.338,13.088,52.675,13.761 &nbsp;·&nbsp; use <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px">{{bbox}}</code> as shorthand</span>
+                        </div>
+                        <textarea id="ovQueryEditor" rows="9" spellcheck="false" style="width:100%;padding:12px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;resize:vertical;line-height:1.6">[out:json][timeout:25];
+(
+  node["amenity"="cafe"](52.338,13.088,52.675,13.761);
+  way["amenity"="cafe"](52.338,13.088,52.675,13.761);
+);
+out body;
+>;
+out skel qt;</textarea>
+                    </div>
+
+                    <div id="ovGenStatus" style="font-size:12px;color:var(--text2);margin-bottom:10px;display:none"></div>
+
+                    <button class="btn primary lg" id="ovRunBtn" onclick="ovRunQuery()"><i class="fas fa-play"></i> Run Query</button>
+                </div>
+
+                <!-- Card 2: Preview -->
+                <div id="ovPreviewCard" style="background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:20px;display:none">
+                    <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:12px;letter-spacing:.5px">STEP 2 — PREVIEW RESULTS</div>
+                    <div id="ovPreviewContent"></div>
+                </div>
+
+                <!-- Card 3: Import -->
+                <div id="ovImportCard" style="background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:20px;display:none">
+                    <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:14px;letter-spacing:.5px">STEP 3 — IMPORT TO DATABASE</div>
+                    <div class="form-group" style="margin-bottom:14px">
+                        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">Table Name <span style="font-size:11px;opacity:.6">(auto-prefixed with osm_)</span></label>
+                        <input id="ovTableName" placeholder="e.g. cafes → stored as osm_cafes" style="width:100%;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--mono)">
+                    </div>
+                    <button class="btn primary lg" id="ovImportBtn" onclick="ovImport()"><i class="fas fa-database"></i> Import to Database</button>
+                    <div id="ovImportProgress" style="margin-top:12px;font-size:12px;color:var(--text2);display:none">
+                        <div class="spinner" style="display:inline-block;margin-right:8px"></div>Importing features into PostGIS — this may take a moment…
+                    </div>
+                    <div id="ovImportResult" style="margin-top:14px;display:none"></div>
+                </div>
+
+            </div>
         </div>
     </div>
 
@@ -964,8 +1025,7 @@
             <div class="log-filters">
                 <select id="logActionFilter" onchange="loadChangelog()">
                     <option value="">All Actions</option>
-                    <option value="osm_update">OSM Update</option>
-                    <option value="osm_update_batch">OSM Batch</option>
+                    <option value="overpass_import">Overpass Import</option>
                     <option value="upload">Upload</option>
                     <option value="delete">Delete</option>
                     <option value="rename">Rename</option>
@@ -1008,10 +1068,27 @@
                         & Ingest</button>
                 </div>
                 <div id="uploadProgress" style="margin-top:12px;font-size:12px;color:var(--text2);display:none">
-                    <div class="spinner"></div>Uploading...
+                    <div class="spinner"></div>Checking &amp; uploading...
                 </div>
             </div>
             <div class="upload-result" id="uploadResult"></div>
+        </div>
+    </div>
+
+    <!-- Duplicate table detection modal (shared by upload + WFS) -->
+    <div class="modal-bg" id="duplicateModal" style="display:none">
+        <div class="modal" style="max-width:640px;width:95%">
+            <h3 style="margin-bottom:16px"><i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:8px"></i>Table Already Exists</h3>
+            <div id="duplicateCompare"></div>
+            <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+                <button class="btn" onclick="closeDuplicateModal()"><i class="fas fa-times"></i> Cancel</button>
+                <button class="btn" onclick="proceedWithMode('update_data')" style="border-color:rgba(59,130,246,.4);color:#60a5fa"><i class="fas fa-database"></i> Update Data Only</button>
+                <button class="btn primary" onclick="proceedWithMode('replace')"><i class="fas fa-sync-alt"></i> Replace Entirely</button>
+            </div>
+            <p style="font-size:11px;color:var(--text2);margin-top:12px">
+                <strong>Update Data Only</strong> replaces the table rows but keeps existing descriptions and metadata.<br>
+                <strong>Replace Entirely</strong> overwrites all data and regenerates the table description.
+            </p>
         </div>
     </div>
 
@@ -1145,7 +1222,7 @@
             t.classList.add('active');
             document.getElementById('panel-' + t.dataset.tab).classList.add('active');
             if (t.dataset.tab === 'changelog') loadChangelog();
-            if (t.dataset.tab === 'osm') loadOsmCategories();
+            if (t.dataset.tab === 'osm') ovApplyPreset();
         }));
 
         // ── TABLES TAB ──
@@ -1428,174 +1505,232 @@
             }
         });
 
-        // ── OSM UPDATE TAB ──
-        let osmPolling = null;
+        // ── OVERPASS IMPORT TAB ──
+        const BERLIN_BBOX = '52.338,13.088,52.675,13.761';
 
-        async function loadOsmCategories() {
+        const OV_PRESETS = {
+            cafes:           { table: 'cafes',           q: `[out:json][timeout:25];\n(\n  node["amenity"="cafe"](${BERLIN_BBOX});\n  way["amenity"="cafe"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            hospitals:       { table: 'hospitals',       q: `[out:json][timeout:25];\n(\n  node["amenity"="hospital"](${BERLIN_BBOX});\n  way["amenity"="hospital"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            schools:         { table: 'schools',         q: `[out:json][timeout:25];\n(\n  node["amenity"="school"](${BERLIN_BBOX});\n  way["amenity"="school"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            supermarkets:    { table: 'supermarkets',    q: `[out:json][timeout:25];\n(\n  node["shop"="supermarket"](${BERLIN_BBOX});\n  way["shop"="supermarket"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            transport_stops: { table: 'transport_stops', q: `[out:json][timeout:25];\n(\n  node["public_transport"="stop_position"](${BERLIN_BBOX});\n  node["highway"="bus_stop"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            parks:           { table: 'parks',           q: `[out:json][timeout:25];\n(\n  node["leisure"="park"](${BERLIN_BBOX});\n  way["leisure"="park"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            restaurants:     { table: 'restaurants',     q: `[out:json][timeout:25];\n(\n  node["amenity"="restaurant"](${BERLIN_BBOX});\n  way["amenity"="restaurant"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            pharmacies:      { table: 'pharmacies',      q: `[out:json][timeout:25];\n(\n  node["amenity"="pharmacy"](${BERLIN_BBOX});\n  way["amenity"="pharmacy"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            banks:           { table: 'banks',           q: `[out:json][timeout:25];\n(\n  node["amenity"="bank"](${BERLIN_BBOX});\n  way["amenity"="bank"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            atms:            { table: 'atms',            q: `[out:json][timeout:25];\n(\n  node["amenity"="atm"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            bicycle_parking: { table: 'bicycle_parking', q: `[out:json][timeout:25];\n(\n  node["amenity"="bicycle_parking"](${BERLIN_BBOX});\n  way["amenity"="bicycle_parking"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+            playgrounds:     { table: 'playgrounds',     q: `[out:json][timeout:25];\n(\n  node["leisure"="playground"](${BERLIN_BBOX});\n  way["leisure"="playground"](${BERLIN_BBOX});\n);\nout body;\n>;\nout skel qt;` },
+        };
+
+        // Cached query string from last successful run (used by import to avoid re-running)
+        let _ovLastQuery = null;
+
+        function ovApplyPreset() {
+            const key = document.getElementById('ovPreset').value;
+            if (!key || !OV_PRESETS[key]) return;
+            const p = OV_PRESETS[key];
+            document.getElementById('ovQueryEditor').value = p.q;
+            document.getElementById('ovTableName').value = p.table;
+            // Reset preview/import cards when query changes
+            document.getElementById('ovPreviewCard').style.display = 'none';
+            document.getElementById('ovImportCard').style.display = 'none';
+            _ovLastQuery = null;
+        }
+
+        async function ovGenerateQuery() {
+            const nl = document.getElementById('ovNlInput').value.trim();
+            if (!nl) { alert('Please describe what you want to query.'); return; }
+            const btn = document.getElementById('ovGenBtn');
+            const status = document.getElementById('ovGenStatus');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="display:inline-block;width:14px;height:14px;margin-right:6px"></div> Generating…';
+            status.style.display = 'block';
+            status.style.color = 'var(--text2)';
+            status.textContent = 'Calling AI to generate Overpass QL…';
             try {
-                const r = await fetch(API + '/osm-update/categories');
+                const r = await fetch(API + '/overpass/generate-query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ natural_language: nl })
+                });
                 const d = await r.json();
-                if (d.success) {
-                    // Group by category
-                    const groups = {};
-                    d.categories.forEach(c => {
-                        if (!groups[c.category]) groups[c.category] = [];
-                        groups[c.category].push(c);
-                    });
-                    let html = '<div class="d-label" style="margin-bottom:10px;text-align:center">Categories (' + d.total + ') — extracted from Geofabrik PBF</div>';
-                    for (const [group, items] of Object.entries(groups)) {
-                        html += '<div style="font-size:11px;color:var(--accent);margin:12px 0 4px;text-transform:uppercase;letter-spacing:1px">' + group + '</div>';
-                        html += '<div class="cat-grid">' + items.map(c => `<div class="cat-chip"><i class="fas fa-circle"></i>${c.description}<span style="font-size:10px;color:var(--text2);margin-left:auto">${c.layer}</span></div>`).join('') + '</div>';
+                if (r.ok && d.success) {
+                    document.getElementById('ovQueryEditor').value = d.query;
+                    // Auto-fill table name from first word of NL input
+                    const safeName = nl.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').substring(0, 40);
+                    document.getElementById('ovTableName').value = safeName;
+                    status.style.color = 'var(--green)';
+                    status.textContent = 'Query generated — review it, then click Run Query.';
+                    document.getElementById('ovPreviewCard').style.display = 'none';
+                    document.getElementById('ovImportCard').style.display = 'none';
+                    _ovLastQuery = null;
+                } else {
+                    status.style.color = 'var(--red)';
+                    status.textContent = 'Error: ' + (d.detail || 'Generation failed');
+                }
+            } catch (e) {
+                status.style.color = 'var(--red)';
+                status.textContent = 'Request failed: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magic"></i> Generate with AI';
+            }
+        }
+
+        async function ovRunQuery() {
+            const rawQuery = document.getElementById('ovQueryEditor').value.trim();
+            if (!rawQuery) { alert('Please enter an Overpass QL query.'); return; }
+            const query = rawQuery.replace(/\{\{bbox\}\}/g, BERLIN_BBOX);
+
+            const btn = document.getElementById('ovRunBtn');
+            const previewCard = document.getElementById('ovPreviewCard');
+            const previewContent = document.getElementById('ovPreviewContent');
+            const importCard = document.getElementById('ovImportCard');
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="display:inline-block;width:14px;height:14px;margin-right:6px"></div> Running…';
+            previewCard.style.display = 'block';
+            previewContent.innerHTML = '<div class="empty" style="padding:20px 0"><div class="spinner"></div>Querying Overpass API…</div>';
+            importCard.style.display = 'none';
+            _ovLastQuery = null;
+
+            try {
+                const r = await fetch(API + '/overpass/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, timeout: 30 })
+                });
+                const d = await r.json();
+
+                if (r.ok && d.success) {
+                    if (d.feature_count === 0) {
+                        previewContent.innerHTML = `<div style="color:var(--yellow);font-size:13px"><i class="fas fa-exclamation-triangle" style="margin-right:6px"></i>Query returned 0 features. Try a different query or check your Overpass QL syntax.</div>`;
+                    } else {
+                        const geomBadges = d.geometry_types.map(g => `<span style="background:rgba(62,207,142,.12);border:1px solid rgba(62,207,142,.25);padding:2px 8px;border-radius:4px;font-size:11px;color:var(--accent)">${g}</span>`).join(' ');
+                        const colList = d.sample_properties.slice(0, 10).join(', ') + (d.sample_properties.length > 10 ? ` +${d.sample_properties.length - 10} more` : '');
+                        const relationNote = d.skipped_relations > 0 ? `<div style="margin-top:8px;font-size:12px;color:var(--yellow)"><i class="fas fa-info-circle"></i> ${d.skipped_relations} relation(s) skipped (not yet supported)</div>` : '';
+                        previewContent.innerHTML = `
+                            <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px">
+                                <div><div style="font-size:11px;color:var(--text2);margin-bottom:3px">FEATURES</div><div style="font-size:22px;font-weight:700;color:var(--accent)">${d.feature_count.toLocaleString()}</div></div>
+                                <div><div style="font-size:11px;color:var(--text2);margin-bottom:6px">GEOMETRY TYPES</div><div style="display:flex;gap:6px;flex-wrap:wrap">${geomBadges}</div></div>
+                            </div>
+                            <div style="font-size:12px;color:var(--text2)"><strong style="color:var(--text)">Sample columns:</strong> ${colList}</div>
+                            ${relationNote}`;
+                        _ovLastQuery = query;
+                        importCard.style.display = 'block';
+                        document.getElementById('ovImportResult').style.display = 'none';
                     }
-                    document.getElementById('osmCategories').innerHTML = html;
-                }
-            } catch (e) { }
-            // Also check if an update is already running
-            checkOsmStatus();
-        }
-
-        async function startOsmUpdate() {
-            document.getElementById('osmStartBtn').disabled = true;
-            document.getElementById('osmSupermarketsBtn').disabled = true;
-            document.getElementById('osmTransportStopsBtn').disabled = true;
-            try {
-                const r = await fetch(API + '/osm-update', { method: 'POST' });
-                const d = await r.json();
-                if (d.success) {
-                    document.getElementById('osmProgressBar').style.display = 'block';
-                    document.getElementById('osmLog').style.display = 'block';
-                    osmPolling = setInterval(checkOsmStatus, 2000);
-                } else { 
-                    alert(d.detail || 'Error'); 
-                    document.getElementById('osmStartBtn').disabled = false; 
-                    document.getElementById('osmSupermarketsBtn').disabled = false;
-                    document.getElementById('osmTransportStopsBtn').disabled = false;
-                }
-            } catch (e) { 
-                alert('Error: ' + e.message); 
-                document.getElementById('osmStartBtn').disabled = false; 
-                document.getElementById('osmSupermarketsBtn').disabled = false;
-                document.getElementById('osmTransportStopsBtn').disabled = false;
-            }
-        }
-
-        async function startOsmSupermarketsUpdate() {
-            document.getElementById('osmStartBtn').disabled = true;
-            document.getElementById('osmSupermarketsBtn').disabled = true;
-            document.getElementById('osmTransportStopsBtn').disabled = true;
-            const statusDiv = document.getElementById('osmStatus');
-            statusDiv.textContent = '📥 Downloading supermarkets via Overpass API...';
-            document.getElementById('osmProgressBar').style.display = 'block';
-            document.getElementById('osmProgressFill').style.width = '50%';
-            
-            try {
-                const r = await fetch(API + '/osm-update/supermarkets', { method: 'POST' });
-                const d = await r.json();
-                if (d.success) {
-                    statusDiv.innerHTML = `<span style="color:var(--green)">✅ ${d.message}</span>`;
-                    document.getElementById('osmProgressFill').style.width = '100%';
-                    loadTables();
                 } else {
-                    alert('Error: ' + (d.message || d.detail || 'Unknown error'));
-                    statusDiv.textContent = '❌ Update failed';
-                    document.getElementById('osmProgressBar').style.display = 'none';
+                    previewContent.innerHTML = `<div style="color:var(--red);font-size:13px"><i class="fas fa-times-circle" style="margin-right:6px"></i>${d.detail || 'Query failed'}</div>`;
                 }
             } catch (e) {
-                alert('Error: ' + e.message);
-                statusDiv.textContent = '❌ Update error';
-                document.getElementById('osmProgressBar').style.display = 'none';
+                previewContent.innerHTML = `<div style="color:var(--red);font-size:13px"><i class="fas fa-times-circle" style="margin-right:6px"></i>Request failed: ${e.message}</div>`;
             } finally {
-                document.getElementById('osmStartBtn').disabled = false;
-                document.getElementById('osmSupermarketsBtn').disabled = false;
-                document.getElementById('osmTransportStopsBtn').disabled = false;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> Run Query';
             }
         }
 
-        async function startOsmTransportStopsUpdate() {
-            document.getElementById('osmStartBtn').disabled = true;
-            document.getElementById('osmSupermarketsBtn').disabled = true;
-            document.getElementById('osmTransportStopsBtn').disabled = true;
-            const statusDiv = document.getElementById('osmStatus');
-            statusDiv.textContent = '📥 Downloading transport stops via Overpass API...';
-            document.getElementById('osmProgressBar').style.display = 'block';
-            document.getElementById('osmProgressFill').style.width = '50%';
-            
+        async function ovImport() {
+            if (!_ovLastQuery) { alert('Run the query first to preview results.'); return; }
+            const rawName = document.getElementById('ovTableName').value.trim();
+            if (!rawName) { alert('Please enter a table name.'); return; }
+
+            const btn = document.getElementById('ovImportBtn');
+            const progress = document.getElementById('ovImportProgress');
+            btn.disabled = true;
+            progress.style.display = 'block';
+            progress.innerHTML = '<div class="spinner" style="display:inline-block;margin-right:8px"></div>Checking for existing table…';
+            document.getElementById('ovImportResult').style.display = 'none';
+
             try {
-                const r = await fetch(API + '/osm-update/transport_stops', { method: 'POST' });
-                const d = await r.json();
-                if (d.success) {
-                    statusDiv.innerHTML = `<span style="color:var(--green)">✅ ${d.message}</span>`;
-                    document.getElementById('osmProgressFill').style.width = '100%';
-                    loadTables();
-                } else {
-                    alert('Error: ' + (d.message || d.detail || 'Unknown error'));
-                    statusDiv.textContent = '❌ Update failed';
-                    document.getElementById('osmProgressBar').style.display = 'none';
-                }
-            } catch (e) {
-                alert('Error: ' + e.message);
-                statusDiv.textContent = '❌ Update error';
-                document.getElementById('osmProgressBar').style.display = 'none';
-            } finally {
-                document.getElementById('osmStartBtn').disabled = false;
-                document.getElementById('osmSupermarketsBtn').disabled = false;
-                document.getElementById('osmTransportStopsBtn').disabled = false;
-            }
-        }
+                const cr = await fetch(API + '/overpass/import/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ table_name: rawName })
+                });
+                const cd = await cr.json();
+                progress.style.display = 'none';
+                btn.disabled = false;
 
-        async function checkOsmStatus() {
-            try {
-                const r = await fetch(API + '/osm-update/status');
-                const d = await r.json();
-                if (d.running) {
-                    document.getElementById('osmStartBtn').disabled = true;
-                    document.getElementById('osmSupermarketsBtn').disabled = true;
-                    document.getElementById('osmTransportStopsBtn').disabled = true;
-                    document.getElementById('osmProgressBar').style.display = 'block';
-                    document.getElementById('osmLog').style.display = 'block';
-
-                    let pct = 0;
-                    let statusText = 'Starting...';
-
-                    if (d.phase === 'downloading') {
-                        // Show download progress based on bytes
-                        if (d.download_total > 0) {
-                            pct = (d.download_progress / d.download_total) * 100;
-                            const dlMB = (d.download_progress / 1048576).toFixed(1);
-                            const totalMB = (d.download_total / 1048576).toFixed(1);
-                            statusText = `📥 Downloading PBF: ${dlMB} / ${totalMB} MB`;
-                        } else {
-                            statusText = '📥 Downloading PBF from Geofabrik...';
+                if (cd.exists) {
+                    showDuplicateModal({
+                        exists: true,
+                        safe_name: cd.safe_name,
+                        new_table: { row_count: null, column_count: null, categorical_columns: [] },
+                        existing_table: {
+                            row_count: cd.existing_table ? cd.existing_table.row_count : 0,
+                            columns: cd.existing_table ? cd.existing_table.columns : [],
+                            columns_added: [], columns_removed: [], same_row_count: false,
                         }
-                    } else if (d.phase === 'extracting') {
-                        pct = d.total > 0 ? ((d.progress / d.total) * 100) : 0;
-                        statusText = d.current_category
-                            ? `🔧 Extracting: ${d.current_category} (${d.progress}/${d.total})`
-                            : '🔧 Extracting categories...';
-                    } else if (d.phase === 'done') {
-                        pct = 100;
-                        statusText = '✅ Update complete!';
-                    }
-
-                    document.getElementById('osmProgressFill').style.width = pct + '%';
-                    document.getElementById('osmStatus').textContent = statusText;
-                    document.getElementById('osmLog').innerHTML = d.log.map(l => '<div>' + l + '</div>').join('');
-                    document.getElementById('osmLog').scrollTop = document.getElementById('osmLog').scrollHeight;
-                    if (!osmPolling) osmPolling = setInterval(checkOsmStatus, 2000);
-                } else {
-                    if (osmPolling) { clearInterval(osmPolling); osmPolling = null; }
-                    document.getElementById('osmStartBtn').disabled = false;
-                    document.getElementById('osmSupermarketsBtn').disabled = false;
-                    document.getElementById('osmTransportStopsBtn').disabled = false;
-                    if (d.log && d.log.length) {
-                        document.getElementById('osmProgressFill').style.width = '100%';
-                        document.getElementById('osmLog').style.display = 'block';
-                        document.getElementById('osmLog').innerHTML = d.log.map(l => '<div>' + l + '</div>').join('');
-                        document.getElementById('osmStatus').textContent = d.last_run ? 'Last run: ' + new Date(d.last_run).toLocaleString() : 'Ready';
-                    }
-                    if (d.last_run) loadTables();
+                    }, (mode) => ovProceedImport(mode));
+                    return;
                 }
-            } catch (e) { }
+                ovProceedImport('replace');
+            } catch (e) {
+                progress.style.display = 'none';
+                btn.disabled = false;
+                alert('Pre-check failed: ' + e.message);
+            }
+        }
+
+        async function ovProceedImport(mode) {
+            if (!_ovLastQuery) { alert('Run the query first.'); return; }
+            const rawName = document.getElementById('ovTableName').value.trim();
+
+            const btn = document.getElementById('ovImportBtn');
+            const progress = document.getElementById('ovImportProgress');
+            const resultEl = document.getElementById('ovImportResult');
+            btn.disabled = true;
+            progress.style.display = 'block';
+            progress.innerHTML = '<div class="spinner" style="display:inline-block;margin-right:8px"></div>Importing into PostGIS…';
+            resultEl.style.display = 'none';
+
+            try {
+                const r = await fetch(API + '/overpass/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: _ovLastQuery, table_name: rawName, mode, timeout: 30 })
+                });
+                const d = await r.json();
+                progress.style.display = 'none';
+                resultEl.style.display = 'block';
+
+                if (r.ok && d.success) {
+                    const catHtml = _buildCategoricalHtml(d.categorical_columns);
+                    resultEl.innerHTML = `
+                        <div style="background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.25);border-radius:12px;padding:20px">
+                            <h3 style="color:var(--green);margin-bottom:8px"><i class="fas fa-check-circle"></i> Import Successful</h3>
+                            <p style="font-size:13px">${d.message}</p>
+                            <div style="font-size:12px;color:var(--text2);margin-top:8px">
+                                Table: <strong style="color:var(--text)">${d.table_name}</strong> &nbsp;·&nbsp;
+                                Rows: <strong style="color:var(--text)">${d.row_count.toLocaleString()}</strong> &nbsp;·&nbsp;
+                                Columns: <strong style="color:var(--text)">${d.column_count}</strong> &nbsp;·&nbsp;
+                                Geometry: <strong style="color:var(--text)">${d.has_geometry ? 'Yes' : 'No'}</strong>
+                            </div>
+                            ${d.warning ? `<div style="margin-top:10px;font-size:12px;color:var(--yellow)"><i class="fas fa-exclamation-triangle"></i> ${d.warning}</div>` : ''}
+                            ${catHtml}
+                        </div>`;
+                    loadTables();
+                } else {
+                    resultEl.innerHTML = `
+                        <div style="background:rgba(244,67,54,.08);border:1px solid rgba(244,67,54,.25);border-radius:12px;padding:20px">
+                            <h3 style="color:var(--red);margin-bottom:8px"><i class="fas fa-times-circle"></i> Import Failed</h3>
+                            <p style="font-size:13px">${d.detail || 'Unknown error'}</p>
+                        </div>`;
+                }
+            } catch (e) {
+                progress.style.display = 'none';
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = `
+                    <div style="background:rgba(244,67,54,.08);border:1px solid rgba(244,67,54,.25);border-radius:12px;padding:20px">
+                        <h3 style="color:var(--red);margin-bottom:8px"><i class="fas fa-times-circle"></i> Request Failed</h3>
+                        <p style="font-size:13px">${e.message}</p>
+                    </div>`;
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         // ── CHANGELOG TAB ──
@@ -1613,8 +1748,8 @@
                 const d = await r.json();
                 if (!d.success || !d.entries.length) { container.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><p>No changelog entries</p></div>'; document.getElementById('changelogPagination').innerHTML = ''; return; }
                 container.innerHTML = d.entries.map(e => {
-                    const iconClass = e.action.includes('osm') ? 'osm' : e.action === 'upload' ? 'upload' : e.action === 'delete' ? 'delete' : e.action === 'wfs_import' ? 'wfs' : 'desc';
-                    const iconFA = e.action.includes('osm') ? 'fa-globe' : e.action === 'upload' ? 'fa-upload' : e.action === 'delete' ? 'fa-trash' : e.action === 'wfs_import' ? 'fa-link' : 'fa-pen';
+                    const iconClass = (e.action.includes('osm') || e.action === 'overpass_import') ? 'osm' : e.action === 'upload' ? 'upload' : e.action === 'delete' ? 'delete' : e.action === 'wfs_import' ? 'wfs' : 'desc';
+                    const iconFA = (e.action.includes('osm') || e.action === 'overpass_import') ? 'fa-globe' : e.action === 'upload' ? 'fa-upload' : e.action === 'delete' ? 'fa-trash' : e.action === 'wfs_import' ? 'fa-link' : 'fa-pen';
                     const det = e.details ? Object.entries(e.details).map(([k, v]) => `<span style="margin-right:10px"><strong>${k}:</strong> ${typeof v === 'object' ? JSON.stringify(v) : v}</span>`).join('') : '';
                     return `<div class="log-entry fade-in">
                 <div class="log-icon ${iconClass}"><i class="fas ${iconFA}"></i></div>
@@ -1659,25 +1794,138 @@
             dropZone.style.display = 'block';
             fileInput.value = '';
         }
+
+        // ── Duplicate modal shared state ──
+        let _duplicateProceedFn = null;
+        function closeDuplicateModal() {
+            document.getElementById('duplicateModal').style.display = 'none';
+            _duplicateProceedFn = null;
+        }
+        function proceedWithMode(mode) {
+            const fn = _duplicateProceedFn;
+            closeDuplicateModal();
+            if (fn) fn(mode);
+        }
+
+        function _buildCategoricalHtml(cats) {
+            if (!cats || cats.length === 0) return '';
+            const rows = cats.map(c => {
+                const vals = c.top_values.slice(0, 8).join(', ') + (c.top_values.length > 8 ? ', …' : '');
+                return `<tr><td style="padding:3px 8px;color:var(--text)">${c.column}</td><td style="padding:3px 8px;color:var(--text2)">${c.unique_count} values · ${c.coverage_pct}% coverage</td><td style="padding:3px 8px;font-size:11px;color:var(--text2)">${vals}</td></tr>`;
+            }).join('');
+            return `<div style="margin-top:14px">
+                <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px"><i class="fas fa-tags" style="margin-right:4px"></i>Detected Categorical Columns</div>
+                <table style="width:100%;border-collapse:collapse;font-size:12px"><tbody>${rows}</tbody></table>
+            </div>`;
+        }
+
+        function showDuplicateModal(data, proceedFn) {
+            _duplicateProceedFn = proceedFn;
+            const ex = data.existing_table || {};
+            const nw = data.new_table || {};
+            const sameRows = ex.same_row_count;
+            const added = ex.columns_added || [];
+            const removed = ex.columns_removed || [];
+
+            let warningHtml = '';
+            if (sameRows) {
+                warningHtml = `<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#f59e0b">
+                    <i class="fas fa-exclamation-circle" style="margin-right:6px"></i><strong>Same row count detected</strong> — this may already be the same data.
+                </div>`;
+            }
+
+            let colDiffHtml = '';
+            if (added.length || removed.length) {
+                const addedHtml = added.map(c => `<span style="color:#4ade80;margin-right:6px">+${c}</span>`).join('');
+                const removedHtml = removed.map(c => `<span style="color:#f87171;margin-right:6px">−${c}</span>`).join('');
+                colDiffHtml = `<div style="margin-top:10px;font-size:12px">
+                    ${added.length ? `<div><strong style="color:#4ade80">Added columns:</strong> ${addedHtml}</div>` : ''}
+                    ${removed.length ? `<div style="margin-top:4px"><strong style="color:#f87171">Removed columns:</strong> ${removedHtml}</div>` : ''}
+                </div>`;
+            }
+
+            const catHtml = _buildCategoricalHtml(nw.categorical_columns);
+
+            const html = `
+                ${warningHtml}
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+                    <div style="background:rgba(255,255,255,.04);border-radius:8px;padding:14px">
+                        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Existing Table</div>
+                        <div>Rows: <strong style="color:var(--text)">${(ex.row_count||0).toLocaleString()}</strong></div>
+                        <div style="margin-top:4px">Columns: <strong style="color:var(--text)">${(ex.columns||[]).length}</strong></div>
+                    </div>
+                    <div style="background:rgba(62,207,142,.06);border:1px solid rgba(62,207,142,.2);border-radius:8px;padding:14px">
+                        <div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">New Data</div>
+                        <div>Rows: <strong style="color:var(--text)">${(nw.row_count||0).toLocaleString()}</strong></div>
+                        <div style="margin-top:4px">Columns: <strong style="color:var(--text)">${nw.column_count||0}</strong></div>
+                    </div>
+                </div>
+                ${colDiffHtml}
+                ${catHtml}
+            `;
+
+            document.getElementById('duplicateCompare').innerHTML = html;
+            document.getElementById('duplicateModal').style.display = 'flex';
+        }
+
         async function doUpload() {
             if (!uploadFile) return;
             document.getElementById('uploadBtn').disabled = true;
             document.getElementById('uploadProgress').style.display = 'block';
-            const fd = new FormData();
-            fd.append('file', uploadFile);
+            document.getElementById('uploadProgress').innerHTML = '<div class="spinner"></div>Checking for duplicates…';
+
             const tn = document.getElementById('uploadTableName').value.trim();
-            let url = API + '/upload';
-            if (tn) url += '?table_name=' + encodeURIComponent(tn);
+
+            // Step 1: pre-check
             try {
+                const checkFd = new FormData();
+                checkFd.append('file', uploadFile);
+                let checkUrl = API + '/upload/check';
+                if (tn) checkUrl += '?table_name=' + encodeURIComponent(tn);
+
+                const cr = await fetch(checkUrl, { method: 'POST', body: checkFd });
+                const cd = await cr.json();
+                document.getElementById('uploadProgress').style.display = 'none';
+                document.getElementById('uploadBtn').disabled = false;
+
+                if (cd.exists) {
+                    showDuplicateModal(cd, (mode) => proceedUpload(mode));
+                    return;
+                }
+                // No duplicate – proceed
+                proceedUpload('replace');
+            } catch (e) {
+                document.getElementById('uploadProgress').style.display = 'none';
+                document.getElementById('uploadBtn').disabled = false;
+                alert('Pre-check failed: ' + e.message);
+            }
+        }
+
+        async function proceedUpload(mode) {
+            if (!uploadFile) return;
+            document.getElementById('uploadBtn').disabled = true;
+            document.getElementById('uploadProgress').style.display = 'block';
+            document.getElementById('uploadProgress').innerHTML = '<div class="spinner"></div>Uploading…';
+
+            const tn = document.getElementById('uploadTableName').value.trim();
+            let url = API + '/upload?mode=' + encodeURIComponent(mode);
+            if (tn) url += '&table_name=' + encodeURIComponent(tn);
+
+            try {
+                const fd = new FormData();
+                fd.append('file', uploadFile);
                 const r = await fetch(url, { method: 'POST', body: fd });
                 const d = await r.json();
                 document.getElementById('uploadProgress').style.display = 'none';
                 document.getElementById('uploadBtn').disabled = false;
                 if (d.success) {
+                    const catHtml = _buildCategoricalHtml(d.categorical_columns);
                     document.getElementById('uploadResult').style.display = 'block';
-                    document.getElementById('uploadResult').innerHTML = `<h3 style="color:var(--green);margin-bottom:8px"><i class="fas fa-check-circle"></i> Upload Successful</h3>
-                <p style="font-size:13px">${d.message}</p>
-                <div style="font-size:12px;color:var(--text2);margin-top:8px">Table: <strong>${d.table_name}</strong> · Rows: ${d.row_count.toLocaleString()} · Columns: ${d.column_count} · Geometry: ${d.has_geometry ? 'Yes' : 'No'}</div>`;
+                    document.getElementById('uploadResult').innerHTML = `
+                        <h3 style="color:var(--green);margin-bottom:8px"><i class="fas fa-check-circle"></i> Upload Successful</h3>
+                        <p style="font-size:13px">${d.message}</p>
+                        <div style="font-size:12px;color:var(--text2);margin-top:8px">Table: <strong>${d.table_name}</strong> · Rows: ${d.row_count.toLocaleString()} · Columns: ${d.column_count} · Geometry: ${d.has_geometry ? 'Yes' : 'No'}</div>
+                        ${catHtml}`;
                     document.getElementById('uploadForm').style.display = 'none';
                     loadTables();
                     setTimeout(() => { dropZone.style.display = 'block'; }, 3000);
@@ -1771,19 +2019,70 @@
             const resultEl = document.getElementById('wfsResult');
             btn.disabled = true;
             progress.style.display = 'block';
+            progress.innerHTML = '<div class="spinner"></div>Checking for duplicates…';
+            resultEl.style.display = 'none';
+
+            // Step 1: pre-check (lightweight — just checks if table name already exists)
+            try {
+                const cr = await fetch(API + '/wfs-import/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, layer_name: layerName, table_name: tableName || null, max_features: maxFeatures })
+                });
+                const cd = await cr.json();
+                progress.style.display = 'none';
+                btn.disabled = false;
+
+                if (cd.exists) {
+                    // Build a check-result shaped like upload check for the shared modal
+                    showDuplicateModal({
+                        exists: true,
+                        safe_name: cd.safe_name,
+                        new_table: { row_count: null, column_count: null, categorical_columns: [] },
+                        existing_table: {
+                            row_count: cd.existing_table ? cd.existing_table.row_count : 0,
+                            columns: cd.existing_table ? cd.existing_table.columns : [],
+                            columns_added: [],
+                            columns_removed: [],
+                            same_row_count: false,
+                        }
+                    }, (mode) => proceedWfsImport(mode));
+                    return;
+                }
+                proceedWfsImport('replace');
+            } catch (e) {
+                progress.style.display = 'none';
+                btn.disabled = false;
+                alert('Pre-check failed: ' + e.message);
+            }
+        }
+
+        async function proceedWfsImport(mode) {
+            const url = document.getElementById('wfsUrl').value.trim();
+            const layerName = document.getElementById('wfsLayerSelect').value;
+            const tableName = document.getElementById('wfsTableName').value.trim();
+            const maxFeatures = parseInt(document.getElementById('wfsMaxFeatures').value) || 50000;
+
+            const btn = document.getElementById('wfsImportBtn');
+            const progress = document.getElementById('wfsImportProgress');
+            const resultEl = document.getElementById('wfsResult');
+            btn.disabled = true;
+            progress.style.display = 'block';
+            progress.innerHTML = '<div class="spinner"></div>Importing…';
             resultEl.style.display = 'none';
 
             try {
                 const r = await fetch(API + '/wfs-import', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, layer_name: layerName, table_name: tableName || null, max_features: maxFeatures })
+                    body: JSON.stringify({ url, layer_name: layerName, table_name: tableName || null, max_features: maxFeatures, mode })
                 });
                 const d = await r.json();
                 progress.style.display = 'none';
                 resultEl.style.display = 'block';
 
                 if (r.ok && d.success) {
+                    const catHtml = _buildCategoricalHtml(d.categorical_columns);
                     resultEl.innerHTML = `
                         <div style="background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.25);border-radius:12px;padding:20px">
                             <h3 style="color:var(--green);margin-bottom:8px"><i class="fas fa-check-circle"></i> Import Successful</h3>
@@ -1795,6 +2094,7 @@
                                 Geometry: <strong style="color:var(--text)">${d.has_geometry ? 'Yes' : 'No'}</strong>
                             </div>
                             ${d.warning ? `<div style="margin-top:10px;font-size:12px;color:var(--yellow)"><i class="fas fa-exclamation-triangle"></i> ${d.warning}</div>` : ''}
+                            ${catHtml}
                         </div>`;
                     loadTables();
                 } else {
