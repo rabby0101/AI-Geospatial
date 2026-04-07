@@ -3047,6 +3047,15 @@
             color: var(--text-muted);
         }
 
+        /* Agent panel step badges */
+        .agent-step { display: flex; gap: 8px; align-items: flex-start; }
+        .agent-badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; margin-top: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-thought  { background: #2a1e3e; color: #8a70d9; }
+        .badge-action   { background: #1e3a1e; color: #60c060; }
+        .badge-result   { background: #2a1e0e; color: #d08050; }
+        .badge-error    { background: #3a1e1e; color: #e07070; }
+        .agent-content  { color: #ccc; line-height: 1.5; word-break: break-word; flex: 1; }
+
         /* Panel Legend Container */
         [data-theme='light'] .panel-legend-container {
             background: rgba(240, 240, 240, 0.5);
@@ -3450,16 +3459,27 @@
                                 <div class="flex items-center justify-between pt-2 border-t border-base-content/5">
                                     <!-- Left: Utilities -->
                                     <div class="flex items-center gap-1">
-                                        <div class="tooltip" data-tip="Upload file">
+                                        <div class="tooltip" data-tip="Upload satellite images">
                                             <button class="btn btn-ghost btn-circle btn-sm opacity-70 hover:opacity-100"
-                                                onclick="document.getElementById('fileInput').click()">
-                                                <i data-lucide="paperclip" class="w-5 h-5"></i>
+                                                onclick="document.getElementById('satelliteUploadModal').showModal()">
+                                                <i data-lucide="satellite" class="w-5 h-5"></i>
                                             </button>
                                         </div>
-                                        <div class="tooltip" data-tip="Settings">
+                                        <div class="tooltip" data-tip="Skills — select a mode to reduce token usage">
                                             <button class="btn btn-ghost btn-circle btn-sm opacity-70 hover:opacity-100"
-                                                onclick="console.log('Settings placeholder')">
+                                                onclick="openSkillsPanel()">
                                                 <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Active Skill Badge -->
+                                        <div class="badge badge-accent gap-1 hidden shadow-sm text-xs"
+                                            id="skillBadge">
+                                            <span id="skillBadgeIcon"></span>
+                                            <span id="skillBadgeText"></span>
+                                            <button class="btn btn-ghost btn-xs btn-circle text-accent-content"
+                                                onclick="clearActiveSkill()">
+                                                <i data-lucide="x" class="w-3 h-3"></i>
                                             </button>
                                         </div>
 
@@ -3470,6 +3490,17 @@
                                             <span id="pillText" class="max-w-[100px] truncate"></span>
                                             <button class="btn btn-ghost btn-xs btn-circle text-primary-content"
                                                 onclick="clearSelectedFeature()">
+                                                <i data-lucide="x" class="w-3 h-3"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Satellite Session Badge -->
+                                        <div class="badge badge-secondary gap-1 hidden shadow-sm text-xs"
+                                            id="satelliteBadge">
+                                            <i data-lucide="satellite" class="w-3 h-3"></i>
+                                            <span id="satelliteBadgeText">0 files</span>
+                                            <button class="btn btn-ghost btn-xs btn-circle text-secondary-content"
+                                                onclick="clearSatelliteSession()">
                                                 <i data-lucide="x" class="w-3 h-3"></i>
                                             </button>
                                         </div>
@@ -3510,6 +3541,16 @@
                                             </ul>
                                         </div>
 
+                                        <!-- Agent mode toggle -->
+                                        <button
+                                            id="agentModeBtn"
+                                            onclick="toggleAgentMode()"
+                                            title="Toggle Agent Mode (ReAct — step-by-step reasoning)"
+                                            class="btn btn-sm btn-ghost opacity-70 hover:opacity-100 gap-1 text-xs"
+                                            style="border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;">
+                                            🤖 Agent OFF
+                                        </button>
+
                                         <button
                                             class="btn btn-primary btn-circle shadow-lg hover:scale-105 transition-transform"
                                             id="searchBtn" onclick="executeSearch()" title="Submit query">
@@ -3519,6 +3560,15 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Agent Progress Panel -->
+                    <div id="agentPanel" style="display:none; margin: 0 16px 8px; background: rgba(10,10,20,0.85); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; font-size: 13px; max-height: 320px; overflow-y: auto; backdrop-filter: blur(12px);">
+                        <div style="padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Agent Reasoning</span>
+                            <span id="agentPanelToggle" style="color: #555; cursor: pointer; font-size: 11px;" onclick="collapseAgentSteps()">[ hide ]</span>
+                        </div>
+                        <div id="agentSteps" style="padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;"></div>
                     </div>
 
                     <!-- Tab Pills Row (Below Main Bar) -->
@@ -3630,6 +3680,64 @@
     </button>
     </div>
     </div>
+
+    <!-- Satellite Upload Modal -->
+    <dialog id="satelliteUploadModal" class="modal">
+        <div class="modal-box max-w-md">
+            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                <i data-lucide="satellite" class="w-5 h-5 text-secondary"></i>
+                Upload Satellite Images
+            </h3>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-medium">Image format</span></label>
+                <select id="satFormatSelect" class="select select-bordered select-sm w-full">
+                    <option value="auto">Auto-detect</option>
+                    <option value="individual_bands">Individual band GeoTIFFs (.tif)</option>
+                    <option value="safe_zip">Sentinel-2 SAFE ZIP (.zip)</option>
+                </select>
+                <label class="label">
+                    <span class="label-text-alt opacity-60">
+                        For NDVI: upload B04 + B08 band files. For EVI: B02, B04, B08.
+                    </span>
+                </label>
+            </div>
+
+            <!-- Hidden file input lives inside the dialog so showModal() top-layer doesn't block programmatic .click() -->
+            <input type="file" id="satelliteFileInput" multiple accept=".tif,.tiff,.zip" style="display:none"
+                   onchange="if(this.files.length>0){_autoUploadFiles(Array.from(this.files));this.value='';}">
+
+            <div id="satDropZone"
+                 class="border-2 border-dashed border-base-content/20 rounded-xl p-8 text-center cursor-pointer hover:border-secondary/60 transition-colors mb-4"
+                 onclick="document.getElementById('satelliteFileInput').click()"
+                 ondragover="satDragOver(event)"
+                 ondragleave="satDragLeave(event)"
+                 ondrop="satDrop(event)">
+                <i data-lucide="upload-cloud" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+                <p class="text-sm opacity-70 font-medium" id="satDropZoneText">
+                    Click or drop files here to upload immediately
+                </p>
+                <p class="text-xs opacity-40 mt-1">.tif band files or SAFE .zip · multiple files OK · uploads accumulate in session</p>
+            </div>
+
+            <div id="satUploadProgress" class="hidden">
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="loading loading-spinner loading-xs"></span>
+                    <span id="satUploadProgressText">Uploading...</span>
+                </div>
+            </div>
+
+            <div class="modal-action">
+                <button class="btn btn-ghost btn-sm"
+                    onclick="document.getElementById('satelliteUploadModal').close()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
 
     <!-- Save Drawing Modal (DaisyUI) -->
     <dialog id="saveDrawingModal" class="modal">
@@ -5412,6 +5520,44 @@ LIMIT 10</textarea>
                     colorScheme = 'plasma'; // Use plasma for MCDA scores (purple-yellow progression)
                     minVal = 0;
                     maxVal = 1;
+                } else if (props.ndvi_change !== undefined) {
+                    // Satellite NDVI change detection (diverging: red=loss, green=gain)
+                    gradientProperty = 'ndvi_change';
+                    colorScheme = 'rdylgn';
+                    const changeVals = geojsonData.features
+                        .map(f => f.properties.ndvi_change)
+                        .filter(v => typeof v === 'number' && !isNaN(v));
+                    if (changeVals.length > 0) {
+                        const absMax = Math.max(Math.abs(Math.min(...changeVals)), Math.abs(Math.max(...changeVals)));
+                        minVal = -absMax;
+                        maxVal = absMax;
+                    }
+                } else if (props.ndvi_mean !== undefined) {
+                    gradientProperty = 'ndvi_mean';
+                    colorScheme = 'viridis';
+                    const vals = geojsonData.features.map(f => f.properties.ndvi_mean).filter(v => typeof v === 'number');
+                    if (vals.length > 0) { minVal = Math.min(...vals); maxVal = Math.max(...vals); }
+                } else if (props.evi_change !== undefined) {
+                    gradientProperty = 'evi_change';
+                    colorScheme = 'rdylgn';
+                    const vals = geojsonData.features.map(f => f.properties.evi_change).filter(v => typeof v === 'number');
+                    if (vals.length > 0) { const a = Math.max(Math.abs(Math.min(...vals)), Math.abs(Math.max(...vals))); minVal = -a; maxVal = a; }
+                } else if (props.evi_mean !== undefined) {
+                    gradientProperty = 'evi_mean'; colorScheme = 'viridis';
+                    const vals = geojsonData.features.map(f => f.properties.evi_mean).filter(v => typeof v === 'number');
+                    if (vals.length > 0) { minVal = Math.min(...vals); maxVal = Math.max(...vals); }
+                } else if (props.ndwi_change !== undefined) {
+                    gradientProperty = 'ndwi_change'; colorScheme = 'rdylbu';
+                    const vals = geojsonData.features.map(f => f.properties.ndwi_change).filter(v => typeof v === 'number');
+                    if (vals.length > 0) { const a = Math.max(Math.abs(Math.min(...vals)), Math.abs(Math.max(...vals))); minVal = -a; maxVal = a; }
+                } else if (props.ndbi_change !== undefined) {
+                    gradientProperty = 'ndbi_change'; colorScheme = 'plasma';
+                    const vals = geojsonData.features.map(f => f.properties.ndbi_change).filter(v => typeof v === 'number');
+                    if (vals.length > 0) { const a = Math.max(Math.abs(Math.min(...vals)), Math.abs(Math.max(...vals))); minVal = -a; maxVal = a; }
+                } else if (props.savi_change !== undefined) {
+                    gradientProperty = 'savi_change'; colorScheme = 'rdylgn';
+                    const vals = geojsonData.features.map(f => f.properties.savi_change).filter(v => typeof v === 'number');
+                    if (vals.length > 0) { const a = Math.max(Math.abs(Math.min(...vals)), Math.abs(Math.max(...vals))); minVal = -a; maxVal = a; }
                 } else {
                     // Check for density metrics as fallback
                     if (props.amenities_per_km2 !== undefined) {
@@ -9164,11 +9310,130 @@ LIMIT 10</textarea>
         }
 
         // Execute search
+        // ─── Agent Mode ──────────────────────────────────────────────────────────
+
+        window._useAgent = false;
+
+        function toggleAgentMode() {
+            window._useAgent = !window._useAgent;
+            const btn = document.getElementById('agentModeBtn');
+            if (btn) {
+                btn.textContent = window._useAgent ? '🤖 Agent ON' : '🤖 Agent OFF';
+                btn.style.background = window._useAgent ? 'rgba(60,120,60,0.4)' : '';
+                btn.style.color = window._useAgent ? '#7df' : '';
+            }
+        }
+
+        function collapseAgentSteps() {
+            const steps = document.getElementById('agentSteps');
+            const toggle = document.getElementById('agentPanelToggle');
+            if (!steps) return;
+            const hidden = steps.style.display === 'none';
+            steps.style.display = hidden ? 'flex' : 'none';
+            if (toggle) toggle.textContent = hidden ? '[ hide ]' : '[ show ]';
+        }
+
+        function _appendAgentStep(type, content) {
+            const panel = document.getElementById('agentPanel');
+            const container = document.getElementById('agentSteps');
+            if (!container) return;
+            if (panel) panel.style.display = 'block';
+            const badgeClass = { thought: 'badge-thought', action: 'badge-action', tool_result: 'badge-result', error: 'badge-error' }[type] || 'badge-result';
+            const label = { thought: 'Thought', action: 'Action', tool_result: 'Result', error: 'Error' }[type] || type;
+            const div = document.createElement('div');
+            div.className = 'agent-step';
+            div.innerHTML = `<span class="agent-badge ${badgeClass}">${label}</span><span class="agent-content">${String(content).slice(0, 500).replace(/</g, '&lt;')}</span>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function submitAgentQuery(question, llmProvider) {
+            const panel = document.getElementById('agentPanel');
+            const stepsContainer = document.getElementById('agentSteps');
+            if (panel) panel.style.display = 'block';
+            if (stepsContainer) stepsContainer.innerHTML = '';
+
+            const payload = { question, llm_provider: llmProvider || 'gemini', max_iterations: 10 };
+            if (window.drawnGeometry) payload.drawn_geometry = window.drawnGeometry;
+            if (window.userLocation) payload.user_location = window.userLocation;
+
+            try {
+                const response = await fetch('/api/agent/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const raw = line.slice(6).trim();
+                        if (!raw) continue;
+
+                        let step;
+                        try { step = JSON.parse(raw); } catch { continue; }
+
+                        if (step.type === 'done') break;
+
+                        if (step.type === 'thought') {
+                            _appendAgentStep('thought', step.content);
+                        } else if (step.type === 'action') {
+                            _appendAgentStep('action', step.content);
+                        } else if (step.type === 'tool_result' && step.tool_name !== 'final_answer') {
+                            const content = typeof step.tool_result === 'object'
+                                ? JSON.stringify(step.tool_result).slice(0, 300)
+                                : String(step.content).slice(0, 300);
+                            _appendAgentStep('tool_result', content);
+                        } else if (step.type === 'tool_result' && step.tool_name === 'final_answer') {
+                            const fa = step.tool_result;
+                            const count = (fa.geojson && fa.geojson.features) ? fa.geojson.features.length : 0;
+                            _appendAgentStep('tool_result', `✅ ${fa.summary} (${count} features · ${fa.execution_time}s)`);
+                            if (fa.geojson && typeof addLayer === 'function') {
+                                addLayer(fa.layer_name, fa.geojson, question, [], fa.summary, [], {}, fa.execution_time);
+                            }
+                        } else if (step.type === 'error') {
+                            _appendAgentStep('error', step.content);
+                        }
+                    }
+                }
+            } catch (err) {
+                _appendAgentStep('error', `Connection error: ${err.message}`);
+            } finally {
+                const searchBtn = document.getElementById('searchBtn');
+                if (searchBtn) searchBtn.disabled = false;
+                setLoading(false);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+
         async function executeSearch() {
             const query = document.getElementById('searchInput').value.trim();
 
             if (!query) {
                 showNotification('Please enter a search query', 'error');
+                return;
+            }
+
+            // Delegate to agent if agent mode is on
+            if (window._useAgent) {
+                const searchBtn = document.getElementById('searchBtn');
+                if (searchBtn) searchBtn.disabled = true;
+                setLoading(true, 'Agent thinking...');
+                await submitAgentQuery(query, window.selectedLLMProvider || 'gemini');
                 return;
             }
 
@@ -9385,6 +9650,57 @@ LIMIT 10</textarea>
                 const llmProvider = getSelectedLLMProvider();
                 console.log(`🧠 Using LLM: ${llmProvider.toUpperCase()}`);
 
+                // ── Satellite pipeline fork ──────────────────────────────
+                if (window.satelliteSession) {
+                    console.log('🛰️ Satellite session active — routing to /api/satellite/analyze');
+                    try {
+                        const satResp = await fetch(`${API_URL}/satellite/analyze`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                question: query,
+                                session_id: window.satelliteSession,
+                                llm_provider: llmProvider,
+                            }),
+                        });
+
+                        const satData = await satResp.json();
+                        console.log('🛰️ Satellite response:', satData);
+
+                        if (satData.success && satData.data?.features) {
+                            const meta = satData.metadata || {};
+
+                            if (queryMode === 'single') clearAllQueries();
+
+                            addLayer(
+                                satData.layer_name,
+                                satData.data,
+                                query,
+                                [],
+                                satData.reasoning,
+                                satData.datasets_used || [],
+                                meta,
+                                satData.execution_time || 0
+                            );
+
+                            const fCount = meta.feature_count || satData.data.features.length;
+                            showNotification(
+                                `${satData.layer_name}: ${fCount} area${fCount !== 1 ? 's' : ''} analysed`,
+                                'success'
+                            );
+                        } else {
+                            const errMsg = satData.detail || satData.error || 'Satellite analysis failed';
+                            showNotification(errMsg, 'error');
+                        }
+                    } catch (err) {
+                        showNotification(`Satellite error: ${err.message}`, 'error');
+                    }
+                    setLoading(false);
+                    searchBtn.disabled = false;
+                    return;
+                }
+                // ── End satellite fork ───────────────────────────────────
+
                 // Determine query type
                 const isDEM = isDEMQuery(query);
                 const endpoint = isDEM ? '/api/dem/query' : '/api/query';
@@ -9415,6 +9731,7 @@ LIMIT 10</textarea>
                     const payload = {
                         question: query,
                         llm_provider: llmProvider,
+                        active_skill: getActiveSkillId(),
                         context: {
                             session_id: sessionId
                         }
@@ -10461,11 +10778,271 @@ ORDER BY ?title`
                 lucide.createIcons();
             }
         });
+
+        // ===================================================================
+        // SATELLITE IMAGE ANALYSIS PIPELINE
+        // ===================================================================
+
+        window.satelliteSession = null;
+        window._pendingSatelliteFiles = [];
+
+        // Drag-and-drop handlers for the satellite drop zone (called inline from HTML)
+        function satDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('border-secondary'); }
+        function satDragLeave(e) { e.currentTarget.classList.remove('border-secondary'); }
+        function satDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('border-secondary');
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) _autoUploadFiles(files);
+        }
+
+        async function _autoUploadFiles(files) {
+            if (!files || files.length === 0) return;
+            const formatHint = document.getElementById('satFormatSelect')?.value || 'auto';
+            document.getElementById('satelliteUploadModal')?.close();
+            // Reset file input so the same file can be re-selected if needed
+            const fi = document.getElementById('satelliteFileInput');
+            if (fi) fi.value = '';
+            await uploadSatelliteFiles(files, formatHint);
+        }
+
+        // Keep confirmSatelliteUpload as no-op (button is now hidden but onclick still referenced in HTML)
+        function confirmSatelliteUpload() {}
+
+        async function uploadSatelliteFiles(files, formatHint) {
+            const sessionId = window.sessionId || `session_${Date.now()}`;
+            window.sessionId = sessionId;
+
+            const progressEl  = document.getElementById('satUploadProgress');
+            const progressTxt = document.getElementById('satUploadProgressText');
+            if (progressEl)  progressEl.classList.remove('hidden');
+            if (progressTxt) progressTxt.textContent = `Uploading ${files.length} file(s)...`;
+
+            const formData = new FormData();
+            for (const f of files) formData.append('files', f);
+            formData.append('session_id', sessionId);
+            formData.append('format_hint', formatHint || 'auto');
+
+            try {
+                const resp = await fetch(`${API_URL}/satellite/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await resp.json();
+
+                if (progressEl) progressEl.classList.add('hidden');
+
+                // Always show errors first so user knows what happened
+                if (data.errors && data.errors.length > 0) {
+                    console.warn('Satellite upload warnings:', data.errors);
+                    data.errors.forEach(e => showNotification(`⚠ ${e}`, 'warning'));
+                }
+
+                if (data.success && data.total_files > 0) {
+                    window.satelliteSession = sessionId;
+
+                    // Update badge
+                    const badge   = document.getElementById('satelliteBadge');
+                    const badgeTxt = document.getElementById('satelliteBadgeText');
+                    if (badge)    badge.classList.remove('hidden');
+                    if (badgeTxt) badgeTxt.textContent =
+                        `${data.total_files} file${data.total_files !== 1 ? 's' : ''} · ${data.dates_found.length} date${data.dates_found.length !== 1 ? 's' : ''}`;
+
+                    const bandList = data.bands_found.length > 0 ? data.bands_found.join(', ') : 'none detected';
+                    showNotification(
+                        `Satellite: ${data.dates_found.length} date(s), ${data.total_files} band file(s). Bands: ${bandList}`,
+                        'success'
+                    );
+                    if (window.lucide) lucide.createIcons();
+                } else if (data.success && data.total_files === 0) {
+                    showNotification('No band files were found inside the uploaded archive. Check console for details.', 'error');
+                    console.error('Full upload response:', data);
+                } else {
+                    showNotification(data.detail || 'Satellite upload failed', 'error');
+                }
+                return data;
+            } catch (err) {
+                if (progressEl) progressEl.classList.add('hidden');
+                showNotification(`Upload error: ${err.message}`, 'error');
+                return null;
+            }
+        }
+
+        function clearSatelliteSession() {
+            const sid = window.satelliteSession;
+            if (sid) {
+                fetch(`${API_URL}/satellite/session/${sid}`, { method: 'DELETE' }).catch(() => {});
+            }
+            window.satelliteSession = null;
+            const badge = document.getElementById('satelliteBadge');
+            if (badge) badge.classList.add('hidden');
+            showNotification('Satellite session cleared', 'info');
+        }
+
     </script>
 
 
     <script src="/static/js/turf-utils.js"></script>
     <script src="/static/js/safety-layers.js"></script>
+
+    <!-- ── Skills Panel ────────────────────────────────────────────────── -->
+    <div id="skillsOverlay"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9000; backdrop-filter:blur(2px);"
+        onclick="closeSkillsPanel()"></div>
+
+    <div id="skillsPanel"
+        style="display:none; position:fixed; right:0; top:0; bottom:0; width:340px; z-index:9001;
+               background:rgba(26,24,37,0.97); backdrop-filter:blur(24px);
+               border-left:1px solid rgba(255,255,255,0.1); padding:1.5rem;
+               overflow-y:auto; transition:transform 0.25s ease;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+            <div>
+                <h2 style="font-size:1.1rem; font-weight:700; color:#f5f5f5; margin:0;">Skills</h2>
+                <p style="font-size:0.75rem; color:#9ca3af; margin:0.25rem 0 0;">Select a mode to focus the AI and reduce token usage</p>
+            </div>
+            <button onclick="closeSkillsPanel()"
+                style="background:none; border:none; cursor:pointer; color:#9ca3af; padding:0.25rem;">
+                <i data-lucide="x" style="width:20px;height:20px;"></i>
+            </button>
+        </div>
+
+        <!-- None / General option -->
+        <div class="skill-card" id="skill-card-none" onclick="selectSkill(null)"
+            style="cursor:pointer; border-radius:12px; border:1.5px solid rgba(255,255,255,0.1);
+                   padding:1rem; margin-bottom:0.75rem; transition:all 0.15s;
+                   background:rgba(255,255,255,0.03);">
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+                <span style="font-size:1.5rem;">🌐</span>
+                <div>
+                    <div style="font-weight:600; color:#f5f5f5; font-size:0.9rem;">General</div>
+                    <div style="font-size:0.75rem; color:#9ca3af; margin-top:0.2rem;">Full pipeline — all tables, all capabilities</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic skill cards injected here -->
+        <div id="skillCardsList"></div>
+    </div>
+
+    <script>
+        // ── Skills System ─────────────────────────────────────────────────────
+
+        let _skills = [];
+
+        async function loadSkillsFromAPI() {
+            try {
+                const resp = await fetch(`${API_URL}/skills`);
+                if (!resp.ok) return;
+                _skills = await resp.json();
+                renderSkillCards();
+            } catch (e) {
+                console.warn('Skills API unavailable:', e);
+            }
+        }
+
+        function renderSkillCards() {
+            const container = document.getElementById('skillCardsList');
+            container.innerHTML = '';
+            const activeId = localStorage.getItem('active_skill');
+            _skills.forEach(skill => {
+                const card = document.createElement('div');
+                card.className = 'skill-card';
+                card.id = `skill-card-${skill.id}`;
+                card.onclick = () => selectSkill(skill);
+                const isActive = skill.id === activeId;
+                card.style.cssText = `
+                    cursor:pointer; border-radius:12px; margin-bottom:0.75rem;
+                    border:1.5px solid ${isActive ? '#FFB162' : 'rgba(255,255,255,0.1)'};
+                    padding:1rem; transition:all 0.15s;
+                    background:${isActive ? 'rgba(255,177,98,0.08)' : 'rgba(255,255,255,0.03)'};
+                `;
+                card.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <span style="font-size:1.5rem;">${skill.icon || '🔧'}</span>
+                        <div>
+                            <div style="font-weight:600; color:#f5f5f5; font-size:0.9rem;">${skill.name}</div>
+                            <div style="font-size:0.75rem; color:#9ca3af; margin-top:0.2rem;">${skill.description}</div>
+                        </div>
+                        ${isActive ? '<i data-lucide="check-circle" style="width:16px;height:16px;color:#FFB162;margin-left:auto;"></i>' : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+            highlightActiveCard();
+        }
+
+        function highlightActiveCard() {
+            const activeId = localStorage.getItem('active_skill');
+            // Reset none card
+            const noneCard = document.getElementById('skill-card-none');
+            if (noneCard) {
+                const isActive = !activeId;
+                noneCard.style.borderColor = isActive ? '#FFB162' : 'rgba(255,255,255,0.1)';
+                noneCard.style.background = isActive ? 'rgba(255,177,98,0.08)' : 'rgba(255,255,255,0.03)';
+            }
+        }
+
+        function selectSkill(skill) {
+            if (!skill) {
+                localStorage.removeItem('active_skill');
+                updateSkillBadge(null);
+            } else {
+                localStorage.setItem('active_skill', skill.id);
+                localStorage.setItem('active_skill_name', skill.name);
+                localStorage.setItem('active_skill_icon', skill.icon || '🔧');
+                updateSkillBadge(skill);
+            }
+            renderSkillCards();
+            closeSkillsPanel();
+        }
+
+        function clearActiveSkill() {
+            selectSkill(null);
+        }
+
+        function updateSkillBadge(skill) {
+            const badge = document.getElementById('skillBadge');
+            const icon = document.getElementById('skillBadgeIcon');
+            const text = document.getElementById('skillBadgeText');
+            if (skill) {
+                icon.textContent = skill.icon || '🔧';
+                text.textContent = skill.name;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function openSkillsPanel() {
+            loadSkillsFromAPI();
+            document.getElementById('skillsPanel').style.display = 'block';
+            document.getElementById('skillsOverlay').style.display = 'block';
+        }
+
+        function closeSkillsPanel() {
+            document.getElementById('skillsPanel').style.display = 'none';
+            document.getElementById('skillsOverlay').style.display = 'none';
+        }
+
+        function getActiveSkillId() {
+            return localStorage.getItem('active_skill') || null;
+        }
+
+        // Restore badge on page load
+        (function restoreSkillBadge() {
+            const id = localStorage.getItem('active_skill');
+            if (id) {
+                updateSkillBadge({
+                    id,
+                    name: localStorage.getItem('active_skill_name') || id,
+                    icon: localStorage.getItem('active_skill_icon') || '🔧',
+                });
+            }
+        })();
+    </script>
+    <!-- ── End Skills Panel ───────────────────────────────────────────────── -->
 </body>
 
 </html>
