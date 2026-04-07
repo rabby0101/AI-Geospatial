@@ -3,7 +3,7 @@ from app.models.agent_model import AgentRequest, AgentStep, AgentFinalAnswer
 
 def test_agent_request_defaults():
     req = AgentRequest(question="Find parks near me")
-    assert req.llm_provider == "gemini"
+    assert req.llm_provider == "deepseek"
     assert req.max_iterations == 10
 
 

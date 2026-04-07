@@ -18,10 +18,6 @@ from app.utils.agent_tools import TOOL_REGISTRY
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 
@@ -68,54 +64,28 @@ Rules:
 """
 
 
-def _call_llm(messages: list, provider: str) -> str:
-    """Call Gemini or DeepSeek with a message list. Returns raw text."""
-    if provider == "gemini" and GEMINI_API_KEY:
-        # Convert to Gemini format — merge system message into first user turn
-        contents = []
-        system_text = ""
-        for msg in messages:
-            if msg["role"] == "system":
-                system_text = msg["content"]
-            elif msg["role"] == "user":
-                text = f"{system_text}\n\n{msg['content']}" if system_text else msg["content"]
-                contents.append({"role": "user", "parts": [{"text": text}]})
-                system_text = ""  # Only prepend once
-            else:
-                contents.append({"role": "model", "parts": [{"text": msg["content"]}]})
+def _call_llm(messages: list, provider: str = "deepseek") -> str:
+    """Call DeepSeek with a message list. Returns raw text."""
+    if not DEEPSEEK_API_KEY:
+        raise RuntimeError("DEEPSEEK_API_KEY not set. Add it to your .env file.")
 
-        payload = {
-            "contents": contents,
-            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 2048},
-        }
-        resp = requests.post(
-            f"{GEMINI_URL}?key={GEMINI_API_KEY}",
-            json=payload,
-            timeout=60,
-        )
-        resp.raise_for_status()
-        return resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-
-    if DEEPSEEK_API_KEY:
-        payload = {
-            "model": "deepseek-chat",
-            "messages": messages,
-            "temperature": 0.1,
-            "max_tokens": 2048,
-        }
-        resp = requests.post(
-            DEEPSEEK_URL,
-            headers={
-                "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=60,
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
-
-    raise RuntimeError("No LLM provider available. Set GEMINI_API_KEY or DEEPSEEK_API_KEY.")
+    payload = {
+        "model": "deepseek-chat",
+        "messages": messages,
+        "temperature": 0.1,
+        "max_tokens": 2048,
+    }
+    resp = requests.post(
+        DEEPSEEK_URL,
+        headers={
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=60,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"].strip()
 
 
 def _truncate_result(result: Any, max_chars: int = MAX_RESULT_CHARS) -> Any:

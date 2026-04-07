@@ -9353,7 +9353,7 @@ LIMIT 10</textarea>
             if (panel) panel.style.display = 'block';
             if (stepsContainer) stepsContainer.innerHTML = '';
 
-            const payload = { question, llm_provider: llmProvider || 'gemini', max_iterations: 10 };
+            const payload = { question, llm_provider: 'deepseek', max_iterations: 10 };
             if (window.drawnGeometry) payload.drawn_geometry = window.drawnGeometry;
             if (window.userLocation) payload.user_location = window.userLocation;
 
