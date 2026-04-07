@@ -13,8 +13,12 @@ from app.routes.semantic import router as semantic_router
 from app.routes.gdi_berlin import router as gdi_berlin_router
 from app.routes.walking_distance import router as walking_distance_router
 from app.routes.geocoding import router as geocoding_router
+from app.routes.satellite import router as satellite_router
+from app.routes.skills import router as skills_router
+from app.routes.agent import router as agent_router
 from app.utils.database import db_manager
 from app.utils.auto_discovery import auto_discovery
+from app.utils.skills_manager import load_skills
 
 # Create FastAPI app
 app = FastAPI(
@@ -41,8 +45,20 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database connection, auto-discover tables, and start SchemaWatcher"""
+    load_skills()
     print("🚀 Starting Cognitive Geospatial Assistant API...")
     print("📊 Initializing database connection...")
+
+    # Clean up stale satellite session tmp dirs (older than 24h)
+    import glob, time as _time
+    for d in glob.glob("/tmp/satellite_*"):
+        try:
+            from pathlib import Path as _Path
+            if _time.time() - _Path(d).stat().st_mtime > 86400:
+                import shutil as _shutil
+                _shutil.rmtree(d, ignore_errors=True)
+        except Exception:
+            pass
 
     try:
         db_manager.initialize()
@@ -86,6 +102,9 @@ app.include_router(semantic_router)    # Semantic/Knowledge Graph endpoints
 app.include_router(gdi_berlin_router)  # GDI Berlin WFS import endpoints
 app.include_router(walking_distance_router)  # Walking distance analysis endpoints
 app.include_router(geocoding_router)         # Geocoding endpoints (Nominatim)
+app.include_router(satellite_router)         # Satellite image analysis endpoints
+app.include_router(skills_router)            # Skills system endpoints
+app.include_router(agent_router)             # Agentic ReAct query endpoint
 
 
 # Serve static files (dashboards, assets)
