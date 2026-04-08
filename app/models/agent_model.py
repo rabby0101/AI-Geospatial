@@ -10,7 +10,7 @@ class AgentRequest(BaseModel):
     selected_feature: Optional[Dict[str, Any]] = None
     session_id: Optional[str] = None
     selected_features: Optional[List[Dict[str, Any]]] = None
-    max_iterations: int = 10
+    max_iterations: int = 20
 
     class Config:
         json_schema_extra = {

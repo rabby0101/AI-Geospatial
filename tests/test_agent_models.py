@@ -4,7 +4,7 @@ from app.models.agent_model import AgentRequest, AgentStep, AgentFinalAnswer
 def test_agent_request_defaults():
     req = AgentRequest(question="Find parks near me")
     assert req.llm_provider == "deepseek"
-    assert req.max_iterations == 10
+    assert req.max_iterations == 20
 
 
 def test_agent_request_accepts_session_and_features():

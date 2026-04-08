@@ -218,7 +218,7 @@ def _parse_llm_output(raw: str) -> Dict[str, Any]:
 async def run_agent(
     question: str,
     llm_provider: str = "deepseek",
-    max_iterations: int = 15,
+    max_iterations: int = 20,
     user_location: Optional[Dict] = None,
     drawn_geometry: Optional[Dict] = None,
     session_id: Optional[str] = None,
