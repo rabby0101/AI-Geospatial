@@ -464,11 +464,11 @@ def execute_sql(sql: str) -> Dict[str, Any]:
     Execute a PostGIS SQL query and return results as a GeoJSON FeatureCollection.
 
     Rules for writing the SQL:
-    - Always SELECT the geometry column: use ST_AsGeoJSON(geom) AS geometry
-      (or ST_AsGeoJSON(geom_25833) if the table uses EPSG:25833)
+    - ALWAYS write: SELECT *, ST_AsGeoJSON(geom_25833) AS geometry
+      geom_25833 is the geometry column in ALL tables; SELECT * preserves all attributes
     - Tables live in the 'vector' schema: FROM vector.<table_name>
-    - For spatial filters use ST_Within(geom, ST_GeomFromGeoJSON('<polygon_json>'))
-      or ST_Intersects — wrap the polygon JSON with ST_SetSRID(..., 4326)
+      Temp tables (selected features) live in the 'temp' schema: FROM temp.<table_name>
+    - For spatial filters use ST_Within or ST_Intersects with ST_SetSRID(..., 4326)
     - Use ST_MakeValid() on geometries that may be invalid
     - Limit results to 500 rows max to avoid memory issues
 
