@@ -31,10 +31,12 @@ async def _sse_generator(request: AgentRequest) -> AsyncGenerator[str, None]:
     try:
         async for step in run_agent(
             question=request.question,
-            llm_provider=request.llm_provider or "gemini",
+            llm_provider=request.llm_provider or "deepseek",
             max_iterations=request.max_iterations,
             user_location=request.user_location,
             drawn_geometry=request.drawn_geometry,
+            session_id=request.session_id,
+            selected_features=request.selected_features,
         ):
             payload = step.model_dump()
             yield f"data: {json.dumps(payload, default=str)}\n\n"

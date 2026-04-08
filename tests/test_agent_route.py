@@ -41,6 +41,35 @@ def test_agent_query_returns_sse_stream():
     assert "text/event-stream" in resp.headers["content-type"]
 
 
+def test_agent_query_forwards_session_and_features():
+    """Route must pass session_id and selected_features to run_agent."""
+    forwarded_kwargs = {}
+
+    async def mock_run_agent(*args, **kwargs):
+        forwarded_kwargs.update(kwargs)
+        for step in _make_mock_steps():
+            yield step
+
+    with patch("app.routes.agent.run_agent", side_effect=mock_run_agent):
+        client = TestClient(app)
+        resp = client.post(
+            "/api/agent/query",
+            json={
+                "question": "Find cafes near selection",
+                "session_id": "session_xyz",
+                "selected_features": [
+                    {"geometry": {"type": "Point", "coordinates": [13.4, 52.5]},
+                     "properties": {"name": "Test Cafe"},
+                     "name": "Test Cafe"}
+                ],
+            },
+        )
+
+    assert resp.status_code == 200
+    assert forwarded_kwargs.get("session_id") == "session_xyz"
+    assert len(forwarded_kwargs.get("selected_features", [])) == 1
+
+
 def test_agent_query_rejects_empty_question():
     client = TestClient(app)
     resp = client.post("/api/agent/query", json={"question": "   "})
