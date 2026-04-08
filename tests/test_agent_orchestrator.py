@@ -65,7 +65,7 @@ def test_system_prompt_enforces_select_star():
 def test_system_prompt_enforces_geom_25833():
     prompt = _build_agent_system_prompt()
     assert "geom_25833" in prompt
-    assert "ST_AsGeoJSON(geom_25833)" in prompt
+    assert "ST_AsGeoJSON(ST_Transform(geom_25833, 4326))" in prompt
 
 
 def test_system_prompt_forbids_geometry_column():

@@ -65,11 +65,11 @@ Standard workflow for spatial queries:
 execute_sql rules:
 - Tables are in the 'vector' schema: FROM vector.<table_name>
   Temp tables (selected features) are in the 'temp' schema: FROM temp.<table_name>
-- ALWAYS write: SELECT *, ST_AsGeoJSON(geom_25833) AS geometry
+- ALWAYS write: SELECT *, ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geometry
   - geom_25833 is THE geometry column in ALL tables — never use 'geometry' or 'geom'
   - SELECT * preserves all feature attributes in the result
-  - ST_AsGeoJSON(geom_25833) AS geometry exports it as GeoJSON for the map
-- For spatial proximity (ST_DWithin) use geom_25833 directly (units = metres, no transform):
+  - ST_Transform(geom_25833, 4326) converts to WGS84 so the map can render it
+- For spatial proximity (ST_DWithin) use geom_25833 directly (units = metres, no transform needed):
   ST_DWithin(a.geom_25833, b.geom_25833, <metres>)
 - For spatial filter with a buffer polygon use:
   WHERE ST_Within(ST_Transform(geom_25833, 4326), ST_SetSRID(ST_GeomFromGeoJSON('<polygon_json>'), 4326))
@@ -78,9 +78,9 @@ execute_sql rules:
 
 Spatial tips:
 - GEOMETRY COLUMN: ALL tables use geom_25833 (EPSG:25833, units = metres).
-  Always write ST_AsGeoJSON(geom_25833) AS geometry in your SELECT.
+  Always write ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geometry in your SELECT.
   get_table_columns will show it first in the column list.
-- COMPUTE AREA: Use ST_Area(ST_Transform(geometry, 25833)) / 10000.0 for hectares.
+- COMPUTE AREA: Use ST_Area(geom_25833) / 10000.0 for hectares (geom_25833 is already projected, no transform needed).
   Do NOT use text 'area' columns for numeric comparison — always compute with ST_Area().
 - FILTER BY DISTRICT: Find the districts/bezirk table from get_schema_info, then use
   ST_Intersects to spatially join. Check column names with get_table_columns first.
