@@ -113,29 +113,44 @@ def create_buffer(geometry_or_coords: Union[Dict, Any], radius_m: int) -> Dict[s
         return {"error": str(e)}
 
 
-def get_schema_info(keywords: List[str]) -> Union[List[Dict], Dict]:
+def get_schema_info(keywords: Optional[List[str]] = None) -> Union[List[Dict], Dict]:
     """
-    Return relevant table names and descriptions matching the given keywords.
+    Return a compact catalog of ALL available tables so the LLM can choose
+    which ones are relevant. Each entry has table_name, a short description,
+    geometry_type, and row_count.
+
+    Args:
+        keywords: Ignored (kept for backward compatibility). All tables are returned.
 
     Returns:
-        List of {"table_name": str, "description": str, "geometry_type": str}
+        List of {"table_name": str, "description": str, "geometry_type": str, "row_count": int}
         or {"error": str}
     """
     try:
-        keyword_conditions = " OR ".join(
-            f"(LOWER(table_name) LIKE '%{kw.lower()}%' OR LOWER(description) LIKE '%{kw.lower()}%')"
-            for kw in keywords
-        )
-        sql = f"""
-            SELECT table_name, description, geometry_type
-            FROM vector.table_metadata
-            WHERE {keyword_conditions}
-            LIMIT 10
+        sql = """
+            SELECT table_name, description, geometry_type, row_count
+            FROM metadata.table_descriptions
+            ORDER BY table_name
         """
-        rows = db_manager.execute_query(sql)
-        if rows is None:
-            return {"error": "Database query failed"}
-        return [dict(r) for r in rows]
+        df = db_manager.execute_query(sql)
+
+        if df is None or df.empty:
+            return {"error": "No tables found in metadata"}
+        rows = df.to_dict("records")
+        # Return compact one-line-per-table catalog for minimal token usage
+        lines = []
+        for r in rows:
+            name = r["table_name"]
+            raw_rc = r.get("row_count")
+            try:
+                import math
+                rc = int(raw_rc) if raw_rc is not None and not math.isnan(raw_rc) else "?"
+            except (TypeError, ValueError):
+                rc = "?"
+            gt = r.get("geometry_type") or "NONE"
+            desc = (r.get("description") or "")[:100]
+            lines.append(f"{name} ({rc} rows, {gt}) — {desc}")
+        return {"catalog": "\n".join(lines), "total_tables": len(lines)}
     except Exception as e:
         logger.error(f"get_schema_info error: {e}")
         return {"error": str(e)}
@@ -381,17 +396,143 @@ def score_locations(features: Dict[str, Any], criteria: List[str]) -> Dict[str, 
 
 
 # ---------------------------------------------------------------------------
+# New atomic tools for explicit agentic SQL workflow
+# ---------------------------------------------------------------------------
+
+def get_table_columns(table_name: str) -> Union[List[Dict], Dict]:
+    """
+    Return column names, types, and sample values for a specific table.
+    Use this after get_schema_info to understand what columns are available
+    before writing SQL.
+
+    Args:
+        table_name: Exact table name from get_schema_info (e.g. "osm_playgrounds")
+
+    Returns:
+        List of {"column": str, "type": str, "sample_values": list} dicts
+        or {"error": str}
+    """
+    try:
+        sql = f"""
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_schema = 'vector'
+              AND table_name = '{table_name}'
+            ORDER BY ordinal_position
+            LIMIT 40
+        """
+        df = db_manager.execute_query(sql)
+        if df is None or df.empty:
+            return {"error": f"No columns found for 'vector.{table_name}'. Check the table name."}
+
+        rows = df.to_dict("records")
+        columns = [{"column": r["column_name"], "type": r["data_type"]} for r in rows]
+
+        # Geometry columns bubble to the top so the LLM always sees them,
+        # even in wide tables (50+ columns) where they'd otherwise be truncated
+        GEO_COLS = {"geom_25833", "geometry", "geom"}
+        geo = [c for c in columns if c["column"] in GEO_COLS]
+        non_geo = [c for c in columns if c["column"] not in GEO_COLS]
+        columns = geo + non_geo
+
+        # Fetch sample values for first 10 non-geometry columns
+        sample_cols = [c for c in columns if c["type"] not in ("USER-DEFINED",)][:10]
+        for col in sample_cols:
+            try:
+                sample_sql = f"""
+                    SELECT DISTINCT "{col['column']}"::text AS val
+                    FROM vector.{table_name}
+                    WHERE "{col['column']}" IS NOT NULL
+                    LIMIT 5
+                """
+                sample_df = db_manager.execute_query(sample_sql)
+                if sample_df is not None and not sample_df.empty:
+                    col["sample_values"] = sample_df["val"].tolist()
+                else:
+                    col["sample_values"] = []
+            except Exception:
+                col["sample_values"] = []
+
+        return columns
+    except Exception as e:
+        logger.error(f"get_table_columns error: {e}")
+        return {"error": str(e)}
+
+
+def execute_sql(sql: str) -> Dict[str, Any]:
+    """
+    Execute a PostGIS SQL query and return results as a GeoJSON FeatureCollection.
+
+    Rules for writing the SQL:
+    - Always SELECT the geometry column: use ST_AsGeoJSON(geom) AS geometry
+      (or ST_AsGeoJSON(geom_25833) if the table uses EPSG:25833)
+    - Tables live in the 'vector' schema: FROM vector.<table_name>
+    - For spatial filters use ST_Within(geom, ST_GeomFromGeoJSON('<polygon_json>'))
+      or ST_Intersects — wrap the polygon JSON with ST_SetSRID(..., 4326)
+    - Use ST_MakeValid() on geometries that may be invalid
+    - Limit results to 500 rows max to avoid memory issues
+
+    Args:
+        sql: Valid PostGIS SQL SELECT statement
+
+    Returns:
+        {"type": "FeatureCollection", "features": [...], "count": int}
+        or {"error": str}
+    """
+    try:
+        import json as _json
+        df = db_manager.execute_query(sql)
+        if df is None or df.empty:
+            return {"error": "Query failed or returned no results"}
+
+        features = []
+        for row_dict in df.to_dict("records"):
+            # Extract geometry
+            geom = None
+            for key in ("geometry", "geom", "geom_25833"):
+                if key in row_dict and row_dict[key]:
+                    try:
+                        geom = _json.loads(row_dict.pop(key))
+                    except Exception:
+                        row_dict.pop(key, None)
+                    break
+
+            # Remove any remaining raw geometry columns to keep properties clean
+            for key in list(row_dict.keys()):
+                if "geom" in key.lower():
+                    row_dict.pop(key)
+
+            features.append({
+                "type": "Feature",
+                "geometry": geom,
+                "properties": row_dict,
+            })
+
+        return {
+            "type": "FeatureCollection",
+            "features": features,
+            "count": len(features),
+        }
+    except Exception as e:
+        logger.error(f"execute_sql error: {e}")
+        return {"error": str(e)}
+
+
+# ---------------------------------------------------------------------------
 # Tool registry — maps tool names to callables for the orchestrator
 # ---------------------------------------------------------------------------
 
 TOOL_REGISTRY: Dict[str, Any] = {
     "geocode_location": geocode_location,
     "create_buffer": create_buffer,
-    "query_features": query_features,
-    "spatial_filter": spatial_filter,
     "get_schema_info": get_schema_info,
+    "get_table_columns": get_table_columns,
+    "execute_sql": execute_sql,
+    "spatial_filter": spatial_filter,
     "calculate_route": calculate_route,
     "walking_isochrone": walking_isochrone,
     "analyze_satellite": analyze_satellite,
     "score_locations": score_locations,
+    # kept but not in system prompt — available as fallback
+    "query_features": query_features,
 }

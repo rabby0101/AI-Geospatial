@@ -1,9 +1,11 @@
 import pytest
 from unittest.mock import patch, MagicMock
+import pandas as pd
 from app.utils.agent_tools import (
     geocode_location,
     create_buffer,
     get_schema_info,
+    get_table_columns,
     TOOL_REGISTRY,
 )
 
@@ -46,6 +48,24 @@ def test_get_schema_info_returns_tables():
         ]
         result = get_schema_info(["parks", "green"])
     assert isinstance(result, list)
+
+
+def test_get_table_columns_geom_25833_appears_first():
+    """geom_25833 must appear first even when it's at a high ordinal position."""
+    mock_cols = pd.DataFrame([
+        {"column_name": "id", "data_type": "integer"},
+        {"column_name": "name", "data_type": "text"},
+        {"column_name": "amenity", "data_type": "text"},
+        {"column_name": "addr_street", "data_type": "text"},
+        {"column_name": "geom_25833", "data_type": "USER-DEFINED"},
+    ])
+    with patch("app.utils.agent_tools.db_manager") as mock_db:
+        mock_db.execute_query.return_value = mock_cols
+        result = get_table_columns("osm_cafes")
+    assert isinstance(result, list)
+    assert result[0]["column"] == "geom_25833", (
+        f"Expected geom_25833 first, got: {result[0]['column']}"
+    )
 
 
 def test_tool_registry_has_all_tools():
