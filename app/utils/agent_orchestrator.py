@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 
-MAX_RESULT_CHARS = 2000  # Max characters of a tool result to feed back to LLM
+MAX_RESULT_CHARS = 12000  # Max characters of a tool result to feed back to LLM
 
 
 # ---------------------------------------------------------------------------
@@ -29,38 +29,76 @@ MAX_RESULT_CHARS = 2000  # Max characters of a tool result to feed back to LLM
 # ---------------------------------------------------------------------------
 
 def _build_agent_system_prompt() -> str:
-    return """You are a geospatial AI agent. You answer questions by calling tools one at a time.
+    return """You are a geospatial AI agent that answers questions by calling tools one at a time.
 
-For each step output EXACTLY this format (no extra text before or after):
+For each step output EXACTLY this format:
 Thought: <your reasoning>
 Action: <tool_name>
 Args: <JSON object with arguments>
 
-When you have enough information to give the final answer, output EXACTLY:
+When you have the final result, output EXACTLY:
 Thought: <brief conclusion>
 Final Answer:
 <valid GeoJSON FeatureCollection as compact JSON — no markdown, no code fences>
-Summary: <one sentence describing the result>
-Layer: <snake_case layer name, e.g. playgrounds_500m_neukoelln>
+Summary: <one sentence>
+Layer: <snake_case_layer_name>
 
 Available tools:
 - geocode_location(name: str) → {lat, lon, display_name, geometry}
 - create_buffer(geometry_or_coords: dict, radius_m: int) → GeoJSON Polygon
-- query_features(description: str, within_geometry?: GeoJSON) → GeoJSON FeatureCollection
+- get_schema_info() → compact catalog of ALL available tables with name, description, geometry_type, row_count
+- get_table_columns(table_name: str) → list of {column, type, sample_values} for a table in the vector schema
+- execute_sql(sql: str) → GeoJSON FeatureCollection from a PostGIS SQL query
 - spatial_filter(features: GeoJSON, filter_geometry: GeoJSON, relation: "within"|"intersects") → GeoJSON FeatureCollection
-- get_schema_info(keywords: list[str]) → list of matching tables
 - calculate_route(waypoints: list[{lat,lon,name}], mode: "driving"|"walking") → GeoJSON FeatureCollection
 - walking_isochrone(location: {lat,lon}, minutes: int) → GeoJSON FeatureCollection
-- analyze_satellite(bbox: GeoJSON|{min_lon,min_lat,max_lon,max_lat}, indices: list[str], date_range?: {start,end}) → GeoJSON FeatureCollection
+- analyze_satellite(bbox: dict, indices: list[str]) → GeoJSON FeatureCollection
 - score_locations(features: GeoJSON, criteria: list[str]) → GeoJSON FeatureCollection with score property
 
+Standard workflow for spatial queries:
+1. get_schema_info — get the full table catalog, pick the tables relevant to the query
+2. get_table_columns — inspect column names, types, and sample values before writing SQL
+3. geocode_location — resolve any named place to coordinates (if needed)
+4. create_buffer — if a distance/radius is involved
+5. execute_sql — write and run a PostGIS SQL query using what you learned
+
+execute_sql rules:
+- Tables are in the 'vector' schema: FROM vector.<table_name>
+  Temp tables (selected features) are in the 'temp' schema: FROM temp.<table_name>
+- ALWAYS write: SELECT *, ST_AsGeoJSON(geom_25833) AS geometry
+  - geom_25833 is THE geometry column in ALL tables — never use 'geometry' or 'geom'
+  - SELECT * preserves all feature attributes in the result
+  - ST_AsGeoJSON(geom_25833) AS geometry exports it as GeoJSON for the map
+- For spatial proximity (ST_DWithin) use geom_25833 directly (units = metres, no transform):
+  ST_DWithin(a.geom_25833, b.geom_25833, <metres>)
+- For spatial filter with a buffer polygon use:
+  WHERE ST_Within(ST_Transform(geom_25833, 4326), ST_SetSRID(ST_GeomFromGeoJSON('<polygon_json>'), 4326))
+  or ST_Intersects for partial overlap
+- Always add LIMIT 500
+
+Spatial tips:
+- GEOMETRY COLUMN: ALL tables use geom_25833 (EPSG:25833, units = metres).
+  Always write ST_AsGeoJSON(geom_25833) AS geometry in your SELECT.
+  get_table_columns will show it first in the column list.
+- COMPUTE AREA: Use ST_Area(ST_Transform(geometry, 25833)) / 10000.0 for hectares.
+  Do NOT use text 'area' columns for numeric comparison — always compute with ST_Area().
+- FILTER BY DISTRICT: Find the districts/bezirk table from get_schema_info, then use
+  ST_Intersects to spatially join. Check column names with get_table_columns first.
+
 Rules:
-- ALWAYS call geocode_location before using a named place in any other tool
-- The Final Answer MUST contain a valid GeoJSON FeatureCollection
-- Never guess coordinates — always geocode named places
-- Call tools one at a time; wait for the result before continuing
-- If a tool returns an error, try an alternative approach or a different tool
-- Do not apologise or add commentary outside the required format
+- The Final Answer MUST be a valid GeoJSON FeatureCollection
+- When execute_sql returns a successful FeatureCollection, IMMEDIATELY produce the Final Answer.
+  Do NOT re-run the same query. Use this exact format:
+  Thought: Got N results. Returning them.
+  Final Answer:
+  {"use_last_result": true}
+  Summary: <one sentence describing results>
+  Layer: <snake_case_name>
+  The system will substitute the full FeatureCollection from your last execute_sql.
+- Never guess table names — always call get_schema_info first
+- Never guess column names — always call get_table_columns before writing SQL
+- Call tools one at a time; wait for each result before proceeding
+- If a tool returns an error, adjust and retry with corrected arguments
 """
 
 
@@ -91,17 +129,21 @@ def _call_llm(messages: list, provider: str = "deepseek") -> str:
 def _truncate_result(result: Any, max_chars: int = MAX_RESULT_CHARS) -> Any:
     """
     Trim large tool results so they fit in the LLM context window.
-    For FeatureCollections, keeps the first 5 features and adds a count note.
+    For FeatureCollections with geometry, keeps the first 3 features.
+    For FeatureCollections without geometry (e.g. SELECT DISTINCT), keeps up to 30.
     """
     if isinstance(result, dict) and result.get("type") == "FeatureCollection":
         features = result.get("features", [])
         count = len(features)
-        if count > 5:
+        # Check if features have geometry (spatial results vs tabular results)
+        has_geometry = any(f.get("geometry") for f in features[:3])
+        limit = 3 if has_geometry else 30
+        if count > limit:
             return {
                 "type": "FeatureCollection",
-                "features": features[:5],
+                "features": features[:limit],
                 "count": count,
-                "_truncated": f"Showing 5 of {count} features. Use the full result for Final Answer.",
+                "_note": f"Showing {limit} of {count}. Full result is stored — use Final Answer: {{\"use_last_result\": true}} to return it.",
             }
 
     result_str = json.dumps(result)
@@ -176,7 +218,7 @@ def _parse_llm_output(raw: str) -> Dict[str, Any]:
 async def run_agent(
     question: str,
     llm_provider: str = "gemini",
-    max_iterations: int = 10,
+    max_iterations: int = 15,
     user_location: Optional[Dict] = None,
     drawn_geometry: Optional[Dict] = None,
 ) -> AsyncGenerator[AgentStep, None]:
@@ -202,6 +244,8 @@ async def run_agent(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_content},
     ]
+
+    last_sql_result = None  # Store full execute_sql result for use_last_result
 
     retry_count = 0
     max_retries = 2
@@ -240,13 +284,17 @@ async def run_agent(
             yield AgentStep(type="thought", content=parsed["thought"])
 
         if parsed["type"] == "final_answer":
+            geojson = parsed["geojson"]
+            # If agent signals use_last_result, substitute the full execute_sql result
+            if isinstance(geojson, dict) and geojson.get("use_last_result") and last_sql_result:
+                geojson = last_sql_result
             elapsed = round(time.time() - start_time, 2)
             yield AgentStep(
                 type="tool_result",
                 content="final_answer",
                 tool_name="final_answer",
                 tool_result=AgentFinalAnswer(
-                    geojson=parsed["geojson"],
+                    geojson=geojson,
                     summary=parsed["summary"],
                     layer_name=parsed["layer"],
                     steps_taken=iteration + 1,
@@ -280,6 +328,10 @@ async def run_agent(
                 observation = {"error": f"Tool called with wrong arguments: {e}"}
             except Exception as e:
                 observation = {"error": str(e)}
+
+        # Store full execute_sql result for use_last_result
+        if tool_name == "execute_sql" and isinstance(observation, dict) and observation.get("type") == "FeatureCollection":
+            last_sql_result = observation
 
         truncated_obs = _truncate_result(observation)
         obs_str = json.dumps(truncated_obs, ensure_ascii=False, default=str)

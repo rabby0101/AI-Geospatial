@@ -1,7 +1,9 @@
+from unittest.mock import patch
 from app.utils.agent_orchestrator import (
     _parse_llm_output,
     _build_agent_system_prompt,
     _truncate_result,
+    run_agent,
 )
 
 
@@ -53,6 +55,22 @@ def test_system_prompt_contains_all_tools():
         "walking_isochrone", "analyze_satellite", "score_locations",
     ]:
         assert tool in prompt
+
+
+def test_system_prompt_enforces_select_star():
+    prompt = _build_agent_system_prompt()
+    assert "SELECT *" in prompt, "System prompt must instruct agent to use SELECT *"
+
+
+def test_system_prompt_enforces_geom_25833():
+    prompt = _build_agent_system_prompt()
+    assert "geom_25833" in prompt
+    assert "ST_AsGeoJSON(geom_25833)" in prompt
+
+
+def test_system_prompt_forbids_geometry_column():
+    prompt = _build_agent_system_prompt()
+    assert "ST_AsGeoJSON(geometry)" not in prompt
 
 
 def test_truncate_result_long_feature_collection():
