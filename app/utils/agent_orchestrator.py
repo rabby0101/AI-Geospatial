@@ -217,10 +217,12 @@ def _parse_llm_output(raw: str) -> Dict[str, Any]:
 
 async def run_agent(
     question: str,
-    llm_provider: str = "gemini",
+    llm_provider: str = "deepseek",
     max_iterations: int = 15,
     user_location: Optional[Dict] = None,
     drawn_geometry: Optional[Dict] = None,
+    session_id: Optional[str] = None,
+    selected_features: Optional[list] = None,
 ) -> AsyncGenerator[AgentStep, None]:
     """
     Async generator that runs the ReAct loop and yields AgentStep objects.
@@ -239,6 +241,24 @@ async def run_agent(
             f"\n\nUser drew this geometry on the map (use as spatial context): "
             f"{json.dumps(drawn_geometry)[:300]}"
         )
+
+    if selected_features:
+        lines = []
+        for i, feat in enumerate(selected_features[:10]):
+            props = feat.get("properties") or {}
+            name = feat.get("name") or props.get("name") or f"Feature {i + 1}"
+            props_str = json.dumps(props, ensure_ascii=False)[:300]
+            lines.append(f"  {i + 1}. {name}: {props_str}")
+        user_content += (
+            f"\n\nUser has selected {len(selected_features)} feature(s) on the map:\n"
+            + "\n".join(lines)
+        )
+        if session_id:
+            user_content += (
+                f"\n\nSelected features' geometries are stored in PostGIS: "
+                f"temp.temp_selected_{session_id} (columns: id, geom_25833). "
+                f"Use this table in SQL for spatial proximity queries involving the selected features."
+            )
 
     messages = [
         {"role": "system", "content": system_prompt},

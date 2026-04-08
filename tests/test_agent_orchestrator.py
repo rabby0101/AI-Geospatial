@@ -73,6 +73,67 @@ def test_system_prompt_forbids_geometry_column():
     assert "ST_AsGeoJSON(geometry)" not in prompt
 
 
+import asyncio
+
+
+def _collect_steps(gen):
+    """Collect all steps from an async generator."""
+    steps = []
+    async def _run():
+        async for step in gen:
+            steps.append(step)
+    asyncio.run(_run())
+    return steps
+
+
+def test_run_agent_injects_selected_features_context():
+    captured_messages = []
+
+    def mock_call_llm(messages, provider="deepseek"):
+        captured_messages.extend(messages)
+        return (
+            'Thought: Done.\nFinal Answer:\n'
+            '{"type":"FeatureCollection","features":[]}\n'
+            'Summary: Test.\nLayer: test'
+        )
+
+    selected = [
+        {"geometry": {"type": "Point", "coordinates": [13.4, 52.5]},
+         "properties": {"name": "Cafe Mitte", "amenity": "cafe"},
+         "name": "Cafe Mitte"}
+    ]
+
+    with patch("app.utils.agent_orchestrator._call_llm", side_effect=mock_call_llm):
+        _collect_steps(run_agent(
+            question="Find bakeries near my selection",
+            session_id="session_abc",
+            selected_features=selected,
+        ))
+
+    user_msg = next(m["content"] for m in captured_messages if m["role"] == "user")
+    assert "Cafe Mitte" in user_msg
+    assert "amenity" in user_msg
+    assert "temp.temp_selected_session_abc" in user_msg
+
+
+def test_run_agent_no_selected_features_no_injection():
+    captured_messages = []
+
+    def mock_call_llm(messages, provider="deepseek"):
+        captured_messages.extend(messages)
+        return (
+            'Thought: Done.\nFinal Answer:\n'
+            '{"type":"FeatureCollection","features":[]}\n'
+            'Summary: Test.\nLayer: test'
+        )
+
+    with patch("app.utils.agent_orchestrator._call_llm", side_effect=mock_call_llm):
+        _collect_steps(run_agent(question="Find parks"))
+
+    user_msg = next(m["content"] for m in captured_messages if m["role"] == "user")
+    assert "temp_selected" not in user_msg
+
+
 def test_truncate_result_long_feature_collection():
     big = {"type": "FeatureCollection", "features": [{"id": i} for i in range(500)]}
     truncated = _truncate_result(big)
