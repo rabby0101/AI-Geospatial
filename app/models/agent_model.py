@@ -8,6 +8,8 @@ class AgentRequest(BaseModel):
     user_location: Optional[Dict[str, float]] = None
     drawn_geometry: Optional[Dict[str, Any]] = None
     selected_feature: Optional[Dict[str, Any]] = None
+    session_id: Optional[str] = None
+    selected_features: Optional[List[Dict[str, Any]]] = None
     max_iterations: int = 10
 
     class Config:
