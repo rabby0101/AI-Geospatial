@@ -148,7 +148,7 @@ def get_schema_info(keywords: Optional[List[str]] = None) -> Union[List[Dict], D
             except (TypeError, ValueError):
                 rc = "?"
             gt = r.get("geometry_type") or "NONE"
-            desc = (r.get("description") or "")[:100]
+            desc = (r.get("description") or "")[:1000]
             lines.append(f"{name} ({rc} rows, {gt}) — {desc}")
         return {"catalog": "\n".join(lines), "total_tables": len(lines)}
     except Exception as e:
@@ -243,83 +243,109 @@ def spatial_filter(
         return {"error": str(e)}
 
 
-def calculate_route(waypoints: List[Dict[str, float]], mode: str = "driving") -> Dict[str, Any]:
+def calculate_route(waypoints: List[Dict[str, float]], mode: str = "walking") -> Dict[str, Any]:
     """
-    Calculate the optimal route between waypoints using pgRouting.
+    Calculate the optimal route between waypoints using Valhalla.
 
     Args:
         waypoints: List of {"lat": float, "lon": float, "name": str} dicts
-        mode: "driving" or "walking"
+        mode: "walking", "cycling", or "driving"
 
     Returns:
-        GeoJSON FeatureCollection with route LineString + distance/duration properties
+        GeoJSON FeatureCollection with route LineString + distance_m/duration_s properties
         or {"error": str}
     """
     try:
-        from app.utils.spatial_engine import SpatialEngine
-        from app.models.query_model import OperationPlan, GeospatialOperation
+        from app.utils.valhalla_routing import valhalla_service
 
-        engine = SpatialEngine()
-        op = GeospatialOperation(
-            operation="routing",
-            parameters={"waypoints": waypoints, "mode": mode},
-            description=f"Route between {len(waypoints)} waypoints",
-        )
-        plan = OperationPlan(operations=[op], reasoning="Agent-requested routing")
-        result = engine._execute_routing_operation(op, plan)
+        MODE_MAP = {"walking": "pedestrian", "cycling": "bicycle", "driving": "auto"}
+        costing = MODE_MAP.get(mode, "pedestrian")
 
-        if not result.get("success"):
-            return {"error": result.get("error", "Routing failed")}
+        points = [(wp["lat"], wp["lon"]) for wp in waypoints]
+        names = [wp.get("name", f"Point {i+1}") for i, wp in enumerate(waypoints)]
+
+        if len(points) < 2:
+            return {"error": "At least 2 waypoints required"}
+
+        if len(points) == 2:
+            result = valhalla_service.get_route(
+                points[0][0], points[0][1],
+                points[1][0], points[1][1],
+                costing=costing
+            )
+        else:
+            result = valhalla_service.get_multi_point_route(points, costing=costing)
+
+        if not result.success:
+            return {"error": result.error or "Routing failed"}
 
         return {
             "type": "FeatureCollection",
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": result.get("geometry", {}),
+                    "geometry": result.geometry,
                     "properties": {
-                        "distance_m": result.get("total_distance_m", 0),
-                        "duration_s": (result.get("total_time_minutes", 0) or 0) * 60,
+                        "from": names[0],
+                        "to": names[-1],
+                        "mode": mode,
+                        "distance_m": round(result.distance_m),
+                        "distance_km": round(result.distance_m / 1000, 2),
+                        "duration_s": round(result.duration_seconds),
+                        "duration_min": round(result.duration_minutes, 1),
                     },
                 }
             ],
-            "distance_m": result.get("total_distance_m", 0),
-            "duration_s": (result.get("total_time_minutes", 0) or 0) * 60,
         }
     except Exception as e:
         logger.error(f"calculate_route error: {e}")
         return {"error": str(e)}
 
 
-def walking_isochrone(location: Dict[str, float], minutes: int) -> Dict[str, Any]:
+def walking_isochrone(location: Dict[str, float], minutes: int, mode: str = "walking") -> Dict[str, Any]:
     """
-    Calculate the area reachable by walking from a location within N minutes.
+    Calculate the area reachable from a location within N minutes by the given mode.
 
     Args:
         location: {"lat": float, "lon": float}
-        minutes: Walking time in minutes
+        minutes: Travel time in minutes
+        mode: "walking", "cycling", or "driving"
 
     Returns:
         GeoJSON FeatureCollection with isochrone Polygon
         or {"error": str}
     """
     try:
-        from app.utils.spatial_engine import SpatialEngine
-        from app.models.query_model import OperationPlan, GeospatialOperation
+        from app.utils.valhalla_routing import valhalla_service
 
-        engine = SpatialEngine()
-        op = GeospatialOperation(
-            operation="walking_time",
-            parameters={"origin": location, "time_minutes": minutes},
-            description=f"{minutes}-minute walking isochrone",
-        )
-        plan = OperationPlan(operations=[op], reasoning="Agent-requested isochrone")
-        result = engine._execute_walking_time_operation(op, plan)
+        MODE_MAP = {"walking": "pedestrian", "cycling": "bicycle", "driving": "auto"}
+        costing = MODE_MAP.get(mode, "pedestrian")
 
-        if not result.get("success"):
-            return {"error": result.get("error", "Isochrone failed")}
+        lat = location.get("lat")
+        lon = location.get("lon")
+        if lat is None or lon is None:
+            return {"error": "location must have 'lat' and 'lon' keys"}
 
-        return result.get("data", {"type": "FeatureCollection", "features": []})
+        result = valhalla_service.get_isochrone(lat, lon, minutes, costing=costing)
+
+        if not result.success:
+            return {"error": result.error or "Isochrone failed"}
+
+        return {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": result.geometry,
+                    "properties": {
+                        "mode": mode,
+                        "minutes": minutes,
+                        "center_lat": lat,
+                        "center_lon": lon,
+                    },
+                }
+            ],
+        }
     except Exception as e:
         logger.error(f"walking_isochrone error: {e}")
         return {"error": str(e)}
@@ -464,13 +490,14 @@ def execute_sql(sql: str) -> Dict[str, Any]:
     Execute a PostGIS SQL query and return results as a GeoJSON FeatureCollection.
 
     Rules for writing the SQL:
-    - ALWAYS write: SELECT *, ST_AsGeoJSON(geom_25833) AS geometry
-      geom_25833 is the geometry column in ALL tables; SELECT * preserves all attributes
+    - ALWAYS write: SELECT *, ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom
+      Use alias 'geom' — never 'geometry', as some tables (e.g. alkis_buildings) already
+      have a raw 'geometry' column and aliasing to it causes a conflict.
+      geom_25833 is THE geometry column in ALL tables; SELECT * preserves all attributes.
     - Tables live in the 'vector' schema: FROM vector.<table_name>
       Temp tables (selected features) live in the 'temp' schema: FROM temp.<table_name>
     - For spatial filters use ST_Within or ST_Intersects with ST_SetSRID(..., 4326)
     - Use ST_MakeValid() on geometries that may be invalid
-    - Limit results to 500 rows max to avoid memory issues
 
     Args:
         sql: Valid PostGIS SQL SELECT statement
@@ -487,19 +514,20 @@ def execute_sql(sql: str) -> Dict[str, Any]:
 
         features = []
         for row_dict in df.to_dict("records"):
-            # Extract geometry
+            # Extract GeoJSON geometry — look for the 'geom' alias first (canonical),
+            # then geom_25833 as fallback. Never use the raw 'geometry' column (WKB).
             geom = None
-            for key in ("geometry", "geom", "geom_25833"):
+            for key in ("geom", "geom_25833"):
                 if key in row_dict and row_dict[key]:
                     try:
                         geom = _json.loads(row_dict.pop(key))
+                        break
                     except Exception:
                         row_dict.pop(key, None)
-                    break
 
-            # Remove any remaining raw geometry columns to keep properties clean
+            # Remove all remaining raw geometry columns to keep properties clean
             for key in list(row_dict.keys()):
-                if "geom" in key.lower():
+                if "geom" in key.lower() or key == "geometry":
                     row_dict.pop(key)
 
             features.append({

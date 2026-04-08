@@ -50,23 +50,39 @@ Available tools:
 - get_table_columns(table_name: str) → list of {column, type, sample_values} for a table in the vector schema
 - execute_sql(sql: str) → GeoJSON FeatureCollection from a PostGIS SQL query
 - spatial_filter(features: GeoJSON, filter_geometry: GeoJSON, relation: "within"|"intersects") → GeoJSON FeatureCollection
-- calculate_route(waypoints: list[{lat,lon,name}], mode: "driving"|"walking") → GeoJSON FeatureCollection
-- walking_isochrone(location: {lat,lon}, minutes: int) → GeoJSON FeatureCollection
+- calculate_route(waypoints: list[{lat,lon,name}], mode: "walking"|"cycling"|"driving") → GeoJSON FeatureCollection with road-network route
+- walking_isochrone(location: {lat,lon}, minutes: int, mode: "walking"|"cycling"|"driving") → GeoJSON FeatureCollection with reachable area polygon
 - analyze_satellite(bbox: dict, indices: list[str]) → GeoJSON FeatureCollection
 - score_locations(features: GeoJSON, criteria: list[str]) → GeoJSON FeatureCollection with score property
 
-Standard workflow for spatial queries:
+Standard workflow for spatial queries (SQL-based):
 1. get_schema_info — get the full table catalog, pick the tables relevant to the query
 2. get_table_columns — inspect column names, types, and sample values before writing SQL
 3. geocode_location — resolve any named place to coordinates (if needed)
 4. create_buffer — if a distance/radius is involved
 5. execute_sql — write and run a PostGIS SQL query using what you learned
 
+Routing workflow (route from A to B):
+1. geocode_location — resolve each named place to {lat, lon}
+2. If one end is "nearest X": execute_sql — find the nearest matching feature and extract its coordinates
+3. calculate_route — pass the resolved waypoints with the correct mode ("walking"/"cycling"/"driving")
+
+Isochrone workflow (area reachable within N minutes):
+1. geocode_location — resolve the origin place to {lat, lon}
+2. walking_isochrone — pass the coordinates, minutes, and mode ("walking"/"cycling"/"driving")
+3. If the question also asks about POIs within the area: spatial_filter or execute_sql using the polygon
+
+Accessibility density workflow (which areas have fewest X within N minutes?):
+1. get_schema_info — find the neighborhood/district table and the POI table
+2. get_table_columns — check column names for both tables
+3. execute_sql — for each district, count POIs within a walking-distance proxy using ST_DWithin on geom_25833, then ORDER BY count ASC
+
 execute_sql rules:
 - Tables are in the 'vector' schema: FROM vector.<table_name>
   Temp tables (selected features) are in the 'temp' schema: FROM temp.<table_name>
-- ALWAYS write: SELECT *, ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geometry
-  - geom_25833 is THE geometry column in ALL tables — never use 'geometry' or 'geom'
+- ALWAYS write: SELECT *, ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom
+  - geom_25833 is THE geometry column in ALL tables — always use geom_25833, never 'geometry'
+  - Use alias 'geom' (not 'geometry') — some tables already have a 'geometry' column
   - SELECT * preserves all feature attributes in the result
   - ST_Transform(geom_25833, 4326) converts to WGS84 so the map can render it
 - For spatial proximity (ST_DWithin) use geom_25833 directly (units = metres, no transform needed):
@@ -74,12 +90,12 @@ execute_sql rules:
 - For spatial filter with a buffer polygon use:
   WHERE ST_Within(ST_Transform(geom_25833, 4326), ST_SetSRID(ST_GeomFromGeoJSON('<polygon_json>'), 4326))
   or ST_Intersects for partial overlap
-- Always add LIMIT 500
 
 Spatial tips:
 - GEOMETRY COLUMN: ALL tables use geom_25833 (EPSG:25833, units = metres).
-  Always write ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geometry in your SELECT.
-  get_table_columns will show it first in the column list.
+  Always write ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom in your SELECT.
+  Never use 'geometry' as an alias — some tables already have a raw 'geometry' column.
+  get_table_columns will show geom_25833 first in the column list.
 - COMPUTE AREA: Use ST_Area(geom_25833) / 10000.0 for hectares (geom_25833 is already projected, no transform needed).
   Do NOT use text 'area' columns for numeric comparison — always compute with ST_Area().
 - FILTER BY DISTRICT: Find the districts/bezirk table from get_schema_info, then use
@@ -87,14 +103,15 @@ Spatial tips:
 
 Rules:
 - The Final Answer MUST be a valid GeoJSON FeatureCollection
-- When execute_sql returns a successful FeatureCollection, IMMEDIATELY produce the Final Answer.
-  Do NOT re-run the same query. Use this exact format:
-  Thought: Got N results. Returning them.
+- When execute_sql, calculate_route, or walking_isochrone returns a successful FeatureCollection,
+  IMMEDIATELY produce the Final Answer using this exact format:
+  Thought: Got result. Returning it.
   Final Answer:
   {"use_last_result": true}
   Summary: <one sentence describing results>
   Layer: <snake_case_name>
-  The system will substitute the full FeatureCollection from your last execute_sql.
+  The system will substitute the full FeatureCollection from the last successful tool call.
+  Do NOT try to echo the geometry coordinates — always use {"use_last_result": true}.
 - Never guess table names — always call get_schema_info first
 - Never guess column names — always call get_table_columns before writing SQL
 - Call tools one at a time; wait for each result before proceeding
@@ -218,7 +235,7 @@ def _parse_llm_output(raw: str) -> Dict[str, Any]:
 async def run_agent(
     question: str,
     llm_provider: str = "deepseek",
-    max_iterations: int = 20,
+    max_iterations: int = 40,
     user_location: Optional[Dict] = None,
     drawn_geometry: Optional[Dict] = None,
     session_id: Optional[str] = None,
@@ -265,7 +282,7 @@ async def run_agent(
         {"role": "user", "content": user_content},
     ]
 
-    last_sql_result = None  # Store full execute_sql result for use_last_result
+    last_result = None  # Store full tool result for use_last_result (execute_sql, calculate_route, walking_isochrone)
 
     retry_count = 0
     max_retries = 2
@@ -305,9 +322,9 @@ async def run_agent(
 
         if parsed["type"] == "final_answer":
             geojson = parsed["geojson"]
-            # If agent signals use_last_result, substitute the full execute_sql result
-            if isinstance(geojson, dict) and geojson.get("use_last_result") and last_sql_result:
-                geojson = last_sql_result
+            # If agent signals use_last_result, substitute the last stored tool result
+            if isinstance(geojson, dict) and geojson.get("use_last_result") and last_result:
+                geojson = last_result
             elapsed = round(time.time() - start_time, 2)
             yield AgentStep(
                 type="tool_result",
@@ -349,9 +366,9 @@ async def run_agent(
             except Exception as e:
                 observation = {"error": str(e)}
 
-        # Store full execute_sql result for use_last_result
-        if tool_name == "execute_sql" and isinstance(observation, dict) and observation.get("type") == "FeatureCollection":
-            last_sql_result = observation
+        # Store full result for use_last_result (routing/isochrone tools return large geometries the LLM can't echo)
+        if tool_name in ("execute_sql", "calculate_route", "walking_isochrone") and isinstance(observation, dict) and observation.get("type") == "FeatureCollection":
+            last_result = observation
 
         truncated_obs = _truncate_result(observation)
         obs_str = json.dumps(truncated_obs, ensure_ascii=False, default=str)

@@ -7908,6 +7908,10 @@ LIMIT 10</textarea>
         // Create styled layer with Leaflet (with advanced clustering for points)
         function createStyledLayer(geojsonData, styleConfig) {
             // Validate geometry data
+            if (!geojsonData || !geojsonData.features) {
+                console.error('❌ createStyledLayer: geojsonData has no features array', geojsonData);
+                return L.featureGroup();
+            }
             console.log(`📐 Layer has ${geojsonData.features.length} features`);
 
             // Check geometry types and log any missing geometries
@@ -9394,7 +9398,7 @@ LIMIT 10</textarea>
             if (panel) { panel.classList.add('visible'); panel.classList.remove('collapsed'); }
             if (stepsContainer) stepsContainer.innerHTML = '';
 
-            const payload = { question, llm_provider: 'deepseek', max_iterations: 20 };
+            const payload = { question, llm_provider: 'deepseek', max_iterations: 40 };
             if (window.drawnGeometry) payload.drawn_geometry = window.drawnGeometry;
             if (window.userLocation) payload.user_location = window.userLocation;
             if (window.sessionId) payload.session_id = window.sessionId;
