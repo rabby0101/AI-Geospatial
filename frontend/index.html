@@ -1774,6 +1774,30 @@
             transform: translateX(100%);
         }
 
+        /* Agent Reasoning Right Panel */
+        #agentRightPanel {
+            width: 320px;
+            height: 100vh;
+            background: rgba(26, 24, 37, 0.95);
+            backdrop-filter: blur(24px) saturate(180%);
+            border-left: 1.5px solid rgba(255, 255, 255, 0.12);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            position: absolute;
+            right: 0;
+            top: 0;
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.3);
+            z-index: 600;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #agentRightPanel.visible {
+            display: flex;
+        }
+        #agentRightPanel.collapsed {
+            transform: translateX(100%);
+        }
+
         /* Floating Collapse Toggle Buttons */
         .panel-toggle-btn {
             position: fixed;
@@ -3562,14 +3586,7 @@
                         </div>
                     </div>
 
-                    <!-- Agent Progress Panel -->
-                    <div id="agentPanel" style="display:none; margin: 0 16px 8px; background: rgba(10,10,20,0.85); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; font-size: 13px; max-height: 320px; overflow-y: auto; backdrop-filter: blur(12px);">
-                        <div style="padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Agent Reasoning</span>
-                            <span id="agentPanelToggle" style="color: #555; cursor: pointer; font-size: 11px;" onclick="collapseAgentSteps()">[ hide ]</span>
-                        </div>
-                        <div id="agentSteps" style="padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;"></div>
-                    </div>
+                    <!-- Agent Progress Panel moved to right side (#agentRightPanel) -->
 
                     <!-- Tab Pills Row (Below Main Bar) -->
                     <div class="chat-tabs-row relative z-[60]">
@@ -3678,6 +3695,25 @@
     <button class="panel-toggle-btn right" onclick="toggleOperationsPanel()" title="Toggle operations panel">
         <i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i>
     </button>
+
+    <!-- Agent Reasoning Right Panel -->
+    <div id="agentRightPanel">
+        <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+                    display: flex; justify-content: space-between; align-items: center;
+                    background: rgba(0,0,0,0.2); flex-shrink: 0;">
+            <span style="color: #888; font-size: 11px; text-transform: uppercase;
+                         letter-spacing: 1px; font-weight: 600;">Agent Reasoning</span>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span id="agentPanelToggle" style="color: #555; cursor: pointer; font-size: 11px;"
+                      onclick="collapseAgentSteps()">[ hide ]</span>
+                <span style="color: #444; cursor: pointer; font-size: 15px; line-height: 1;"
+                      onclick="closeAgentRightPanel()" title="Close">✕</span>
+            </div>
+        </div>
+        <div id="agentSteps"
+             style="padding: 12px 14px; display: flex; flex-direction: column;
+                    gap: 8px; overflow-y: auto; flex: 1; font-size: 13px;"></div>
+    </div>
     </div>
     </div>
 
@@ -9333,11 +9369,16 @@ LIMIT 10</textarea>
             if (toggle) toggle.textContent = hidden ? '[ hide ]' : '[ show ]';
         }
 
+        function closeAgentRightPanel() {
+            const panel = document.getElementById('agentRightPanel');
+            if (panel) panel.classList.remove('visible');
+        }
+
         function _appendAgentStep(type, content) {
-            const panel = document.getElementById('agentPanel');
+            const panel = document.getElementById('agentRightPanel');
             const container = document.getElementById('agentSteps');
             if (!container) return;
-            if (panel) panel.style.display = 'block';
+            if (panel) { panel.classList.add('visible'); panel.classList.remove('collapsed'); }
             const badgeClass = { thought: 'badge-thought', action: 'badge-action', tool_result: 'badge-result', error: 'badge-error' }[type] || 'badge-result';
             const label = { thought: 'Thought', action: 'Action', tool_result: 'Result', error: 'Error' }[type] || type;
             const div = document.createElement('div');
@@ -9348,14 +9389,16 @@ LIMIT 10</textarea>
         }
 
         async function submitAgentQuery(question, llmProvider) {
-            const panel = document.getElementById('agentPanel');
+            const panel = document.getElementById('agentRightPanel');
             const stepsContainer = document.getElementById('agentSteps');
-            if (panel) panel.style.display = 'block';
+            if (panel) { panel.classList.add('visible'); panel.classList.remove('collapsed'); }
             if (stepsContainer) stepsContainer.innerHTML = '';
 
             const payload = { question, llm_provider: 'deepseek', max_iterations: 10 };
             if (window.drawnGeometry) payload.drawn_geometry = window.drawnGeometry;
             if (window.userLocation) payload.user_location = window.userLocation;
+            if (window.sessionId) payload.session_id = window.sessionId;
+            if (selectedFeatures && selectedFeatures.length > 0) payload.selected_features = selectedFeatures;
 
             try {
                 const response = await fetch('/api/agent/query', {
