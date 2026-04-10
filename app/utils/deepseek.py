@@ -25,6 +25,11 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
 OLLAMA_MODEL_SMALL = os.getenv("OLLAMA_MODEL_SMALL", "qwen3.5:4b")
 OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "600"))
 
+# LM Studio (Local LLM) Configuration - no API key needed
+LMSTUDIO_API_URL = os.getenv("LMSTUDIO_API_URL", "http://localhost:1234/v1")
+LMSTUDIO_MODEL = os.getenv("LMSTUDIO_MODEL", "gemma-4-e4b-it")
+LMSTUDIO_TIMEOUT = int(os.getenv("LMSTUDIO_TIMEOUT", "120"))
+
 # Simple in-memory cache (max 100 entries)
 _query_cache: Dict[str, str] = {}
 _MAX_CACHE_SIZE = 100
@@ -85,7 +90,7 @@ def _generate_cache_key(prompt: str, context: Optional[Dict[str, Any]] = None) -
     return cache_str
 
 
-def _select_tables_with_llm(user_query: str, tables_data: list) -> list:
+def _select_tables_with_llm(user_query: str, tables_data: list, skill: dict = None) -> list:
     """
     Pass 1: Ask the LLM which tables are needed for this query.
     Returns a filtered list of table names. Falls back to all on any failure.
@@ -122,6 +127,20 @@ def _select_tables_with_llm(user_query: str, tables_data: list) -> list:
     print(catalog_text)
     print(f"{'='*70}\n")
 
+    # Build skill-scoping instructions if a skill is active
+    skill_scope = ""
+    max_tables = 12
+    if skill:
+        domain = skill.get("domain", {})
+        focus = domain.get("focus", "")
+        exclude = domain.get("exclude", "")
+        max_tables = skill.get("max_tables", 12)
+        if focus:
+            skill_scope += f"\nSKILL FOCUS: {focus}"
+        if exclude:
+            skill_scope += f"\nSKILL EXCLUDE (do not select tables related to): {exclude}"
+        skill_scope += f"\nReturn at most {max_tables} table names."
+
     selection_prompt = (
         "You are a PostGIS database expert and urban planning analyst. Given this table catalog "
         "and a user question, determine which tables are needed to answer comprehensively.\n\n"
@@ -130,7 +149,8 @@ def _select_tables_with_llm(user_query: str, tables_data: list) -> list:
         "- Regulatory/zoning: for business location or development queries, include zoning/land-use plan tables\n"
         "- Context: boundary tables for district filtering, demographic data for demand analysis\n"
         "- Competition: tables with similar existing business types for competitive analysis\n\n"
-        "Return ONLY a JSON array of 3-12 table names. No explanation, no markdown, no code fences.\n\n"
+        f"Return ONLY a JSON array of 3-{max_tables} table names. No explanation, no markdown, no code fences."
+        f"{skill_scope}\n\n"
         f"TABLE CATALOG:\n{catalog_text}\n\n"
         f"USER QUESTION: {user_query}"
     )
@@ -186,6 +206,9 @@ def _select_tables_with_llm(user_query: str, tables_data: list) -> list:
         if selected_names and isinstance(selected_names, list):
             valid = [n for n in selected_names if n in all_table_names]
             if valid:
+                # Enforce skill max_tables cap
+                if skill and len(valid) > skill.get("max_tables", 12):
+                    valid = valid[:skill["max_tables"]]
                 print(f"[SchemaContext] Pass1 selected {len(valid)}/{len(tables_data)} tables: {valid}")
                 return valid
 
@@ -195,7 +218,7 @@ def _select_tables_with_llm(user_query: str, tables_data: list) -> list:
     return [t["table"] for t in tables_data]
 
 
-def _get_database_schema_for_llm(user_query: str = "", _return_selected_tables: bool = False):
+def _get_database_schema_for_llm(user_query: str = "", _return_selected_tables: bool = False, skill: dict = None):
     """
     Get the LIVE database schema from PostGIS.
 
@@ -227,7 +250,7 @@ def _get_database_schema_for_llm(user_query: str = "", _return_selected_tables: 
         # Pass 1: select only relevant tables when a user query is available
         selected_names_list = [t["table"] for t in tables_data]
         if user_query.strip():
-            selected_names_list = _select_tables_with_llm(user_query, tables_data)
+            selected_names_list = _select_tables_with_llm(user_query, tables_data, skill=skill)
             selected_names = set(selected_names_list)
             tables_data = [t for t in tables_data if t["table"] in selected_names]
 
@@ -267,8 +290,6 @@ def _get_database_schema_for_llm(user_query: str = "", _return_selected_tables: 
             # Format table entry
             schema_text += f"**{table_name}**\n"
             schema_text += f"  Description: {description}\n"
-            if usage_hint:
-                schema_text += f"  Usage: {usage_hint}\n"
             if geometry == "NONE":
                 schema_text += f"  Records: {row_count} | Geometry: NONE ⚠️ NO GEOMETRY COLUMNS — do NOT use geometry/geom_25833/ST_* on this table\n"
             else:
@@ -473,7 +494,7 @@ Never invent column values — if unsure, omit the filter."""
         return {}
 
 
-def _build_dynamic_system_prompt(user_query: str, precomputed_schema: str = None, query_plan: Dict[str, Any] = None, business_profile_section: str = "") -> str:
+def _build_dynamic_system_prompt(user_query: str, precomputed_schema: str = None, query_plan: Dict[str, Any] = None, business_profile_section: str = "", skill_injection: str = "") -> str:
     """
     Build a system prompt with LIVE table descriptions from the database.
     Enhanced with ontology awareness for semantic query understanding.
@@ -524,6 +545,10 @@ def _build_dynamic_system_prompt(user_query: str, precomputed_schema: str = None
             if reasoning:
                 plan_lines.append(f"\nReasoning: {reasoning}")
             final_prompt += "\n".join(plan_lines)
+
+        # Inject active skill constraints as the final instruction block
+        if skill_injection:
+            final_prompt += f"\n\n## ACTIVE SKILL CONSTRAINTS\n{skill_injection}"
 
         print(f"\n[FinalPrompt] Total: {len(final_prompt)} chars (~{len(final_prompt)//4} tokens)")
         print(f"[FinalPrompt] Breakdown — base: {len(base_prompt)} | schema: {len(schema_section)} | ontology: {len(ontology_section)} | plan: {len(str(query_plan or {}))}\n")
@@ -688,7 +713,7 @@ def _ontology_id_to_table_name(ontology_id: str) -> str:
     return id_to_table.get(ontology_id, ontology_id if ontology_id.startswith('osm_') else '')
 
 
-def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, drawn_geometry: Dict[str, Any] = None, query_plan: Dict[str, Any] = None, precomputed_schema: str = None, business_profile_section: str = "") -> Dict[str, str]:
+def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, drawn_geometry: Dict[str, Any] = None, query_plan: Dict[str, Any] = None, precomputed_schema: str = None, business_profile_section: str = "", skill_injection: str = "") -> Dict[str, str]:
     """
     Query DeepSeek API with a prompt, using simple in-memory cache.
     Dynamically builds prompts with only relevant tables for the query.
@@ -721,12 +746,13 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
         print(f"💨 Cache hit! Returning cached response")
         return _query_cache[cache_key]  # Returns dict with content, system_prompt, user_prompt
 
-    # Build dynamic system prompt — pass precomputed schema, query plan, and business profile
+    # Build dynamic system prompt — pass precomputed schema, query plan, business profile, and skill
     system_prompt = _build_dynamic_system_prompt(
         prompt,
         precomputed_schema=precomputed_schema,
         query_plan=query_plan,
         business_profile_section=business_profile_section,
+        skill_injection=skill_injection,
     )
 
     # Build the full prompt with context and user_location if provided
@@ -811,7 +837,7 @@ def query_deepseek(prompt: str, context: Dict[str, Any] = None, user_location: D
         raise Exception(f"Unexpected response format from DeepSeek: {str(e)}")
 
 
-def query_gemini(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, drawn_geometry: Dict[str, Any] = None, query_plan: Dict[str, Any] = None, precomputed_schema: str = None) -> Dict[str, str]:
+def query_gemini(prompt: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, drawn_geometry: Dict[str, Any] = None, query_plan: Dict[str, Any] = None, precomputed_schema: str = None, skill_injection: str = "") -> Dict[str, str]:
     """
     Query Google Gemini API with a prompt, using simple in-memory cache.
     Uses the same dynamic prompt building as DeepSeek for consistency.
@@ -845,7 +871,7 @@ def query_gemini(prompt: str, context: Dict[str, Any] = None, user_location: Dic
         return _query_cache[cache_key]
 
     # Build dynamic system prompt — pass precomputed schema and query plan if available
-    system_prompt = _build_dynamic_system_prompt(prompt, precomputed_schema=precomputed_schema, query_plan=query_plan)
+    system_prompt = _build_dynamic_system_prompt(prompt, precomputed_schema=precomputed_schema, query_plan=query_plan, skill_injection=skill_injection)
 
     # Build the full prompt with context and user_location
     full_prompt = prompt
@@ -1427,7 +1453,25 @@ def _evaluate_results(
 # ─── End Phase 0 ──────────────────────────────────────────────────────────────
 
 
-def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, selected_features: List[Dict[str, Any]] = None, drawn_geometry: Dict[str, Any] = None, llm_provider: str = None) -> OperationPlan:
+def query_lmstudio(messages: list) -> str:
+    """Call LM Studio local server (OpenAI-compatible). Returns raw text content."""
+    payload = {
+        "model": LMSTUDIO_MODEL,
+        "messages": messages,
+        "temperature": 0.1,
+        "max_tokens": 2048,
+    }
+    resp = requests.post(
+        f"{LMSTUDIO_API_URL}/chat/completions",
+        headers={"Content-Type": "application/json"},
+        json=payload,
+        timeout=LMSTUDIO_TIMEOUT,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"].strip()
+
+
+def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_location: Dict[str, float] = None, query_type: str = None, selected_feature: Dict[str, Any] = None, selected_features: List[Dict[str, Any]] = None, drawn_geometry: Dict[str, Any] = None, llm_provider: str = None, skill: Dict[str, Any] = None) -> OperationPlan:
     """
     Parse a natural language geospatial query into structured operations.
     Uses DeepSeek API to convert natural language to SQL.
@@ -1486,27 +1530,34 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
             )
 
     # ── Phase 0: Business Intelligence ──────────────────────────────────────
+    from app.utils.skills_manager import phase_enabled, get_skill_prompt_injection
     business_profile: Optional[Dict[str, Any]] = None
     business_profile_section = ""
-    business_type = _detect_business_type(question)
-    if business_type:
-        print(f"[Phase0] Business type detected: {business_type}")
-        business_profile = _get_business_profile(business_type)
-        if business_profile:
-            print(f"[Phase0] Profile found: {business_profile['display_name']}")
+    if phase_enabled(skill, "phase_0_business_intel"):
+        business_type = _detect_business_type(question)
+        if business_type:
+            print(f"[Phase0] Business type detected: {business_type}")
+            business_profile = _get_business_profile(business_type)
+            if business_profile:
+                print(f"[Phase0] Profile found: {business_profile['display_name']}")
+            else:
+                print(f"[Phase0] No profile found — generating with LLM...")
+                business_profile = _generate_business_profile_with_llm(business_type, question)
+            kg_facts = _get_kg_facts(business_type)
+            n_perm = len(kg_facts.get("permitted", []))
+            n_prohib = len(kg_facts.get("prohibited", []))
+            print(f"[Phase0] KG: {n_perm} permitted zones, {n_prohib} prohibited zones")
+            business_profile_section = _format_business_profile_for_prompt(
+                business_profile, kg_facts, business_type
+            )
         else:
-            print(f"[Phase0] No profile found — generating with LLM...")
-            business_profile = _generate_business_profile_with_llm(business_type, question)
-        kg_facts = _get_kg_facts(business_type)
-        n_perm = len(kg_facts.get("permitted", []))
-        n_prohib = len(kg_facts.get("prohibited", []))
-        print(f"[Phase0] KG: {n_perm} permitted zones, {n_prohib} prohibited zones")
-        business_profile_section = _format_business_profile_for_prompt(
-            business_profile, kg_facts, business_type
-        )
+            print(f"[Phase0] No business type detected — skipping profile lookup")
     else:
-        print(f"[Phase0] No business type detected — skipping profile lookup")
+        print(f"[Phase0] Skipped by active skill.")
     # ── End Phase 0 ──────────────────────────────────────────────────────────
+
+    # Build skill prompt injection for Phase 4
+    skill_injection = get_skill_prompt_injection(skill)
 
     # Route to appropriate LLM provider
     effective_query_type = query_type if not is_routing_query else "routing"
@@ -1516,11 +1567,13 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
     precomputed_schema = None
     query_plan = {}
     try:
-        schema_text, selected_tables = _get_database_schema_for_llm(question, _return_selected_tables=True)
+        schema_text, selected_tables = _get_database_schema_for_llm(question, _return_selected_tables=True, skill=skill)
         precomputed_schema = schema_text
-        if _should_run_query_planning(selected_tables, schema_text):
+        if phase_enabled(skill, "phase_3_planning") and _should_run_query_planning(selected_tables, schema_text):
             print(f"[Phase3] Running query planning ({len(selected_tables)} tables selected)")
             query_plan = _plan_query_with_llm(question, schema_text)
+        elif not phase_enabled(skill, "phase_3_planning"):
+            print(f"[Phase3] Skipped by active skill.")
         else:
             print(f"[Phase3] Skipped — simple query ({len(selected_tables)} table(s))")
     except Exception as phase_err:
@@ -1529,7 +1582,7 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
     try:
         if provider == "gemini":
             print("✨ Using Gemini API")
-            response_dict = query_gemini(question, context, user_location, effective_query_type, selected_feature, drawn_geometry, query_plan=query_plan, precomputed_schema=precomputed_schema)
+            response_dict = query_gemini(question, context, user_location, effective_query_type, selected_feature, drawn_geometry, query_plan=query_plan, precomputed_schema=precomputed_schema, skill_injection=skill_injection)
         elif provider == "ollama":
             print("🦙 Using Ollama (local)")
             response_dict = query_ollama(question, context, user_location, effective_query_type, selected_feature, drawn_geometry)
@@ -1538,7 +1591,7 @@ def parse_geospatial_query(question: str, context: Dict[str, Any] = None, user_l
             response_dict = query_ollama(question, context, user_location, effective_query_type, selected_feature, drawn_geometry, model_override=OLLAMA_MODEL_SMALL, num_ctx=64000, num_predict=2048)
         else:
             print("🧠 Using DeepSeek API")
-            response_dict = query_deepseek(question, context, user_location, effective_query_type, selected_feature, drawn_geometry, query_plan=query_plan, precomputed_schema=precomputed_schema, business_profile_section=business_profile_section)
+            response_dict = query_deepseek(question, context, user_location, effective_query_type, selected_feature, drawn_geometry, query_plan=query_plan, precomputed_schema=precomputed_schema, business_profile_section=business_profile_section, skill_injection=skill_injection)
     except Exception as api_err:
         print(f"❌ API Error: {api_err}")
         import traceback
