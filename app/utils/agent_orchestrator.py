@@ -15,6 +15,7 @@ import requests
 
 from app.models.agent_model import AgentStep, AgentFinalAnswer
 from app.utils.agent_tools import TOOL_REGISTRY
+from app.utils.deepseek import query_lmstudio
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +69,15 @@ Routing workflow (route from A to B):
 3. calculate_route — pass the resolved waypoints with the correct mode ("walking"/"cycling"/"driving")
 
 Isochrone workflow (area reachable within N minutes):
+⚠️ TRIGGER RULE: If the query mentions ANY time duration (e.g. "5 minutes", "10 min", "half an hour") alongside walking, travel, or reachability — ALWAYS use walking_isochrone. Never use create_buffer or ST_DWithin as a substitute.
+Origin from a named place:
 1. geocode_location — resolve the origin place to {lat, lon}
 2. walking_isochrone — pass the coordinates, minutes, and mode ("walking"/"cycling"/"driving")
-3. If the question also asks about POIs within the area: spatial_filter or execute_sql using the polygon
+3. If the question also asks about POIs within the area: spatial_filter or execute_sql using the isochrone polygon
+Origin from a selected feature (temp table available):
+1. execute_sql — extract the centroid: SELECT ST_Y(ST_Transform(ST_Centroid(geom_25833),4326)) AS lat, ST_X(ST_Transform(ST_Centroid(geom_25833),4326)) AS lon FROM temp.temp_selected_<session_id> LIMIT 1
+2. walking_isochrone — pass {lat, lon} from step 1, minutes, and mode
+3. execute_sql or spatial_filter — find POIs within the isochrone polygon
 
 Accessibility density workflow (which areas have fewest X within N minutes?):
 1. get_schema_info — find the neighborhood/district table and the POI table
@@ -120,10 +127,13 @@ Rules:
 
 
 def _call_llm(messages: list, provider: str = "deepseek") -> str:
-    """Call DeepSeek with a message list. Returns raw text."""
+    """Route to the appropriate LLM provider and return raw text."""
+    if provider == "lmstudio":
+        return query_lmstudio(messages)
+
+    # Default: DeepSeek
     if not DEEPSEEK_API_KEY:
         raise RuntimeError("DEEPSEEK_API_KEY not set. Add it to your .env file.")
-
     payload = {
         "model": "deepseek-chat",
         "messages": messages,
@@ -274,7 +284,9 @@ async def run_agent(
             user_content += (
                 f"\n\nSelected features' geometries are stored in PostGIS: "
                 f"temp.temp_selected_{session_id} (columns: id, geom_25833). "
-                f"Use this table in SQL for spatial proximity queries involving the selected features."
+                f"For plain distance queries use ST_DWithin with this table. "
+                f"For time-based walking queries (e.g. 'within X minutes') follow the isochrone workflow: "
+                f"extract {'{'}lat,lon{'}'} from the temp table via execute_sql, then call walking_isochrone."
             )
 
     messages = [
