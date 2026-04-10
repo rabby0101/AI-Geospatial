@@ -3562,6 +3562,11 @@
                                                         <span
                                                             class="w-2 h-2 rounded-full bg-violet-400 inline-block"></span>
                                                         Qwen3.5 4b (Local)</a></li>
+                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('lmstudio', 'Gemma 4 E4B (Local)')"
+                                                        class="flex items-center gap-2">
+                                                        <span
+                                                            class="w-2 h-2 rounded-full bg-orange-400 inline-block"></span>
+                                                        Gemma 4 E4B (Local)</a></li>
                                             </ul>
                                         </div>
 
@@ -9398,7 +9403,7 @@ LIMIT 10</textarea>
             if (panel) { panel.classList.add('visible'); panel.classList.remove('collapsed'); }
             if (stepsContainer) stepsContainer.innerHTML = '';
 
-            const payload = { question, llm_provider: 'deepseek', max_iterations: 40 };
+            const payload = { question, llm_provider: llmProvider || 'deepseek', max_iterations: 40 };
             if (window.drawnGeometry) payload.drawn_geometry = window.drawnGeometry;
             if (window.userLocation) payload.user_location = window.userLocation;
             if (window.sessionId) payload.session_id = window.sessionId;
