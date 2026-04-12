@@ -2,31 +2,25 @@
 Agent trace storage — saves and retrieves per-query agent traces from Postgres.
 """
 import json
-import os
 import re
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
+from app.utils.database import db_manager
 
 
-def _get_engine():
-    db_user = os.getenv('POSTGRES_USER', 'geoassist')
-    db_password = os.getenv('POSTGRES_PASSWORD', 'geoassist_password')
-    db_host = os.getenv('POSTGRES_HOST', 'localhost')
-    db_port = os.getenv('POSTGRES_PORT', '5433')
-    db_name = os.getenv('POSTGRES_DB', 'geoassist')
-    return create_engine(
-        f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}',
-        pool_pre_ping=True,
-    )
+def _engine():
+    """Return the shared application engine, initialising if needed."""
+    if not db_manager.engine:
+        db_manager.initialize()
+    return db_manager.engine
 
 
 def init_trace_table() -> None:
     """Create agent_traces table if it does not exist. Called at app startup."""
-    engine = _get_engine()
-    with engine.connect() as conn:
+    with _engine().connect() as conn:
         conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS agent_traces (
+            CREATE TABLE IF NOT EXISTS public.agent_traces (
                 query_id  TEXT PRIMARY KEY,
                 steps     JSONB NOT NULL DEFAULT '[]',
                 sql_queries JSONB NOT NULL DEFAULT '[]',
@@ -50,11 +44,16 @@ def save_trace(
     tables_used: List[str],
     results: Optional[Dict[str, Any]] = None,
 ) -> None:
-    engine = _get_engine()
-    with engine.connect() as conn:
+    """Insert or update a trace record (upsert on query_id).
+
+    An existing query_id is silently overwritten — callers should ensure
+    query_id is unique per agent run. results may be None if the agent
+    has not yet produced a final answer.
+    """
+    with _engine().connect() as conn:
         conn.execute(
             text("""
-                INSERT INTO agent_traces (query_id, steps, sql_queries, tables_used, results)
+                INSERT INTO public.agent_traces (query_id, steps, sql_queries, tables_used, results)
                 VALUES (:query_id, :steps::jsonb, :sql_queries::jsonb,
                         :tables_used::jsonb, :results::jsonb)
                 ON CONFLICT (query_id) DO UPDATE SET
@@ -75,21 +74,20 @@ def save_trace(
 
 
 def get_trace(query_id: str) -> Optional[Dict[str, Any]]:
-    engine = _get_engine()
-    with engine.connect() as conn:
+    with _engine().connect() as conn:
         row = conn.execute(
             text("""
                 SELECT steps, sql_queries, tables_used, results
-                FROM agent_traces WHERE query_id = :qid
+                FROM public.agent_traces WHERE query_id = :qid
             """),
             {"qid": query_id},
         ).fetchone()
-    if not row:
-        return None
-    return {
-        "query_id":    query_id,
-        "steps":       row[0] or [],
-        "sql_queries": row[1] or [],
-        "tables_used": row[2] or [],
-        "results":     row[3],
-    }
+        if not row:
+            return None
+        return {
+            "query_id":    query_id,
+            "steps":       row[0] or [],
+            "sql_queries": row[1] or [],
+            "tables_used": row[2] or [],
+            "results":     row[3],
+        }
