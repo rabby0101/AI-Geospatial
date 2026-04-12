@@ -5,7 +5,6 @@ from fastapi.responses import HTMLResponse
 from pathlib import Path
 import os
 
-from app.routes import query_router
 from app.routes.database import router as database_router
 from app.routes.routing import router as routing_router
 from app.routes.safety import router as safety_router
@@ -16,6 +15,8 @@ from app.routes.geocoding import router as geocoding_router
 from app.routes.satellite import router as satellite_router
 from app.routes.skills import router as skills_router
 from app.routes.agent import router as agent_router
+from app.routes.agent_trace import router as agent_trace_router
+from app.routes.temp_layers import router as temp_layers_router
 from app.utils.database import db_manager
 from app.utils.auto_discovery import auto_discovery
 from app.utils.skills_manager import load_skills
@@ -46,6 +47,12 @@ app.add_middleware(
 async def startup_event():
     """Initialize database connection, auto-discover tables, and start SchemaWatcher"""
     load_skills()
+    from app.utils.agent_trace_store import init_trace_table
+    try:
+        init_trace_table()
+        print("✅ Agent trace table ready")
+    except Exception as e:
+        print(f"⚠️  Agent trace table init failed: {e}")
     print("🚀 Starting Cognitive Geospatial Assistant API...")
     print("📊 Initializing database connection...")
 
@@ -94,7 +101,6 @@ async def shutdown_event():
 
 
 # Include routers
-app.include_router(query_router)
 app.include_router(database_router)    # Database metadata and schema endpoints
 app.include_router(routing_router)     # Road routing and connectivity endpoints
 app.include_router(safety_router)      # Safety analysis endpoints
@@ -105,6 +111,8 @@ app.include_router(geocoding_router)         # Geocoding endpoints (Nominatim)
 app.include_router(satellite_router)         # Satellite image analysis endpoints
 app.include_router(skills_router)            # Skills system endpoints
 app.include_router(agent_router)             # Agentic ReAct query endpoint
+app.include_router(agent_trace_router)       # Agent trace retrieval endpoint
+app.include_router(temp_layers_router)       # Temp layer creation for selected features
 
 
 # Serve static files (dashboards, assets)
