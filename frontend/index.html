@@ -9624,16 +9624,24 @@ LIMIT 10</textarea>
         }
 
         async function submitAgentQuery(question, llmProvider) {
-            const panel = document.getElementById('agentRightPanel');
-            const stepsContainer = document.getElementById('agentSteps');
-            if (panel) { panel.classList.add('visible'); panel.classList.remove('collapsed'); }
-            if (stepsContainer) stepsContainer.innerHTML = '';
+            // Prepare unified panel
+            _clearPanelSections();
+            _showPanelSections();
+            const titleEl = document.getElementById('operationsTitle');
+            if (titleEl) titleEl.textContent = question.length > 28 ? question.slice(0, 28) + '…' : question;
+
+            // Temp layer in left panel (loading state)
+            const tempLayerDomId = createTempLayer(question);
 
             const payload = { question, llm_provider: llmProvider || 'deepseek', max_iterations: 40 };
-            if (window.drawnGeometry) payload.drawn_geometry = window.drawnGeometry;
-            if (window.userLocation) payload.user_location = window.userLocation;
-            if (window.sessionId) payload.session_id = window.sessionId;
+            if (window.drawnGeometry)                            payload.drawn_geometry    = window.drawnGeometry;
+            if (window.userLocation)                             payload.user_location     = window.userLocation;
+            if (window.sessionId)                                payload.session_id        = window.sessionId;
             if (selectedFeatures && selectedFeatures.length > 0) payload.selected_features = selectedFeatures;
+
+            let capturedQueryId = null;
+            let capturedLayerId = null;
+            let agentDone       = false;
 
             try {
                 const response = await fetch('/api/agent/query', {
@@ -9644,9 +9652,9 @@ LIMIT 10</textarea>
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                const reader = response.body.getReader();
+                const reader  = response.body.getReader();
                 const decoder = new TextDecoder();
-                let buffer = '';
+                let buffer    = '';
 
                 while (true) {
                     const { value, done } = await reader.read();
@@ -9662,47 +9670,75 @@ LIMIT 10</textarea>
                         if (!raw) continue;
 
                         let step;
-                        try { step = JSON.parse(raw); } catch(e) {
-                            console.error('[AGENT SSE] JSON.parse failed, len=' + raw.length + ', err=' + e.message + ', preview=' + raw.slice(0, 120));
+                        try { step = JSON.parse(raw); } catch (e) {
+                            console.error('[AGENT SSE] JSON.parse failed, err=' + e.message + ', preview=' + raw.slice(0, 120));
                             continue;
                         }
                         console.log('[AGENT SSE] step:', step.type, step.tool_name || '');
 
-                        if (step.type === 'done') break;
+                        if (step.type === 'done') {
+                            capturedQueryId = step.query_id || null;
+                            // Attach query_id to the layer that was just added
+                            if (capturedQueryId && capturedLayerId !== null) {
+                                const li = layers.find(l => l.id === capturedLayerId);
+                                if (li) {
+                                    if (!li.metadata) li.metadata = {};
+                                    li.metadata.queryId = capturedQueryId;
+                                    saveLayersToStorage();
+                                }
+                            }
+                            agentDone = true;
+                            break;
+                        }
 
                         if (step.type === 'thought') {
                             _appendAgentStep('thought', step.content);
+
                         } else if (step.type === 'action') {
                             _appendAgentStep('action', step.content);
+                            // Extract SQL and tables from execute_sql calls
+                            if (step.tool_name === 'execute_sql' && step.tool_args && step.tool_args.sql) {
+                                _appendSqlQuery(step.tool_args.sql);
+                                const tables = [...step.tool_args.sql.matchAll(/(?:FROM|JOIN)\s+vector\.(\w+)/gi)].map(m => m[1]);
+                                tables.forEach(_appendTableBadge);
+                            }
+
                         } else if (step.type === 'tool_result' && step.tool_name !== 'final_answer') {
                             const content = typeof step.tool_result === 'object'
                                 ? JSON.stringify(step.tool_result).slice(0, 300)
                                 : String(step.content).slice(0, 300);
                             _appendAgentStep('tool_result', content);
+
                         } else if (step.type === 'tool_result' && step.tool_name === 'final_answer') {
-                            const fa = step.tool_result;
+                            const fa    = step.tool_result;
                             const count = (fa.geojson && fa.geojson.features) ? fa.geojson.features.length : 0;
                             console.log('[AGENT] final_answer received:', {
-                                layer: fa.layer_name,
-                                featureCount: count,
+                                layer: fa.layer_name, featureCount: count,
                                 geojsonType: fa.geojson && fa.geojson.type,
-                                firstFeatureGeom: fa.geojson && fa.geojson.features && fa.geojson.features[0] && fa.geojson.features[0].geometry && fa.geojson.features[0].geometry.type,
-                                addLayerAvailable: typeof addLayer === 'function',
                             });
                             _appendAgentStep('tool_result', `✅ ${fa.summary} (${count} features · ${fa.execution_time}s)`);
+                            _fillResultsSection(fa);
                             if (fa.geojson && typeof addLayer === 'function') {
                                 addLayer(fa.layer_name, fa.geojson, question, [], fa.summary, [], {}, fa.execution_time);
+                                capturedLayerId = layers.length > 0 ? layers[layers.length - 1].id : null;
                             } else {
                                 console.warn('[AGENT] addLayer not called — fa.geojson:', !!fa.geojson, 'addLayer type:', typeof addLayer);
                             }
+
                         } else if (step.type === 'error') {
                             _appendAgentStep('error', step.content);
                         }
                     }
+                    if (agentDone) break;
                 }
             } catch (err) {
                 _appendAgentStep('error', `Connection error: ${err.message}`);
             } finally {
+                // Remove temp layer spinner from left panel
+                if (tempLayerDomId) {
+                    const tempEl = document.getElementById(tempLayerDomId);
+                    if (tempEl) tempEl.remove();
+                }
                 const searchBtn = document.getElementById('searchBtn');
                 if (searchBtn) searchBtn.disabled = false;
                 setLoading(false);
