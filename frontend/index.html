@@ -1798,6 +1798,101 @@
             transform: translateX(100%);
         }
 
+        /* ── Unified 4-section operations panel ── */
+        .panel-section {
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .panel-section-header {
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-section-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .panel-section-label.lbl-reasoning { color: #8a70d9; }
+        .panel-section-label.lbl-sql       { color: #60c060; }
+        .panel-section-label.lbl-tables    { color: #A3B565; }
+        .panel-section-label.lbl-results   { color: #5aaae0; }
+        .panel-section-toggle {
+            color: #555;
+            cursor: pointer;
+            font-size: 10px;
+        }
+        .panel-section-meta {
+            color: #555;
+            font-size: 10px;
+        }
+        .panel-section-scroll {
+            overflow-y: auto;
+            padding: 10px 14px;
+            background: rgba(0,0,0,0.2);
+        }
+        .panel-section-scroll.reasoning { height: 130px; }
+        .panel-section-scroll.sql       { height: 110px; }
+        .panel-section-body {
+            padding: 8px 14px;
+            background: rgba(0,0,0,0.2);
+        }
+        .sql-query-label {
+            color: #555;
+            font-size: 9px;
+            margin-bottom: 3px;
+            font-family: sans-serif;
+        }
+        .sql-query-block {
+            background: #111;
+            color: #a3d977;
+            font-size: 9px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border-left: 2px solid #60c060;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+        .panel-table-badge {
+            background: #1e2a10;
+            color: #A3B565;
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(163,181,101,0.2);
+            display: inline-block;
+            margin: 2px;
+        }
+        .panel-results-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .panel-results-stat {
+            flex: 1;
+            background: #111;
+            border-radius: 4px;
+            padding: 5px 7px;
+            text-align: center;
+        }
+        .panel-results-stat-value {
+            color: #5aaae0;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .panel-results-stat-label {
+            color: #666;
+            font-size: 9px;
+        }
+        .panel-results-desc {
+            color: #aaa;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
         /* Floating Collapse Toggle Buttons */
         .panel-toggle-btn {
             position: fixed;
@@ -3570,16 +3665,6 @@
                                             </ul>
                                         </div>
 
-                                        <!-- Agent mode toggle -->
-                                        <button
-                                            id="agentModeBtn"
-                                            onclick="toggleAgentMode()"
-                                            title="Toggle Agent Mode (ReAct — step-by-step reasoning)"
-                                            class="btn btn-sm btn-ghost opacity-70 hover:opacity-100 gap-1 text-xs"
-                                            style="border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;">
-                                            🤖 Agent OFF
-                                        </button>
-
                                         <button
                                             class="btn btn-primary btn-circle shadow-lg hover:scale-105 transition-transform"
                                             id="searchBtn" onclick="executeSearch()" title="Submit query">
@@ -3690,8 +3775,49 @@
             <div id="operationsTitle">Operations</div>
         </div>
         <div class="operations-content" id="operationsContent">
-            <div class="no-selection">
-                Click a layer to view operations
+            <!-- Idle state -->
+            <div class="no-selection" id="panelNoSelection">Click a layer to view operations</div>
+
+            <!-- 4-section layout — shown when a query is active or a layer is selected -->
+            <div id="panelSections" style="display:none;">
+
+                <!-- Section 1: Agent Reasoning -->
+                <div class="panel-section" style="background:rgba(138,112,217,0.04);">
+                    <div class="panel-section-header">
+                        <span class="panel-section-label lbl-reasoning">Agent Reasoning</span>
+                        <span class="panel-section-toggle" id="panelReasoningToggle"
+                              onclick="togglePanelSection('panelReasoningBody','panelReasoningToggle')">[ hide ]</span>
+                    </div>
+                    <div id="panelReasoningBody" class="panel-section-scroll reasoning"></div>
+                </div>
+
+                <!-- Section 2: SQL Queries -->
+                <div class="panel-section" style="background:rgba(96,192,96,0.03);">
+                    <div class="panel-section-header">
+                        <span class="panel-section-label lbl-sql">SQL Queries</span>
+                        <span class="panel-section-meta" id="panelSqlCount">0 queries</span>
+                    </div>
+                    <div id="panelSqlBody" class="panel-section-scroll sql"></div>
+                </div>
+
+                <!-- Section 3: Tables Used -->
+                <div class="panel-section" style="background:rgba(163,181,101,0.03);">
+                    <div class="panel-section-header">
+                        <span class="panel-section-label lbl-tables">Tables Used</span>
+                    </div>
+                    <div id="panelTablesBody" class="panel-section-body"></div>
+                </div>
+
+                <!-- Section 4: Results -->
+                <div class="panel-section" style="border-bottom:none;background:rgba(80,160,220,0.03);">
+                    <div class="panel-section-header">
+                        <span class="panel-section-label lbl-results">Results</span>
+                    </div>
+                    <div id="panelResultsBody" class="panel-section-body">
+                        <div style="color:#666;font-size:11px;padding:4px 0;">Waiting for agent to finish…</div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -9354,19 +9480,121 @@ LIMIT 10</textarea>
             }, 100);
         }
 
-        // Execute search
-        // ─── Agent Mode ──────────────────────────────────────────────────────────
+        // ── Unified panel helpers ──────────────────────────────────────────────
 
-        window._useAgent = false;
+        function _showPanelSections() {
+            const noSel    = document.getElementById('panelNoSelection');
+            const sections = document.getElementById('panelSections');
+            const panel    = document.getElementById('operationsPanel');
+            if (noSel)    noSel.style.display    = 'none';
+            if (sections) sections.style.display = 'block';
+            if (panel)    panel.classList.remove('collapsed');
+        }
 
-        function toggleAgentMode() {
-            window._useAgent = !window._useAgent;
-            const btn = document.getElementById('agentModeBtn');
-            if (btn) {
-                btn.textContent = window._useAgent ? '🤖 Agent ON' : '🤖 Agent OFF';
-                btn.style.background = window._useAgent ? 'rgba(60,120,60,0.4)' : '';
-                btn.style.color = window._useAgent ? '#7df' : '';
-            }
+        function _hidePanelSections() {
+            const noSel    = document.getElementById('panelNoSelection');
+            const sections = document.getElementById('panelSections');
+            if (noSel)    noSel.style.display    = '';
+            if (sections) sections.style.display = 'none';
+        }
+
+        function _clearPanelSections() {
+            const reasoningBody = document.getElementById('panelReasoningBody');
+            const sqlBody       = document.getElementById('panelSqlBody');
+            const tablesBody    = document.getElementById('panelTablesBody');
+            const resultsBody   = document.getElementById('panelResultsBody');
+            const sqlCount      = document.getElementById('panelSqlCount');
+            const toggle        = document.getElementById('panelReasoningToggle');
+            if (reasoningBody) { reasoningBody.innerHTML = ''; reasoningBody.style.display = ''; }
+            if (sqlBody)       sqlBody.innerHTML       = '';
+            if (tablesBody)    tablesBody.innerHTML    = '';
+            if (resultsBody)   resultsBody.innerHTML   = '<div style="color:#666;font-size:11px;padding:4px 0;">Waiting for agent to finish…</div>';
+            if (sqlCount)      sqlCount.textContent    = '0 queries';
+            if (toggle)        toggle.textContent      = '[ hide ]';
+            window._panelSqlCount  = 0;
+            window._panelTablesSet = new Set();
+        }
+
+        function togglePanelSection(bodyId, toggleId) {
+            const body   = document.getElementById(bodyId);
+            const toggle = document.getElementById(toggleId);
+            if (!body || !toggle) return;
+            const hidden = body.style.display === 'none';
+            body.style.display = hidden ? '' : 'none';
+            toggle.textContent  = hidden ? '[ hide ]' : '[ show ]';
+        }
+
+        function _appendSqlQuery(sql) {
+            const container = document.getElementById('panelSqlBody');
+            const countEl   = document.getElementById('panelSqlCount');
+            if (!container) return;
+            window._panelSqlCount = (window._panelSqlCount || 0) + 1;
+            const label = document.createElement('div');
+            label.className   = 'sql-query-label';
+            label.textContent = `Query ${window._panelSqlCount}`;
+            const pre = document.createElement('pre');
+            pre.className   = 'sql-query-block';
+            pre.textContent = sql;
+            container.appendChild(label);
+            container.appendChild(pre);
+            container.scrollTop = container.scrollHeight;
+            if (countEl) countEl.textContent = `${window._panelSqlCount} quer${window._panelSqlCount === 1 ? 'y' : 'ies'}`;
+        }
+
+        function _appendTableBadge(tableName) {
+            const container = document.getElementById('panelTablesBody');
+            if (!container) return;
+            if (!window._panelTablesSet) window._panelTablesSet = new Set();
+            if (window._panelTablesSet.has(tableName)) return;
+            window._panelTablesSet.add(tableName);
+            const badge = document.createElement('span');
+            badge.className   = 'panel-table-badge';
+            badge.textContent = tableName;
+            container.appendChild(badge);
+        }
+
+        function _fillResultsSection(fa) {
+            const container = document.getElementById('panelResultsBody');
+            if (!container) return;
+            const count = (fa.geojson && fa.geojson.features) ? fa.geojson.features.length : 0;
+            const time  = fa.execution_time ? `${fa.execution_time}s` : '—';
+            container.innerHTML = `
+                <div class="panel-results-row">
+                    <div class="panel-results-stat">
+                        <div class="panel-results-stat-value">${count}</div>
+                        <div class="panel-results-stat-label">features</div>
+                    </div>
+                    <div class="panel-results-stat">
+                        <div class="panel-results-stat-value">${time}</div>
+                        <div class="panel-results-stat-label">exec time</div>
+                    </div>
+                </div>
+                <div class="panel-results-desc">${(fa.summary || '').replace(/</g, '&lt;')}</div>
+            `;
+        }
+
+        function createTempLayer(question) {
+            const layersList = document.getElementById('layersList');
+            if (!layersList) return null;
+            const emptyState = layersList.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+            const tempId = `temp-layer-${Date.now()}`;
+            const card = document.createElement('div');
+            card.id        = tempId;
+            card.className = 'card shadow-sm mb-2 border-l-4';
+            card.style.cssText = 'background:color-mix(in srgb,#8a70d9,transparent 85%);border-left-color:#8a70d9;';
+            const shortQ = question.length > 40 ? question.slice(0, 40) + '…' : question;
+            card.innerHTML = `
+                <div class="card-body p-3">
+                    <div class="flex items-center gap-2">
+                        <span class="loading loading-spinner loading-xs" style="color:#8a70d9;flex-shrink:0;"></span>
+                        <h3 class="font-semibold text-sm truncate" style="color:#ccc;" title="${question.replace(/"/g, '&quot;')}">${shortQ.replace(/</g, '&lt;')}</h3>
+                    </div>
+                    <div style="font-size:0.7rem;color:#666;margin-top:4px;">Agent thinking…</div>
+                </div>
+            `;
+            layersList.insertBefore(card, layersList.firstChild);
+            return tempId;
         }
 
         function collapseAgentSteps() {
@@ -9384,12 +9612,10 @@ LIMIT 10</textarea>
         }
 
         function _appendAgentStep(type, content) {
-            const panel = document.getElementById('agentRightPanel');
-            const container = document.getElementById('agentSteps');
+            const container = document.getElementById('panelReasoningBody');
             if (!container) return;
-            if (panel) { panel.classList.add('visible'); panel.classList.remove('collapsed'); }
             const badgeClass = { thought: 'badge-thought', action: 'badge-action', tool_result: 'badge-result', error: 'badge-error' }[type] || 'badge-result';
-            const label = { thought: 'Thought', action: 'Action', tool_result: 'Result', error: 'Error' }[type] || type;
+            const label      = { thought: 'Thought', action: 'Action', tool_result: 'Result', error: 'Error' }[type] || type;
             const div = document.createElement('div');
             div.className = 'agent-step';
             div.innerHTML = `<span class="agent-badge ${badgeClass}">${label}</span><span class="agent-content">${String(content).slice(0, 500).replace(/</g, '&lt;')}</span>`;
@@ -9487,538 +9713,56 @@ LIMIT 10</textarea>
 
         async function executeSearch() {
             const query = document.getElementById('searchInput').value.trim();
-
             if (!query) {
                 showNotification('Please enter a search query', 'error');
                 return;
             }
 
-            // Delegate to agent if agent mode is on
-            if (window._useAgent) {
-                const searchBtn = document.getElementById('searchBtn');
-                if (searchBtn) searchBtn.disabled = true;
-                setLoading(true, 'Agent thinking...');
-                await submitAgentQuery(query, window.selectedLLMProvider || 'gemini');
+            const searchBtn = document.getElementById('searchBtn');
+            if (searchBtn) searchBtn.disabled = true;
+            setLoading(true, 'Agent thinking...');
+
+            // Satellite session active — route to dedicated satellite endpoint
+            if (window.satelliteSession) {
+                console.log('🛰️ Satellite session active — routing to /api/satellite/analyze');
+                try {
+                    const llmProvider = getSelectedLLMProvider();
+                    const satResp = await fetch(`${API_URL}/satellite/analyze`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            question: query,
+                            session_id: window.satelliteSession,
+                            llm_provider: llmProvider,
+                        }),
+                    });
+                    const satData = await satResp.json();
+                    console.log('🛰️ Satellite response:', satData);
+                    if (satData.success && satData.data?.features) {
+                        const meta = satData.metadata || {};
+                        if (queryMode === 'single') clearAllQueries();
+                        addLayer(
+                            satData.layer_name, satData.data, query, [],
+                            satData.reasoning, satData.datasets_used || [], meta,
+                            satData.execution_time || 0
+                        );
+                        const fCount = meta.feature_count || satData.data.features.length;
+                        showNotification(
+                            `${satData.layer_name}: ${fCount} area${fCount !== 1 ? 's' : ''} analysed`,
+                            'success'
+                        );
+                    } else {
+                        showNotification(satData.detail || satData.error || 'Satellite analysis failed', 'error');
+                    }
+                } catch (err) {
+                    showNotification(`Satellite error: ${err.message}`, 'error');
+                }
+                setLoading(false);
+                if (searchBtn) searchBtn.disabled = false;
                 return;
             }
 
-            const searchBtn = document.getElementById('searchBtn');
-            searchBtn.disabled = true;
-
-            setLoading(true, 'Processing...');
-
-            try {
-                // Check for routing query
-                const routingKeywords = ['route', 'directions', 'navigate', 'routing', 'path', 'journey', 'tour', 'visit', 'loop', 'best route', 'find route'];
-                const isRoutingQuery = routingKeywords.some(keyword => query.toLowerCase().includes(keyword));
-                const hasSelectedFeatures = selectedFeatures && selectedFeatures.length >= 2;
-
-                // If routing query with 2+ selected features, call routing endpoint directly
-                if (isRoutingQuery && hasSelectedFeatures) {
-                    console.log(`🛣️  Routing query detected with ${selectedFeatures.length} selected features`);
-
-                    try {
-                        const payload = {
-                            geometries: selectedFeatures.map(f => f.geometry),
-                            feature_names: selectedFeatures.map(f => {
-                                if (f.properties && f.properties.name) return f.properties.name;
-                                if (f.name) return f.name;
-                                return `Point ${selectedFeatures.indexOf(f) + 1}`;
-                            })
-                        };
-
-                        console.log('🛣️  Routing payload:', payload);
-
-                        const response = await fetch(`${API_URL}/routing/optimal-tour`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const routingData = await response.json();
-                        console.log('🛣️  Routing response:', routingData);
-
-                        if (routingData.success) {
-                            // Create GeoJSON FeatureCollection
-                            const geojson = {
-                                type: 'FeatureCollection',
-                                features: [{
-                                    type: 'Feature',
-                                    geometry: routingData.geometry,
-                                    properties: {
-                                        total_distance_m: routingData.total_distance_m,
-                                        total_time_minutes: routingData.total_time_minutes,
-                                        waypoint_count: routingData.waypoints.length,
-                                        route_type: 'optimal_tour'
-                                    }
-                                }]
-                            };
-
-                            // Clear previous layers in single mode
-                            if (queryMode === 'single') {
-                                clearAllQueries();
-                            }
-
-                            // Add route layer
-                            const layerName = routingData.layer_name || 'optimal_route';
-                            addLayer(
-                                layerName,
-                                geojson,
-                                query,
-                                [],
-                                routingData.reasoning || 'Computed optimal route visiting all selected locations',
-                                ['routing.ways', 'routing.ways_vertices_pgr'],
-                                routingData.metadata,
-                                routingData.execution_time_ms / 1000
-                            );
-
-                            // Show directions panel with waypoints and directions
-                            if (routingData.directions && routingData.directions.length > 0) {
-                                showDirectionsPanel(routingData.directions, routingData.waypoints, layerName);
-                            }
-
-                            const distanceKm = (routingData.total_distance_m / 1000).toFixed(1);
-                            showNotification(`✅ Route computed: ${distanceKm}km (${routingData.total_time_minutes}min)`, 'success');
-
-                            // Clear selected features after routing
-                            clearAllSelections();
-                            setLoading(false);
-                            searchBtn.disabled = false;
-                            return; // Exit early - routing handled
-                        } else {
-                            showNotification(routingData.error || 'Routing failed', 'error');
-                            setLoading(false);
-                            searchBtn.disabled = false;
-                            return;
-                        }
-
-                    } catch (error) {
-                        console.error('Routing error:', error);
-                        showNotification('Error computing route: ' + error.message, 'error');
-                        setLoading(false);
-                        searchBtn.disabled = false;
-                        return;
-                    }
-                }
-
-                // Check for street light coverage visualization query
-                // Only match explicit visualization intent — NOT queries that merely mention
-                // "light" or "lighting" as a scoring criterion (e.g. site-selection queries)
-                const queryLower = query.toLowerCase();
-                const isSiteSelection = queryLower.includes('site-selection') ||
-                    queryLower.includes('site selection') ||
-                    queryLower.includes('top ') ||
-                    queryLower.includes('criteria') ||
-                    queryLower.includes('scored locations') ||
-                    queryLower.includes('best location') ||
-                    queryLower.includes('rank') ||
-                    queryLower.includes('analysis for berlin');
-                const isCoverageQuery = !isSiteSelection && (
-                    // Pattern 1: "turn" + "street light/lights" + "on"
-                    (queryLower.includes('turn') && (queryLower.includes('street light') || queryLower.includes('street lights')) && queryLower.includes('on')) ||
-                    // Pattern 2: "show" + "street light/lights" (must be "street light", not just "light")
-                    (queryLower.includes('show') && (queryLower.includes('street light') || queryLower.includes('street lights'))) ||
-                    // Pattern 3: Explicit coverage/illumination visualization terms
-                    queryLower.includes('light coverage') ||
-                    queryLower.includes('illumination coverage') ||
-                    queryLower.includes('visualize lighting') ||
-                    queryLower.includes('visualize street light') ||
-                    // Pattern 4: "display" + "street light/lights"
-                    (queryLower.includes('display') && (queryLower.includes('street light') || queryLower.includes('street lights')))
-                );
-
-                // Check if user is asking for lights without context
-                if (isCoverageQuery && !drawnGeometry && (!selectedFeatures || selectedFeatures.length === 0)) {
-                    showNotification('Please draw an area or select a road segment first, then ask to turn on the lights', 'warning');
-                    setLoading(false);
-                    searchBtn.disabled = false;
-                    return;
-                }
-
-                // If coverage query with drawn geometry or selected features, call coverage endpoint directly
-                if (isCoverageQuery && (drawnGeometry || (selectedFeatures && selectedFeatures.length > 0))) {
-                    console.log(`💡 Street light coverage query detected`);
-                    console.log(`📊 Available context:`, {
-                        hasDrawnGeometry: !!drawnGeometry,
-                        selectedFeaturesCount: selectedFeatures ? selectedFeatures.length : 0,
-                        tempLayerName: window.tempLayerName
-                    });
-
-                    try {
-                        let targetGeometry;
-
-                        // Determine target geometry
-                        if (drawnGeometry) {
-                            targetGeometry = drawnGeometry;
-                            console.log('📐 Using drawn geometry for coverage analysis:', targetGeometry);
-                        } else if (selectedFeatures && selectedFeatures.length > 0) {
-                            // Use first selected feature geometry
-                            targetGeometry = selectedFeatures[0].geometry;
-                            console.log('📍 Using selected feature geometry for coverage analysis:', targetGeometry);
-                        }
-
-                        // Validate geometry
-                        if (!targetGeometry || !targetGeometry.type || !targetGeometry.coordinates) {
-                            throw new Error('Invalid geometry: missing type or coordinates');
-                        }
-
-                        const payload = {
-                            geometry: targetGeometry,
-                            buffer_meters: 20,  // Default 20m buffer
-                            include_coverage: true
-                        };
-
-                        console.log('💡 Coverage payload:', payload);
-
-                        const response = await fetch(`${API_URL}/street-lights/coverage`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const coverageData = await response.json();
-                        console.log('💡 Coverage response:', coverageData);
-
-                        if (coverageData.success) {
-                            // Clear previous layers in single mode
-                            if (queryMode === 'single') {
-                                clearAllQueries();
-                            }
-
-                            // Render street lights and coverage areas
-                            renderStreetLightCoverage(coverageData, query);
-
-                            const lightCount = coverageData.metadata.light_count || 0;
-                            const coverageAreaKm2 = (coverageData.metadata.total_coverage_area_km2 || 0).toFixed(3);
-                            showNotification(`✅ ${lightCount} lights found, ${coverageAreaKm2} km² coverage area`, 'success');
-
-                            setLoading(false);
-                            searchBtn.disabled = false;
-                            return; // Exit early - coverage handled
-                        } else {
-                            showNotification(coverageData.error || 'Coverage analysis failed', 'error');
-                            setLoading(false);
-                            searchBtn.disabled = false;
-                            return;
-                        }
-
-                    } catch (error) {
-                        console.error('Coverage error:', error);
-                        showNotification('Error analyzing coverage: ' + error.message, 'error');
-                        setLoading(false);
-                        searchBtn.disabled = false;
-                        return;
-                    }
-                }
-
-                // Get selected LLM provider
-                const llmProvider = getSelectedLLMProvider();
-                console.log(`🧠 Using LLM: ${llmProvider.toUpperCase()}`);
-
-                // ── Satellite pipeline fork ──────────────────────────────
-                if (window.satelliteSession) {
-                    console.log('🛰️ Satellite session active — routing to /api/satellite/analyze');
-                    try {
-                        const satResp = await fetch(`${API_URL}/satellite/analyze`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                question: query,
-                                session_id: window.satelliteSession,
-                                llm_provider: llmProvider,
-                            }),
-                        });
-
-                        const satData = await satResp.json();
-                        console.log('🛰️ Satellite response:', satData);
-
-                        if (satData.success && satData.data?.features) {
-                            const meta = satData.metadata || {};
-
-                            if (queryMode === 'single') clearAllQueries();
-
-                            addLayer(
-                                satData.layer_name,
-                                satData.data,
-                                query,
-                                [],
-                                satData.reasoning,
-                                satData.datasets_used || [],
-                                meta,
-                                satData.execution_time || 0
-                            );
-
-                            const fCount = meta.feature_count || satData.data.features.length;
-                            showNotification(
-                                `${satData.layer_name}: ${fCount} area${fCount !== 1 ? 's' : ''} analysed`,
-                                'success'
-                            );
-                        } else {
-                            const errMsg = satData.detail || satData.error || 'Satellite analysis failed';
-                            showNotification(errMsg, 'error');
-                        }
-                    } catch (err) {
-                        showNotification(`Satellite error: ${err.message}`, 'error');
-                    }
-                    setLoading(false);
-                    searchBtn.disabled = false;
-                    return;
-                }
-                // ── End satellite fork ───────────────────────────────────
-
-                // Determine query type
-                const isDEM = isDEMQuery(query);
-                const endpoint = isDEM ? '/api/dem/query' : '/api/query';
-
-                console.log(`📍 Query Type: ${isDEM ? 'DEM' : 'Spatial'}`);
-                console.log(`📊 Query Mode: ${queryMode.toUpperCase()}`);
-
-                let response;
-                let geocodePromise = Promise.resolve(null);
-
-                if (isDEM) {
-                    // DEM query
-                    const demUrl = new URL(`${API_URL}/dem/query`, window.location.origin);
-                    demUrl.searchParams.append('question', query);
-
-                    response = await fetch(demUrl.toString(), {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                } else {
-                    // Spatial query with conversation mode
-                    // Generate or reuse session ID for conversation continuity
-                    const sessionId = window.sessionId || `session_${Date.now()}`;
-                    window.sessionId = sessionId;  // Store for future queries
-
-                    const payload = {
-                        question: query,
-                        llm_provider: llmProvider,
-                        active_skill: getActiveSkillId(),
-                        context: {
-                            session_id: sessionId
-                        }
-                    };
-
-                    // Add user location if available
-                    if (userLocation) {
-                        payload.user_location = userLocation;
-                        console.log('🌍 Using user location:', userLocation);
-                    }
-
-                    // Add drawn geometry if available
-                    if (drawnGeometry) {
-                        payload.drawn_geometry = drawnGeometry;
-                        console.log('📐 Including drawn geometry:', drawnGeometry);
-                    }
-
-                    // Note: selected feature is now handled via temporary PostGIS layer
-                    // The layer is automatically included in the schema for DeepSeek to discover
-                    if (window.tempLayerName) {
-                        console.log('🗄️ Temporary layer will be available to DeepSeek:', `temp.${window.tempLayerName}`);
-                    }
-
-                    console.log(`💬 Conversation Mode - Session: ${sessionId}`);
-
-                    // Fire geocoding in parallel — used as fallback if LLM returns no features
-                    geocodePromise = fetch(`${API_URL}/geocode/feature?q=${encodeURIComponent(query)}`)
-                        .then(r => r.ok ? r.json() : null)
-                        .catch(() => null);
-
-                    response = await fetch(`${API_URL}/query`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                }
-
-                const data = await response.json();
-
-                // Debug: Log the full response
-                console.log('📊 API Response:', data);
-
-                // 🔥 LOG LLM PROMPTS TO BROWSER CONSOLE
-                if (data.system_prompt || data.user_prompt) {
-                    const providerLabel = (llmProvider || 'unknown').toUpperCase();
-                    console.log('\n' + '='.repeat(80));
-                    console.log(`%c📤 ${providerLabel} SYSTEM PROMPT`, 'color: #FFB162; font-size: 14px; font-weight: bold;');
-                    console.log('='.repeat(80));
-                    console.log(data.system_prompt || '[No system prompt available]');
-                    console.log('\n' + '='.repeat(80));
-                    console.log(`%c📤 ${providerLabel} USER PROMPT`, 'color: #FFB162; font-size: 14px; font-weight: bold;');
-                    console.log('='.repeat(80));
-                    console.log(data.user_prompt || '[No user prompt available]');
-                    console.log('='.repeat(80) + '\n');
-                }
-
-                if (isDEM) {
-                    // Handle DEM response
-                    if (data.success) {
-                        // Pass the actual data field from API response (which contains GeoJSON)
-                        const processed = processDEMResult(data.data, query);
-
-                        // For subdivision analysis, include ranking info in metadata
-                        let metadata = data.metadata || {};
-                        if (data.ranking && data.top_subdivision) {
-                            metadata.subdivisions_analysis = true;
-                            metadata.rankings = data.ranking;
-                            metadata.top_subdivision = data.top_subdivision;
-                        }
-
-                        // In single mode, clear previous layers; in multi-step, preserve them
-                        if (queryMode === 'single') {
-                            clearAllQueries();
-                        }
-
-                        addLayer(
-                            processed.layerName,
-                            processed.geojson,
-                            query,
-                            data.operations || [],
-                            data.reasoning || processed.summary,
-                            data.datasets_used || [],
-                            metadata,
-                            data.execution_time || 0
-                        );
-
-                        // In multi-step mode, add to query chain
-                        if (queryMode === 'multi-step') {
-                            const result = {
-                                layer_name: processed.layerName,
-                                data: processed.geojson,
-                                operations: data.operations || [],
-                                reasoning: data.reasoning || processed.summary,
-                                datasets_used: data.datasets_used || [],
-                                metadata: metadata,
-                                execution_time: data.execution_time || 0
-                            };
-                            addQueryToChain(query, result);
-                        }
-
-                        const featureCount = processed.geojson.features ? processed.geojson.features.length : 1;
-                        showNotification(`✅ ${processed.layerName}: ${featureCount} features loaded (Top subdivision)`, 'success');
-
-                        // Refresh available layers for multi-step queries
-                        await refreshAvailableLayers();
-                    } else {
-                        showNotification(data.error || 'DEM analysis failed', 'error');
-                    }
-                } else {
-                    // Handle Spatial response
-                    console.log('🔧 Operations:', data.operations);
-                    console.log('💭 Reasoning:', data.reasoning);
-                    console.log('📚 Datasets:', data.datasets_used);
-
-                    if (data.success && data.data && data.data.features) {
-                        // Use DeepSeek-generated layer name if available, fallback to client-side generation
-                        const layerName = data.layer_name || generateLayerName(query, data.data);
-
-                        // Add LLM provider info to metadata
-                        const metadata = data.metadata || {};
-                        metadata.llm_provider = llmProvider.toUpperCase();
-
-                        // In single mode, clear previous layers; in multi-step, preserve them
-                        if (queryMode === 'single') {
-                            clearAllQueries();
-                        }
-
-                        // Pass all operation data to addLayer, including layer tracking
-                        addLayer(
-                            layerName,
-                            data.data,
-                            query,
-                            data.operations,      // Operations performed
-                            data.reasoning,       // AI reasoning
-                            data.datasets_used,   // Datasets used
-                            metadata,             // Metadata (now includes LLM provider)
-                            data.execution_time,  // Execution time
-                            data.layer_id,        // API-generated layer ID
-                            data.parent_layers    // Parent layer IDs for dependency tracking
-                        );
-
-                        // In multi-step mode, add to query chain
-                        if (queryMode === 'multi-step') {
-                            addQueryToChain(query, data);
-                        }
-
-                        showNotification(`Found ${data.data.features.length} results (${llmProvider.toUpperCase()})`, 'success');
-
-                        // Refresh available layers for multi-step queries
-                        await refreshAvailableLayers();
-                    } else {
-                        // LLM returned no spatial features — try geocoder feature fallback
-                        const geocodeData = await geocodePromise;
-
-                        if (geocodeData?.success && geocodeData.feature?.geometry) {
-                            const feat = geocodeData.feature;
-                            const geojson = { type: 'FeatureCollection', features: [feat] };
-                            const layerName = geocodeData.name || query;
-                            const isPolygon = geocodeData.source === 'building_polygon';
-
-                            if (queryMode === 'single') clearAllQueries();
-
-                            addLayer(
-                                layerName, geojson, query, [],
-                                `Geocoded location: ${geocodeData.display_name}`,
-                                [geocodeData.source],
-                                { source: geocodeData.source, geocoded: true },
-                                0
-                            );
-
-                            // Fly to the resolved location
-                            const bbox = geocodeData.bbox;
-                            if (bbox) {
-                                const [minLon, minLat, maxLon, maxLat] = bbox;
-                                const bboxArea = (maxLon - minLon) * (maxLat - minLat);
-                                if (bboxArea > 0.0001) {
-                                    map.fitBounds([[minLat, minLon], [maxLat, maxLon]], { padding: [60, 60], maxZoom: 17 });
-                                } else {
-                                    const cLon = isPolygon ? (minLon + maxLon) / 2 : feat.geometry.coordinates[0];
-                                    const cLat = isPolygon ? (minLat + maxLat) / 2 : feat.geometry.coordinates[1];
-                                    map.flyTo([cLat, cLon], 17, { duration: 1.2, easeLinearity: 0.5 });
-                                }
-                            }
-
-                            const sourceLabel = isPolygon ? 'building polygon' : 'place';
-                            showNotification(`📍 ${layerName} (${sourceLabel}) — click to select for follow-up queries`, 'success');
-
-                            if (queryMode === 'multi-step') {
-                                addQueryToChain(query, {
-                                    layer_name: layerName,
-                                    data: geojson,
-                                    operations: [],
-                                    reasoning: `Geocoded location: ${geocodeData.display_name}`,
-                                    datasets_used: [geocodeData.source],
-                                    metadata: { source: geocodeData.source, geocoded: true },
-                                    execution_time: 0
-                                });
-                            }
-
-                            await refreshAvailableLayers();
-                        } else {
-                            showNotification(data.error || 'No results found', 'error');
-                        }
-                    }
-                }
-
-                // Clear search input and reset styling
-                const inputField = document.getElementById('searchInput');
-                inputField.value = '';
-                currentFontSize = maxFontSize;
-                inputField.style.fontSize = maxFontSize + 'rem';
-                inputField.style.height = 'auto';
-
-            } catch (error) {
-                showNotification(`Error: ${error.message}`, 'error');
-                console.error('❌ Search error:', error);
-            } finally {
-                setLoading(false);
-                searchBtn.disabled = false;
-            }
+            await submitAgentQuery(query, window.selectedLLMProvider || 'deepseek');
         }
 
         // Dynamic font sizing and textarea behavior
