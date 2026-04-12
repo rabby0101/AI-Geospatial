@@ -102,7 +102,7 @@ def get_system_prompt_minimal() -> str:
 **DISTANCE DEFAULTS (if not specified):**
 - "nearby" / "near me" → 500m
 - "closest" / "nearest" → 2km
-- "walking distance" → 800m
+- "walking distance" (no time/minutes mentioned) → 800m
 - "near <location>" → 15km
 """
 
@@ -270,10 +270,41 @@ When user asks for POIs "within X minutes walk" from a location or selected feat
 - target_table should be table name WITHOUT 'vector.' prefix
 - **building_filter/table_filter**: Use this for filtering. You MUST rely on columns that actually exist in the table.
 
-**Walking Time Keywords:**
-- "within X minutes walk", "X min walking distance", "10 minute walk from"
-- "walkable features", "what's within walking distance"
+**Walking Time Rule (HIGHEST PRIORITY — overrides all distance defaults):**
+If the user's query mentions ANY time duration (e.g., "5 minutes", "10 min", "half an hour") in the context of walking, travel, or reachability → ALWAYS use the walking_time operation. Do NOT fall back to a buffer or ST_DWithin.
+The exact phrasing does not matter. All of these trigger walking_time:
+- "10 minutes walking distance", "within 10 minutes walk", "5 min on foot"
+- "reachable in 15 minutes", "accessible within 20 minutes", "X minute walk from"
+- "walkable features", "what's within walking distance in Y minutes"
 - "find X reachable on foot in Y minutes"
+
+
+**⚠️ NAMED PLACE PROXIMITY — CRITICAL RULE:**
+
+When query asks for features near a named place (e.g., "within 500m of Neukölln Rathaus", "near Alexanderplatz"):
+→ Use `location_name`, `target_table`, and `radius_m` parameters — do NOT write proximity SQL yourself
+→ The backend geocodes the place and constructs the SQL automatically
+
+**FORMAT — named place proximity:**
+```json
+{
+  "operation": "spatial_query",
+  "parameters": {
+    "location_name": "Neukölln Rathaus",
+    "target_table": "vector.osm_playgrounds",
+    "radius_m": 500
+  },
+  "description": "Find playgrounds within 500m of Neukölln Rathaus"
+}
+```
+
+**RULES:**
+- `location_name`: exact place name to geocode (the backend calls Nominatim)
+- `target_table`: the full table name including schema (e.g., `vector.osm_playgrounds`)
+- `radius_m`: search radius in meters
+- Do NOT include `sql` in parameters when using `location_name` + `target_table` + `radius_m`
+- Do NOT query any database table to find the named place coordinates
+- Use this for ANY query referencing a named landmark, building, station, or address as the reference point
 
 
 **⚠️ MULTI-SELECT CONTEXT-AWARE QUERIES - CRITICAL RULE:**
@@ -369,8 +400,8 @@ Distance defaults:
 - "near me" / "nearby" → 500m radius (return ALL results, NO LIMIT)
 - "closest" / "nearest" (SINGULAR) → 5km radius, ORDER BY distance, LIMIT 1
 - "find all X near me" → 500m radius, NO LIMIT
-- "within walking distance" (no time specified) → 800m radius
-- "within X minutes walk" → USE walking_time OPERATION (road-network based)
+- "within walking distance" (no time/minutes specified) → 800m radius
+- ANY query with a time duration + walking/travel/reachability context → USE walking_time OPERATION (road-network based). This applies regardless of exact phrasing: "10 minutes walking distance", "5 min on foot", "reachable in 15 minutes", "accessible within X minutes", etc.
 - "near <location>" → 15km radius
 
 SQL Template for proximity queries (USING geom_25833 if available):
@@ -496,7 +527,7 @@ Then SCAN the **"Available Tables in Database"** section and pick the base table
 
 **⚠️ PERFORMANCE: The candidates CTE MUST return at most ~500 rows.**
 If the base table is large (>10K rows), add tight spatial filters AND attribute filters to narrow down.
-For alkis_buildings: filter by bezgfk (building function label) and always include namlag (street), hnr (house number) in SELECT.
+
 
 **STEP 1 - CRITICAL THINKING & GOAL ANALYSIS:**
 - **Base table choice:** Which table's features serve as candidate locations?
@@ -531,7 +562,7 @@ a correlated scalar subquery. Use `CROSS JOIN LATERAL (...)` instead — always.
 
 ```sql
 WITH candidates AS (
-    SELECT b.<id_col>, b.<name_col>, b.geometry, b.geom_25833
+    SELECT b.*
     FROM vector.<base_table> b
     WHERE <base_table_filter_condition_if_any>
     -- Restrict to area if specified

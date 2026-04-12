@@ -605,11 +605,6 @@ Respond with ONLY the JSON object."""
             description = metadata_dict.get("description", "")
             usage_hint = metadata_dict.get("usage_hint", "")
 
-            # Append categorical info to usage_hint if available
-            if categorical_columns:
-                cat_text = AutoTableDiscovery.format_categorical_for_hint(categorical_columns)
-                if cat_text and cat_text not in usage_hint:
-                    usage_hint = f"{usage_hint}\n\n{cat_text}" if usage_hint else cat_text
             key_columns = metadata_dict.get("key_columns", [])
             related_tables = metadata_dict.get("related_tables", [])
             analysis_patterns = metadata_dict.get("analysis_patterns", [])

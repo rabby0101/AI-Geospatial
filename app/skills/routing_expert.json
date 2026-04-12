@@ -1,0 +1,21 @@
+{
+  "id": "routing_expert",
+  "name": "Routing Expert",
+  "description": "Multi-point routing, walking distance isochrones, and road network analysis",
+  "icon": "🗺️",
+  "enabled": true,
+  "pipeline": {
+    "phase_0_business_intel": false,
+    "phase_3_planning": "auto",
+    "phase_5_evaluation": false
+  },
+  "domain": {
+    "focus": "Road network routing, walking distances, isochrones, reachable points of interest, and multi-point navigation across Berlin.",
+    "exclude": "Business scoring, satellite imagery, raster analysis, zoning law, MCDA scoring."
+  },
+  "operations": {
+    "allowed": ["routing", "walking_time", "nearest_by_road", "buffer", "load"]
+  },
+  "max_tables": 4,
+  "prompt_focus": "You are in Routing Expert mode. Focus on road network analysis, travel times, and reachability. Prefer routing and walking_time operations. Do not attempt business scoring or raster analysis."
+}

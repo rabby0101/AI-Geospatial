@@ -9436,7 +9436,11 @@ LIMIT 10</textarea>
                         if (!raw) continue;
 
                         let step;
-                        try { step = JSON.parse(raw); } catch { continue; }
+                        try { step = JSON.parse(raw); } catch(e) {
+                            console.error('[AGENT SSE] JSON.parse failed, len=' + raw.length + ', err=' + e.message + ', preview=' + raw.slice(0, 120));
+                            continue;
+                        }
+                        console.log('[AGENT SSE] step:', step.type, step.tool_name || '');
 
                         if (step.type === 'done') break;
 
@@ -9452,9 +9456,18 @@ LIMIT 10</textarea>
                         } else if (step.type === 'tool_result' && step.tool_name === 'final_answer') {
                             const fa = step.tool_result;
                             const count = (fa.geojson && fa.geojson.features) ? fa.geojson.features.length : 0;
+                            console.log('[AGENT] final_answer received:', {
+                                layer: fa.layer_name,
+                                featureCount: count,
+                                geojsonType: fa.geojson && fa.geojson.type,
+                                firstFeatureGeom: fa.geojson && fa.geojson.features && fa.geojson.features[0] && fa.geojson.features[0].geometry && fa.geojson.features[0].geometry.type,
+                                addLayerAvailable: typeof addLayer === 'function',
+                            });
                             _appendAgentStep('tool_result', `✅ ${fa.summary} (${count} features · ${fa.execution_time}s)`);
                             if (fa.geojson && typeof addLayer === 'function') {
                                 addLayer(fa.layer_name, fa.geojson, question, [], fa.summary, [], {}, fa.execution_time);
+                            } else {
+                                console.warn('[AGENT] addLayer not called — fa.geojson:', !!fa.geojson, 'addLayer type:', typeof addLayer);
                             }
                         } else if (step.type === 'error') {
                             _appendAgentStep('error', step.content);

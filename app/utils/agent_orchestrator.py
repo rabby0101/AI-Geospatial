@@ -92,6 +92,9 @@ execute_sql rules:
   - Use alias 'geom' (not 'geometry') — some tables already have a 'geometry' column
   - SELECT * preserves all feature attributes in the result
   - ST_Transform(geom_25833, 4326) converts to WGS84 so the map can render it
+- NEVER use SELECT COUNT(*) alone — always SELECT the full features with geometry.
+  For "how many X" questions: select the actual features (SELECT *, ST_AsGeoJSON(...) AS geom),
+  then report the count in the Summary. The map requires real geometries to display results.
 - For spatial proximity (ST_DWithin) use geom_25833 directly (units = metres, no transform needed):
   ST_DWithin(a.geom_25833, b.geom_25833, <metres>)
 - For spatial filter with a buffer polygon use:
@@ -108,7 +111,27 @@ Spatial tips:
 - FILTER BY DISTRICT: Find the districts/bezirk table from get_schema_info, then use
   ST_Intersects to spatially join. Check column names with get_table_columns first.
 
+CORRECT format examples (follow these exactly):
+
+Example 1 — inspect a table's columns:
+Thought: I need to check the columns of the osm_parks table.
+Action: get_table_columns
+Args: {"table_name": "osm_parks"}
+
+Example 2 — run a SQL query:
+Thought: I will find parks larger than 5 hectares in Neukölln.
+Action: execute_sql
+Args: {"sql": "SELECT *, ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM vector.osm_parks p JOIN vector.wfs_alkis_bezirk b ON ST_Intersects(p.geom_25833, b.geom_25833) WHERE b.namgem = 'Neukölln' AND ST_Area(p.geom_25833) / 10000.0 > 5"}
+
+Example 3 — return the result immediately after a successful SQL call:
+Thought: Got result. Returning it.
+Final Answer:
+{"use_last_result": true}
+Summary: Found 3 parks in Neukölln larger than 5 hectares.
+Layer: large_parks_neukoelln
+
 Rules:
+- Args MUST always contain ALL required parameters — NEVER use empty Args: {}
 - The Final Answer MUST be a valid GeoJSON FeatureCollection
 - When execute_sql, calculate_route, or walking_isochrone returns a successful FeatureCollection,
   IMMEDIATELY produce the Final Answer using this exact format:
@@ -121,6 +144,7 @@ Rules:
   Do NOT try to echo the geometry coordinates — always use {"use_last_result": true}.
 - Never guess table names — always call get_schema_info first
 - Never guess column names — always call get_table_columns before writing SQL
+- Once you have inspected the schema and columns, proceed directly to execute_sql — do NOT call get_schema_info again
 - Call tools one at a time; wait for each result before proceeding
 - If a tool returns an error, adjust and retry with corrected arguments
 """
@@ -147,7 +171,7 @@ def _call_llm(messages: list, provider: str = "deepseek") -> str:
             "Content-Type": "application/json",
         },
         json=payload,
-        timeout=60,
+        timeout=120,
     )
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"].strip()
@@ -155,7 +179,7 @@ def _call_llm(messages: list, provider: str = "deepseek") -> str:
 
 def _truncate_result(result: Any, max_chars: int = MAX_RESULT_CHARS) -> Any:
     """
-    Trim large tool results so they fit in the LLM context window.
+    Trim large tool results for frontend display.
     For FeatureCollections with geometry, keeps the first 3 features.
     For FeatureCollections without geometry (e.g. SELECT DISTINCT), keeps up to 30.
     """
@@ -180,6 +204,67 @@ def _truncate_result(result: Any, max_chars: int = MAX_RESULT_CHARS) -> Any:
     return result
 
 
+def _prepare_obs_for_llm(tool_name: str, result: Any, max_chars: int = MAX_RESULT_CHARS) -> Any:
+    """
+    Prepare tool result for LLM context — geometry-aware stripping.
+
+    - execute_sql with real geometry: strip geometry coordinates, keep only properties.
+      The LLM reasons about feature attributes, not raw coordinate arrays.
+    - walking_isochrone / calculate_route: keep geometry intact — the LLM needs the
+      polygon/line to use in the next ST_GeomFromGeoJSON(...) SQL call.
+    - Null-geometry results (e.g. centroid extraction returning lat/lon in properties):
+      keep as-is — the LLM must see the actual values to pass to the next tool.
+    - All other results: apply character cap as fallback.
+    """
+    if not (isinstance(result, dict) and result.get("type") == "FeatureCollection"):
+        result_str = json.dumps(result)
+        if len(result_str) > max_chars:
+            return result_str[:max_chars] + "... [truncated]"
+        return result
+
+    features = result.get("features", [])
+    total = len(features)
+    has_geometry = any(f.get("geometry") for f in features[:3])
+
+    # Null-geometry result (e.g. centroid lat/lon in properties) — keep in full
+    if not has_geometry:
+        result_str = json.dumps(result)
+        if len(result_str) > max_chars:
+            return result_str[:max_chars] + "... [truncated]"
+        return result
+
+    # execute_sql: return plain metadata — deliberately NOT a FeatureCollection.
+    # If we return a FeatureCollection with geometry:null, the LLM may echo it directly
+    # as Final Answer, causing the map to receive null geometries and render nothing.
+    # A plain dict forces the LLM to use {"use_last_result": true}, which substitutes
+    # last_result (the full geometry-intact observation) into the final answer.
+    if tool_name == "execute_sql":
+        MAX_SAMPLE = 5
+        sample_props = []
+        for f in features[:MAX_SAMPLE]:
+            props = dict(f.get("properties") or {})
+            props.pop("geom", None)
+            props.pop("geometry", None)
+            sample_props.append(props)
+        return {
+            "status": "success",
+            "total_features": total,
+            "sample_properties": sample_props,
+            "_note": (
+                f"Query returned {total} features with geometry. "
+                "Full spatial result is stored — use "
+                "{\"use_last_result\": true} in your Final Answer to return it to the map."
+            ),
+        }
+
+    # walking_isochrone / calculate_route: keep geometry (needed for next SQL step)
+    # but still apply the character cap
+    result_str = json.dumps(result)
+    if len(result_str) > max_chars:
+        return result_str[:max_chars] + "... [truncated]"
+    return result
+
+
 def _parse_llm_output(raw: str) -> Dict[str, Any]:
     """
     Parse the LLM's raw text output into a structured dict.
@@ -191,16 +276,21 @@ def _parse_llm_output(raw: str) -> Dict[str, Any]:
     """
     raw = raw.strip()
 
+    # Fix 4: Strip markdown code fences that smaller models (e.g. Gemma4) often add
+    raw = re.sub(r"```(?:json)?\s*", "", raw)
+    raw = re.sub(r"```\s*", "", raw)
+
     # Extract Thought (optional)
     thought = ""
-    thought_match = re.search(r"Thought:\s*(.+?)(?=\nAction:|\nFinal Answer:|$)", raw, re.DOTALL)
+    thought_match = re.search(r"Thought:\s*(.+?)(?=\nAction:|\nFinal Answer:|$)", raw, re.DOTALL | re.IGNORECASE)
     if thought_match:
         thought = thought_match.group(1).strip()
 
-    # Check for Final Answer
-    if "Final Answer:" in raw:
+    # Fix 2: Case-insensitive Final Answer detection (Gemma4 may output "final answer:")
+    fa_match = re.search(r"Final Answer:", raw, re.IGNORECASE)
+    if fa_match:
         try:
-            after_fa = raw.split("Final Answer:", 1)[1].strip()
+            after_fa = raw[fa_match.end():].strip()
             # Extract JSON block (greedy match from first { to last })
             json_match = re.search(r"(\{.*\})", after_fa, re.DOTALL)
             if not json_match:
@@ -232,7 +322,8 @@ def _parse_llm_output(raw: str) -> Dict[str, Any]:
             try:
                 args = json.loads(args_match.group(1))
             except json.JSONDecodeError:
-                pass
+                # Fix 3: Malformed Args JSON → retry with format correction instead of silently using {}
+                return {"type": "retry", "raw": raw}
         return {"type": "action", "thought": thought, "tool": tool_name, "args": args}
 
     return {"type": "retry", "raw": raw}
@@ -295,6 +386,7 @@ async def run_agent(
     ]
 
     last_result = None  # Store full tool result for use_last_result (execute_sql, calculate_route, walking_isochrone)
+    seen_calls: set = set()  # Track repeated tool calls to break loops
 
     retry_count = 0
     max_retries = 2
@@ -334,9 +426,36 @@ async def run_agent(
 
         if parsed["type"] == "final_answer":
             geojson = parsed["geojson"]
-            # If agent signals use_last_result, substitute the last stored tool result
-            if isinstance(geojson, dict) and geojson.get("use_last_result") and last_result:
+
+            # Always prefer last_result over whatever the LLM echoed.
+            # last_result is the full geometry-intact FeatureCollection from the most recent
+            # successful spatial tool call. The LLM's parsed geojson may be
+            # {"use_last_result": true}, a stripped FC with null geometries, or a COUNT
+            # result — none of which render correctly on the map.
+            if last_result:
                 geojson = last_result
+
+            # Safety check: if we still have no renderable geometry (e.g. LLM wrote a
+            # COUNT(*) query and no prior spatial call stored a last_result), loop back
+            # and ask the agent to re-run with full features instead of a count.
+            _final_features = geojson.get("features", []) if isinstance(geojson, dict) else []
+            _has_render_geometry = any(f.get("geometry") for f in _final_features[:3])
+
+            if not _has_render_geometry:
+                messages.append({"role": "assistant", "content": raw})
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Your answer contains no geometry and cannot be displayed on the map. "
+                        "This usually happens when SELECT COUNT(*) was used instead of selecting features. "
+                        "Please run execute_sql again using:\n"
+                        "SELECT *, ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM vector.<table> ...\n"
+                        "Retrieve the actual features so they can be rendered. "
+                        "Report the count in your Summary — do not use SELECT COUNT(*)."
+                    ),
+                })
+                continue
+
             elapsed = round(time.time() - start_time, 2)
             yield AgentStep(
                 type="tool_result",
@@ -355,6 +474,27 @@ async def run_agent(
         # Execute tool
         tool_name = parsed["tool"]
         tool_args = parsed.get("args", {})
+
+        # Fix 1: Loop detection extended to ALL tools (not just schema tools).
+        # Smaller models (e.g. Gemma4) can repeat any tool indefinitely.
+        call_key = (tool_name, json.dumps(tool_args, sort_keys=True))
+        if call_key in seen_calls:
+            messages.append({"role": "assistant", "content": raw})
+            if tool_name in ("get_schema_info", "get_table_columns"):
+                nudge = (
+                    f"You already called {tool_name}({json.dumps(tool_args)}) earlier and have the result in this conversation. "
+                    "Do NOT call it again. You have all the schema and column information you need. "
+                    "Proceed directly to execute_sql with your PostGIS SQL query now."
+                )
+            else:
+                nudge = (
+                    f"You already called {tool_name}({json.dumps(tool_args)}) with these exact arguments "
+                    "and the result is already in this conversation. Do NOT call it again. "
+                    "Use the results you already have to produce your Final Answer now."
+                )
+            messages.append({"role": "user", "content": nudge})
+            continue
+        seen_calls.add(call_key)
 
         yield AgentStep(
             type="action",
@@ -379,11 +519,27 @@ async def run_agent(
                 observation = {"error": str(e)}
 
         # Store full result for use_last_result (routing/isochrone tools return large geometries the LLM can't echo)
-        if tool_name in ("execute_sql", "calculate_route", "walking_isochrone") and isinstance(observation, dict) and observation.get("type") == "FeatureCollection":
+        # Only treat as "got spatial result" when features have actual geometry — null-geometry results
+        # (e.g. a centroid extraction returning lat/lon in properties) are intermediate data that the
+        # LLM must see in full to use in the next tool call.
+        _obs_features = observation.get("features", []) if isinstance(observation, dict) else []
+        _has_real_geometry = any(f.get("geometry") for f in _obs_features[:3])
+        got_feature_collection = (
+            tool_name in ("execute_sql", "calculate_route", "walking_isochrone")
+            and isinstance(observation, dict)
+            and observation.get("type") == "FeatureCollection"
+            and _has_real_geometry
+        )
+        if got_feature_collection:
             last_result = observation
 
+        # Frontend display: truncated but with geometry (for map rendering)
         truncated_obs = _truncate_result(observation)
         obs_str = json.dumps(truncated_obs, ensure_ascii=False, default=str)
+
+        # LLM context: geometry stripped from SQL results to keep context small
+        llm_obs = _prepare_obs_for_llm(tool_name, observation)
+        llm_obs_str = json.dumps(llm_obs, ensure_ascii=False, default=str)
 
         yield AgentStep(
             type="tool_result",
@@ -393,7 +549,30 @@ async def run_agent(
         )
 
         messages.append({"role": "assistant", "content": raw})
-        messages.append({"role": "user", "content": f"Observation: {obs_str}"})
+
+        if got_feature_collection:
+            feature_count = len(observation.get("features", []))
+            messages.append({
+                "role": "user",
+                "content": (
+                    f"Observation: {llm_obs_str}\n\n"
+                    f"The {tool_name} call returned a successful FeatureCollection with {feature_count} feature(s). "
+                    "If this result directly and completely answers the user's original question, produce the Final Answer now using exactly this format:\n"
+                    "Thought: Got result. Returning it.\n"
+                    "Final Answer:\n"
+                    '{"use_last_result": true}\n'
+                    "Summary: <one sentence describing the results>\n"
+                    "Layer: <snake_case_layer_name>\n\n"
+                    "If this is an intermediate step (e.g., you still need to call execute_sql, "
+                    "score_locations, or spatial_filter to complete the workflow), "
+                    "continue with the next step now. When writing SQL that needs this polygon, "
+                    "use: WHERE ST_Within(ST_Transform(geom_25833, 4326), "
+                    "ST_SetSRID(ST_GeomFromGeoJSON('<polygon_json_from_observation>'), 4326))"
+                ),
+            })
+        else:
+            messages.append({"role": "user", "content": f"Observation: {llm_obs_str}"})
+
 
     yield AgentStep(
         type="error",

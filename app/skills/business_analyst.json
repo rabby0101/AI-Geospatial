@@ -1,0 +1,21 @@
+{
+  "id": "business_analyst",
+  "name": "Business Analyst",
+  "description": "Site selection, business suitability scoring, and location intelligence",
+  "icon": "📊",
+  "enabled": true,
+  "pipeline": {
+    "phase_0_business_intel": true,
+    "phase_3_planning": "auto",
+    "phase_5_evaluation": true
+  },
+  "domain": {
+    "focus": "Business site selection, suitability analysis, MCDA scoring, and zoning evaluation using business profiles and knowledge graph.",
+    "exclude": "Satellite imagery, raster analysis, raw road routing, crime incident mapping."
+  },
+  "operations": {
+    "allowed": ["load", "spatial_query", "buffer", "filter", "aggregate"]
+  },
+  "max_tables": 8,
+  "prompt_focus": "You are in Business Analyst mode. Focus on site suitability, proximity to amenities, and scoring business locations. Use business_profiles and knowledge graph when relevant."
+}

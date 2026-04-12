@@ -1,12 +1,29 @@
 import time
+import numpy as np
 from fastapi import APIRouter, HTTPException, status
 from typing import Dict, Any
 from app.models.query_model import NLQuery, QueryResponse, DatasetInfo
 from app.utils.deepseek import parse_geospatial_query, get_available_datasets, clear_query_cache, query_gemini
 from app.utils.spatial_engine import SpatialEngine
 from app.utils.database import db_manager
+from app.utils.skills_manager import get_skill
 
 router = APIRouter(prefix="/api", tags=["queries"])
+
+
+def _convert_numpy(obj):
+    """Recursively convert numpy types to native Python types for JSON serialization."""
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        return float(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {k: _convert_numpy(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_convert_numpy(i) for i in obj]
+    return obj
 
 
 @router.post("/query", response_model=QueryResponse)
@@ -80,6 +97,11 @@ async def geospatial_query(request: NLQuery) -> QueryResponse:
         else:
             print("   - No selected_feature in request")
 
+        # Load active skill config (None = full pipeline mode)
+        active_skill = get_skill(request.active_skill)
+        if active_skill:
+            print(f"🎯 Active skill: {active_skill['name']}")
+
         # Parse the query using the selected LLM provider
         operation_plan = parse_geospatial_query(
             question=request.question,
@@ -87,12 +109,13 @@ async def geospatial_query(request: NLQuery) -> QueryResponse:
             user_location=request.user_location,
             selected_feature=request.selected_feature,
             drawn_geometry=request.drawn_geometry,
-            llm_provider=request.llm_provider
+            llm_provider=request.llm_provider,
+            skill=active_skill,
         )
 
         # Execute the operation plan
         engine = SpatialEngine()
-        result = engine.execute_plan(operation_plan)
+        result = _convert_numpy(engine.execute_plan(operation_plan))
 
         # Calculate execution time
         execution_time = time.time() - start_time

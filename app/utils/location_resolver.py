@@ -1,11 +1,9 @@
 """
 Location Resolver - Dynamically resolve location names to geometries and bounding boxes.
-Replaces hardcoded district bounding boxes with real database queries.
 
 Resolution tiers (in order):
-  Tier 1: Landmarks DB  — exact + fuzzy ILIKE (~<10ms, always works)
-  Tier 2: Nominatim     — OSM geocoder for addresses/unknown places (~100-500ms)
-  Tier 3: None + warning log
+  Tier 1: Nominatim     — OSM geocoder for addresses/unknown places (~100-500ms)
+  Tier 2: None + warning log
 """
 
 import logging
@@ -23,27 +21,21 @@ class LocationResolver:
 
     def resolve_location(self, location_name: str) -> Optional[Dict[str, Any]]:
         """
-        Resolve a location name to its geometry and bounding box using the unified landmarks table.
+        Resolve a location name to its geometry and bounding box via Nominatim.
 
         Args:
-            location_name: Name of location (district, subdivision, park, station, hospital, etc.)
-                          e.g., "Mitte", "Kladow", "Alexanderplatz", "Tiergarten"
+            location_name: Name of location (district, landmark, address, etc.)
+                          e.g., "Mitte", "Alexanderplatz", "Neukölln Rathaus"
 
         Returns:
             Dict with:
                 - name: resolved name
-                - type: 'bezirk' | 'ortsteil' | 'park' | 'hospital' | 'train_station' | 'transit_stop'
+                - type: location type
                 - parent_bezirk: parent district (if applicable)
                 - geometry: WKT geometry
                 - bbox: [min_lon, min_lat, max_lon, max_lat]
             Or None if not found
         """
-        # Tier 1: Landmarks DB (exact + fuzzy ILIKE)
-        result = self._resolve_from_landmarks(location_name)
-        if result:
-            return result
-
-        # Tier 2: Nominatim geocoder (addresses, unknown places)
         try:
             from app.utils.geocoder import geocoder_service
             geocode_results = geocoder_service.search(location_name, limit=1)
@@ -98,78 +90,6 @@ class LocationResolver:
             "tourism": "poi",
         }
         return type_map.get(feature_type, type_map.get(osm_type, "place"))
-
-    def _resolve_from_landmarks(self, location_name: str) -> Optional[Dict[str, Any]]:
-        """
-        Resolve location from the unified landmarks table.
-        Supports exact and fuzzy matching.
-
-        Args:
-            location_name: Location name to search for
-
-        Returns:
-            Location dict with type, geometry, bbox, or None
-        """
-        try:
-            from sqlalchemy import text
-
-            # First try exact match (case-insensitive)
-            sql_exact = """
-                SELECT name, type, parent_bezirk,
-                       ST_AsText(geometry) as geom_wkt,
-                       ST_AsText(ST_Envelope(geometry)) as bbox_wkt
-                FROM vector.landmarks
-                WHERE LOWER(name) = LOWER(:name)
-                LIMIT 1
-            """
-
-            with self.db.engine.connect() as conn:
-                result = conn.execute(text(sql_exact), {"name": location_name}).fetchone()
-
-                if result:
-                    name, location_type, parent_bezirk, geom_wkt, bbox_wkt = result
-                    bbox = self._extract_bbox_from_wkt(bbox_wkt) if bbox_wkt else None
-
-                    return {
-                        "name": name,
-                        "type": location_type,
-                        "parent_bezirk": parent_bezirk,
-                        "geometry": geom_wkt,
-                        "bbox": bbox,
-                        "match_type": "exact",
-                    }
-
-                # Try fuzzy match (ILIKE substring)
-                sql_fuzzy = """
-                    SELECT name, type, parent_bezirk,
-                           ST_AsText(geometry) as geom_wkt,
-                           ST_AsText(ST_Envelope(geometry)) as bbox_wkt
-                    FROM vector.landmarks
-                    WHERE name ILIKE :pattern
-                    LIMIT 1
-                """
-
-                result = conn.execute(
-                    text(sql_fuzzy), {"pattern": f"%{location_name}%"}
-                ).fetchone()
-
-                if result:
-                    name, location_type, parent_bezirk, geom_wkt, bbox_wkt = result
-                    bbox = self._extract_bbox_from_wkt(bbox_wkt) if bbox_wkt else None
-
-                    return {
-                        "name": name,
-                        "type": location_type,
-                        "parent_bezirk": parent_bezirk,
-                        "geometry": geom_wkt,
-                        "bbox": bbox,
-                        "match_type": "fuzzy",
-                    }
-
-        except Exception as e:
-            logger.error(f"Error resolving location '{location_name}' from landmarks: {e}")
-
-        return None
 
     def _resolve_district(self, district_name: str) -> Optional[Dict[str, Any]]:
         """

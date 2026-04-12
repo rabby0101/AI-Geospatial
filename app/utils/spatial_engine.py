@@ -562,43 +562,21 @@ class SpatialEngine:
                 except Exception as e:
                     logger.warning(f"Could not extract coordinates from selected feature: {e}")
             
-            # Fallback: Try to look up location from landmarks table by name
+            # Fallback: Resolve location name via Nominatim
             if (not origin_lon or not origin_lat) and location_name:
-                logger.info(f"Looking up location by name: {location_name}")
+                logger.info(f"Resolving location via Nominatim: {location_name}")
                 try:
-                    location_query = """
-                        SELECT 
-                            ST_X(ST_Centroid(ST_Union(geometry))) as lon,
-                            ST_Y(ST_Centroid(ST_Union(geometry))) as lat
-                        FROM vector.landmarks 
-                        WHERE LOWER(name) = LOWER(:name)
-                    """
-                    db_manager.initialize()
-                    with db_manager.engine.connect() as conn:
-                        result = conn.execute(text(location_query), {"name": location_name})
-                        row = result.fetchone()
-                        if row and row[0] and row[1]:
-                            origin_lon = float(row[0])
-                            origin_lat = float(row[1])
-                            logger.info(f"Found location '{location_name}' at ({origin_lon}, {origin_lat})")
-                        else:
-                            # Try berlin_districts as fallback
-                            district_query = """
-                                SELECT 
-                                    ST_X(ST_Centroid(ST_Union(geometry))) as lon,
-                                    ST_Y(ST_Centroid(ST_Union(geometry))) as lat
-                                FROM vector.berlin_districts 
-                                WHERE LOWER(bezirk) = LOWER(:name) OR LOWER(name) = LOWER(:name)
-                            """
-                            result = conn.execute(text(district_query), {"name": location_name})
-                            row = result.fetchone()
-                            if row and row[0] and row[1]:
-                                origin_lon = float(row[0])
-                                origin_lat = float(row[1])
-                                logger.info(f"Found district '{location_name}' at ({origin_lon}, {origin_lat})")
+                    from app.utils.location_resolver import resolve_location
+                    loc = resolve_location(location_name)
+                    if loc:
+                        bbox = loc.get("bbox")
+                        if bbox:
+                            origin_lon = (bbox[0] + bbox[2]) / 2
+                            origin_lat = (bbox[1] + bbox[3]) / 2
+                            logger.info(f"Resolved '{location_name}' to ({origin_lon}, {origin_lat})")
                 except Exception as e:
-                    logger.warning(f"Could not look up location by name: {e}")
-            
+                    logger.warning(f"Could not resolve location '{location_name}': {e}")
+
             # Validate required parameters
             if not origin_lon or not origin_lat:
                 return {
@@ -760,43 +738,20 @@ class SpatialEngine:
                 except Exception as e:
                     logger.warning(f"Could not extract coordinates from selected feature: {e}")
             
-            # Fallback: Try to look up location from landmarks table by name
+            # Fallback: Resolve location name via Nominatim
             if (not lat or not lon) and location_name:
-                logger.info(f"Looking up location by name: {location_name}")
+                logger.info(f"Resolving location via Nominatim: {location_name}")
                 try:
-                    # Look for the location in landmarks (districts, ortsteils, etc.)
-                    location_query = f"""
-                        SELECT 
-                            ST_X(ST_Centroid(ST_Union(geometry))) as lon,
-                            ST_Y(ST_Centroid(ST_Union(geometry))) as lat
-                        FROM vector.landmarks 
-                        WHERE LOWER(name) = LOWER(:name)
-                    """
-                    db_manager.initialize()
-                    with db_manager.engine.connect() as conn:
-                        result = conn.execute(text(location_query), {"name": location_name})
-                        row = result.fetchone()
-                        if row and row[0] and row[1]:
-                            lon = float(row[0])
-                            lat = float(row[1])
-                            logger.info(f"Found location '{location_name}' at ({lon}, {lat})")
-                        else:
-                            # Try berlin_districts as fallback
-                            district_query = f"""
-                                SELECT 
-                                    ST_X(ST_Centroid(ST_Union(geometry))) as lon,
-                                    ST_Y(ST_Centroid(ST_Union(geometry))) as lat
-                                FROM vector.berlin_districts 
-                                WHERE LOWER(bezirk) = LOWER(:name) OR LOWER(name) = LOWER(:name)
-                            """
-                            result = conn.execute(text(district_query), {"name": location_name})
-                            row = result.fetchone()
-                            if row and row[0] and row[1]:
-                                lon = float(row[0])
-                                lat = float(row[1])
-                                logger.info(f"Found district '{location_name}' at ({lon}, {lat})")
+                    from app.utils.location_resolver import resolve_location
+                    loc = resolve_location(location_name)
+                    if loc:
+                        bbox = loc.get("bbox")
+                        if bbox:
+                            lon = (bbox[0] + bbox[2]) / 2
+                            lat = (bbox[1] + bbox[3]) / 2
+                            logger.info(f"Resolved '{location_name}' to ({lon}, {lat})")
                 except Exception as e:
-                    logger.warning(f"Could not look up location by name: {e}")
+                    logger.warning(f"Could not resolve location '{location_name}': {e}")
             
             # Validate required parameters
             if not lat or not lon:

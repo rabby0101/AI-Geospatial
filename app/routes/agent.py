@@ -11,6 +11,7 @@ Event format:
     data: {"type": "error", "content": "..."}\n\n
     data: {"type": "done"}\n\n
 """
+import asyncio
 import json
 import logging
 from typing import AsyncGenerator
@@ -39,7 +40,8 @@ async def _sse_generator(request: AgentRequest) -> AsyncGenerator[str, None]:
             selected_features=request.selected_features,
         ):
             payload = step.model_dump()
-            yield f"data: {json.dumps(payload, default=str)}\n\n"
+            serialized = await asyncio.to_thread(json.dumps, payload, default=str)
+            yield f"data: {serialized}\n\n"
     except Exception as e:
         logger.error(f"Agent SSE error: {e}")
         error_step = AgentStep(type="error", content=str(e))

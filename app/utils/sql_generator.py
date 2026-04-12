@@ -115,6 +115,51 @@ class SQLQueryGenerator:
         if not sql:
             raise ValueError("No SQL provided for spatial_query operation")
 
+        # Named place proximity: backend constructs SQL from location_name + target_table + radius_m
+        location_name = operation.parameters.get("location_name")
+        target_table = operation.parameters.get("target_table")
+        radius_m = operation.parameters.get("radius_m")
+
+        if location_name and target_table and radius_m:
+            try:
+                from app.utils.location_resolver import resolve_location
+                loc = resolve_location(location_name)
+                if not loc or not loc.get("bbox"):
+                    raise ValueError(f"Could not resolve location: {location_name}")
+                bbox = loc["bbox"]
+                lon = (bbox[0] + bbox[2]) / 2
+                lat = (bbox[1] + bbox[3]) / 2
+                print(f"📍 Resolved '{location_name}' → ({lon}, {lat}), radius={radius_m}m")
+                sql = f"""
+SELECT *,
+       ST_Distance(geom_25833, ST_Transform(ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326), 25833)) AS distance_m
+FROM {target_table}
+WHERE ST_DWithin(
+    geom_25833,
+    ST_Transform(ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326), 25833),
+    {radius_m}
+)
+ORDER BY distance_m
+""".strip()
+            except Exception as e:
+                raise ValueError(f"Named place proximity failed for '{location_name}': {e}")
+
+        elif location_name and ("{lon}" in sql or "{lat}" in sql):
+            # Fallback: substitute {lon}/{lat} placeholders in LLM-provided SQL
+            try:
+                from app.utils.location_resolver import resolve_location
+                loc = resolve_location(location_name)
+                if loc and loc.get("bbox"):
+                    bbox = loc["bbox"]
+                    lon = (bbox[0] + bbox[2]) / 2
+                    lat = (bbox[1] + bbox[3]) / 2
+                    sql = sql.replace("{lon}", str(lon)).replace("{lat}", str(lat))
+                    print(f"📍 Resolved '{location_name}' → ({lon}, {lat})")
+                else:
+                    raise ValueError(f"Could not resolve location: {location_name}")
+            except Exception as e:
+                raise ValueError(f"Location resolution failed for '{location_name}': {e}")
+
         # Validate and fix SQL syntax errors
         is_valid, fixed_sql, errors_found = validate_and_fix_sql(sql)
 
@@ -207,15 +252,20 @@ class SQLQueryGenerator:
         if re.search(r'^(?:WITH\s+.*?\)\s*)?SELECT\s+\w*\.?\*', sql.strip(), re.IGNORECASE | re.DOTALL):
             return sql
 
+        # Check if query is aggregate-only (COUNT/SUM/AVG without GROUP BY geometry)
+        # Adding geometry to such queries breaks GROUP BY rules
+        if re.search(r'^\s*SELECT\s+COUNT\s*\(', sql.strip(), re.IGNORECASE) and not re.search(r'\bGROUP\s+BY\b', sql, re.IGNORECASE):
+            return sql
+
         # Check if geometry is already in the main SELECT clause
         # We need to check only the first SELECT (before any subqueries)
         # Find the main SELECT...FROM portion (before any parentheses that might contain subqueries)
         main_select_match = re.match(r'^(?:WITH\s+.*?\)\s*)?(SELECT\s+)(.*?)\s+(FROM\s+)', sql.strip(), re.IGNORECASE | re.DOTALL)
-        
+
         if not main_select_match:
             # Can't parse the main SELECT, return as-is
             return sql
-        
+
         main_select_columns = main_select_match.group(2)
         
         # Check if geometry-related terms are in the main SELECT columns

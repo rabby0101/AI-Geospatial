@@ -54,6 +54,10 @@ class NLQuery(BaseModel):
         default=None,
         description="LLM provider to use: 'deepseek', 'gemini', or 'gemma3'"
     )
+    active_skill: Optional[str] = Field(
+        default=None,
+        description="Active skill ID (e.g. 'location_expert'). Scopes the pipeline to reduce token usage."
+    )
 
     class Config:
         json_schema_extra = {
@@ -179,3 +183,27 @@ class RoutingResult(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
     execution_time_ms: Optional[float] = None
     error: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Satellite image analysis models
+# ---------------------------------------------------------------------------
+
+class SatelliteUploadResponse(BaseModel):
+    """Response from POST /api/satellite/upload"""
+    success: bool
+    session_id: str
+    file_count: int = Field(description="Number of files processed in this upload")
+    total_files: int = Field(description="Total files accumulated in the session")
+    dates_found: List[str] = Field(default_factory=list, description="ISO dates extracted from filenames")
+    bands_found: List[str] = Field(default_factory=list, description="Band names found (B04, B08, etc.)")
+    tile_ids: List[str] = Field(default_factory=list, description="Sentinel-2 tile IDs found (T33UUU, etc.)")
+    errors: List[str] = Field(default_factory=list, description="Non-fatal parse warnings per file")
+    message: Optional[str] = None
+
+
+class SatelliteAnalyzeRequest(BaseModel):
+    """Request body for POST /api/satellite/analyze"""
+    question: str = Field(..., description="Natural language analysis question")
+    session_id: str = Field(..., description="Session ID from the upload step")
+    llm_provider: str = Field(default="gemini", description="LLM provider: 'gemini' or 'deepseek'")

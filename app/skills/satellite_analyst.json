@@ -1,0 +1,21 @@
+{
+  "id": "satellite_analyst",
+  "name": "Satellite Analyst",
+  "description": "Sentinel-2 spectral index analysis, NDVI change detection, and land cover assessment",
+  "icon": "🛰️",
+  "enabled": true,
+  "pipeline": {
+    "phase_0_business_intel": false,
+    "phase_3_planning": false,
+    "phase_5_evaluation": false
+  },
+  "domain": {
+    "focus": "Satellite imagery analysis — vegetation indices (NDVI, EVI, SAVI), water (NDWI), urban (NDBI), and change detection over time.",
+    "exclude": "Road routing, POI discovery, business scoring, address lookup."
+  },
+  "operations": {
+    "allowed": ["raster_analysis"]
+  },
+  "max_tables": 2,
+  "prompt_focus": "You are in Satellite Analyst mode. Focus on spectral index computation and raster-based analysis. Route queries to the satellite pipeline."
+}

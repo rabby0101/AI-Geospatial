@@ -113,7 +113,7 @@ def create_buffer(geometry_or_coords: Union[Dict, Any], radius_m: int) -> Dict[s
         return {"error": str(e)}
 
 
-def get_schema_info(keywords: Optional[List[str]] = None) -> Union[List[Dict], Dict]:
+def get_schema_info(keywords: Optional[List[str]] = None, **_ignored) -> Union[List[Dict], Dict]:
     """
     Return a compact catalog of ALL available tables so the LLM can choose
     which ones are relevant. Each entry has table_name, a short description,
@@ -512,6 +512,8 @@ def execute_sql(sql: str) -> Dict[str, Any]:
         if df is None or df.empty:
             return {"error": "Query failed or returned no results"}
 
+        import math as _math
+
         features = []
         for row_dict in df.to_dict("records"):
             # Extract GeoJSON geometry — look for the 'geom' alias first (canonical),
@@ -529,6 +531,12 @@ def execute_sql(sql: str) -> Dict[str, Any]:
             for key in list(row_dict.keys()):
                 if "geom" in key.lower() or key == "geometry":
                     row_dict.pop(key)
+
+            # Replace NaN/Infinity with None — json.dumps outputs literal NaN which is
+            # not valid JSON, causing JSON.parse to fail silently in the browser.
+            for key, val in row_dict.items():
+                if isinstance(val, float) and not _math.isfinite(val):
+                    row_dict[key] = None
 
             features.append({
                 "type": "Feature",
