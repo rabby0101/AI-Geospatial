@@ -6350,6 +6350,11 @@ LIMIT 10</textarea>
                 _showPanelSections();
                 try {
                     const resp = await fetch(`/api/agent/trace/${queryId}`);
+                    if (resp.status === 404) {
+                        // Trace not persisted (stale queryId or save failed) — use legacy view
+                        _hidePanelSections();
+                        // fall through to legacy rendering below
+                    } else {
                     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                     const trace = await resp.json();
 
@@ -6416,10 +6421,12 @@ LIMIT 10</textarea>
                             <div class="panel-results-desc">${_escHtml(r.summary || '')}</div>
                         `;
                     }
+                    return;  // trace loaded — skip legacy rendering
+                    }
                 } catch (e) {
                     _appendAgentStep('error', `Failed to load trace: ${e.message}`);
+                    return;
                 }
-                return;  // skip legacy rendering below
             }
 
             // Legacy path — layers without a stored trace (old layers, route layers, etc.)

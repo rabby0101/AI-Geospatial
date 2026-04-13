@@ -92,7 +92,8 @@ async def _sse_generator(request: AgentRequest) -> AsyncGenerator[str, None]:
 
     finally:
         try:
-            save_trace(
+            await asyncio.to_thread(
+                save_trace,
                 query_id,
                 collected_steps,
                 sql_queries,
@@ -100,7 +101,7 @@ async def _sse_generator(request: AgentRequest) -> AsyncGenerator[str, None]:
                 results,
             )
         except Exception as e:
-            logger.warning(f"Failed to save agent trace {query_id}: {e}")
+            logger.error(f"Failed to save agent trace {query_id}: {e}", exc_info=True)
 
         yield f'data: {json.dumps({"type": "done", "query_id": query_id})}\n\n'
 

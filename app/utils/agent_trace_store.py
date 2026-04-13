@@ -20,7 +20,7 @@ def init_trace_table() -> None:
     """Create agent_traces table if it does not exist. Called at app startup."""
     with _engine().connect() as conn:
         conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.agent_traces (
+            CREATE TABLE IF NOT EXISTS vector.agent_traces (
                 query_id  TEXT PRIMARY KEY,
                 steps     JSONB NOT NULL DEFAULT '[]',
                 sql_queries JSONB NOT NULL DEFAULT '[]',
@@ -53,7 +53,7 @@ def save_trace(
     with _engine().connect() as conn:
         conn.execute(
             text("""
-                INSERT INTO public.agent_traces (query_id, steps, sql_queries, tables_used, results)
+                INSERT INTO vector.agent_traces (query_id, steps, sql_queries, tables_used, results)
                 VALUES (:query_id, :steps::jsonb, :sql_queries::jsonb,
                         :tables_used::jsonb, :results::jsonb)
                 ON CONFLICT (query_id) DO UPDATE SET
@@ -78,7 +78,7 @@ def get_trace(query_id: str) -> Optional[Dict[str, Any]]:
         row = conn.execute(
             text("""
                 SELECT steps, sql_queries, tables_used, results
-                FROM public.agent_traces WHERE query_id = :qid
+                FROM vector.agent_traces WHERE query_id = :qid
             """),
             {"qid": query_id},
         ).fetchone()
