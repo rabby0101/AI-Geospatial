@@ -6374,17 +6374,97 @@ LIMIT 10</textarea>
         }
 
         // Display operations for a selected layer
-        function displayLayerOperations(layerId) {
+        async function displayLayerOperations(layerId) {
             const layerInfo = layers.find(l => l.id === layerId);
             if (!layerInfo) return;
 
-            const operationsPanel = document.getElementById('operationsPanel');
+            const operationsPanel   = document.getElementById('operationsPanel');
             const operationsContent = document.getElementById('operationsContent');
-            const operationsTitle = document.getElementById('operationsTitle');
+            const operationsTitle   = document.getElementById('operationsTitle');
 
             // Update title
-            operationsTitle.textContent = `${layerInfo.name}`;
+            if (operationsTitle) operationsTitle.textContent = layerInfo.name;
 
+            // If this layer has a stored agent trace, show the 4-section view
+            const queryId = layerInfo.metadata && layerInfo.metadata.queryId;
+            if (queryId) {
+                _clearPanelSections();
+                _showPanelSections();
+                try {
+                    const resp = await fetch(`/api/agent/trace/${queryId}`);
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const trace = await resp.json();
+
+                    // Section 1: Agent Reasoning
+                    const reasoningBody = document.getElementById('panelReasoningBody');
+                    if (reasoningBody && Array.isArray(trace.steps)) {
+                        trace.steps.forEach(s => {
+                            const badgeClass = { thought: 'badge-thought', action: 'badge-action', tool_result: 'badge-result', error: 'badge-error' }[s.type] || 'badge-result';
+                            const lbl        = { thought: 'Thought', action: 'Action', tool_result: 'Result', error: 'Error' }[s.type] || 'Step';
+                            const div = document.createElement('div');
+                            div.className = 'agent-step';
+                            div.innerHTML = `<span class="agent-badge ${badgeClass}">${_escHtml(lbl)}</span><span class="agent-content">${_escHtml(String(s.content || '').slice(0, 500))}</span>`;
+                            reasoningBody.appendChild(div);
+                        });
+                    }
+
+                    // Section 2: SQL Queries
+                    if (Array.isArray(trace.sql_queries)) {
+                        const sqlBody = document.getElementById('panelSqlBody');
+                        const countEl = document.getElementById('panelSqlCount');
+                        trace.sql_queries.forEach((sql, i) => {
+                            if (sqlBody) {
+                                const lbl = document.createElement('div');
+                                lbl.className   = 'sql-query-label';
+                                lbl.textContent = `Query ${i + 1}`;
+                                const pre = document.createElement('pre');
+                                pre.className   = 'sql-query-block';
+                                pre.textContent = sql;
+                                sqlBody.appendChild(lbl);
+                                sqlBody.appendChild(pre);
+                            }
+                        });
+                        if (countEl) countEl.textContent = `${trace.sql_queries.length} quer${trace.sql_queries.length === 1 ? 'y' : 'ies'}`;
+                    }
+
+                    // Section 3: Tables Used
+                    if (Array.isArray(trace.tables_used)) {
+                        const tablesBody = document.getElementById('panelTablesBody');
+                        trace.tables_used.forEach(t => {
+                            if (tablesBody) {
+                                const badge = document.createElement('span');
+                                badge.className   = 'panel-table-badge';
+                                badge.textContent = t;
+                                tablesBody.appendChild(badge);
+                            }
+                        });
+                    }
+
+                    // Section 4: Results
+                    if (trace.results) {
+                        const r  = trace.results;
+                        const rb = document.getElementById('panelResultsBody');
+                        if (rb) rb.innerHTML = `
+                            <div class="panel-results-row">
+                                <div class="panel-results-stat">
+                                    <div class="panel-results-stat-value">${r.feature_count ?? '—'}</div>
+                                    <div class="panel-results-stat-label">features</div>
+                                </div>
+                                <div class="panel-results-stat">
+                                    <div class="panel-results-stat-value">${r.execution_time ? _escHtml(r.execution_time) + 's' : '—'}</div>
+                                    <div class="panel-results-stat-label">exec time</div>
+                                </div>
+                            </div>
+                            <div class="panel-results-desc">${_escHtml(r.summary || '')}</div>
+                        `;
+                    }
+                } catch (e) {
+                    _appendAgentStep('error', `Failed to load trace: ${e.message}`);
+                }
+                return;  // skip legacy rendering below
+            }
+
+            // Legacy path — layers without a stored trace (old layers, route layers, etc.)
             let content = '';
 
             // Display reasoning
