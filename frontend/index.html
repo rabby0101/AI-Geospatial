@@ -9569,7 +9569,7 @@ LIMIT 10</textarea>
                         <div class="panel-results-stat-label">exec time</div>
                     </div>
                 </div>
-                <div class="panel-results-desc">${(fa.summary || '').replace(/</g, '&lt;')}</div>
+                <div class="panel-results-desc">${_escHtml(fa.summary || '')}</div>
             `;
         }
 
@@ -9611,14 +9611,18 @@ LIMIT 10</textarea>
             if (panel) panel.classList.remove('visible');
         }
 
+        function _escHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         function _appendAgentStep(type, content) {
             const container = document.getElementById('panelReasoningBody');
             if (!container) return;
             const badgeClass = { thought: 'badge-thought', action: 'badge-action', tool_result: 'badge-result', error: 'badge-error' }[type] || 'badge-result';
-            const label      = { thought: 'Thought', action: 'Action', tool_result: 'Result', error: 'Error' }[type] || type;
+            const label      = { thought: 'Thought', action: 'Action', tool_result: 'Result', error: 'Error' }[type] || 'Step';
             const div = document.createElement('div');
             div.className = 'agent-step';
-            div.innerHTML = `<span class="agent-badge ${badgeClass}">${label}</span><span class="agent-content">${String(content).slice(0, 500).replace(/</g, '&lt;')}</span>`;
+            div.innerHTML = `<span class="agent-badge ${badgeClass}">${_escHtml(label)}</span><span class="agent-content">${_escHtml(String(content).slice(0, 500))}</span>`;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
@@ -9642,6 +9646,7 @@ LIMIT 10</textarea>
             let capturedQueryId = null;
             let capturedLayerId = null;
             let agentDone       = false;
+            let reader          = null;
 
             try {
                 const response = await fetch('/api/agent/query', {
@@ -9652,7 +9657,7 @@ LIMIT 10</textarea>
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                const reader  = response.body.getReader();
+                reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer    = '';
 
@@ -9695,7 +9700,7 @@ LIMIT 10</textarea>
                             _appendAgentStep('thought', step.content);
 
                         } else if (step.type === 'action') {
-                            _appendAgentStep('action', step.content);
+                            _appendAgentStep('action', step.content || step.tool_name || '');
                             // Extract SQL and tables from execute_sql calls
                             if (step.tool_name === 'execute_sql' && step.tool_args && step.tool_args.sql) {
                                 _appendSqlQuery(step.tool_args.sql);
@@ -9734,6 +9739,7 @@ LIMIT 10</textarea>
             } catch (err) {
                 _appendAgentStep('error', `Connection error: ${err.message}`);
             } finally {
+                if (reader) reader.cancel().catch(() => {});
                 // Remove temp layer spinner from left panel
                 if (tempLayerDomId) {
                     const tempEl = document.getElementById(tempLayerDomId);
