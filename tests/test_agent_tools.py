@@ -17,6 +17,8 @@ from app.utils.agent_tools import (
     compute_site_suitability,
     compute_kernel_density,
     compute_equity_gaps,
+    add_hypothetical_feature,
+    compare_scenarios,
 )
 
 
@@ -81,11 +83,17 @@ def test_get_table_columns_geom_25833_appears_first():
 
 def test_tool_registry_has_all_tools():
     expected = {
-        "geocode_location", "create_buffer",
-        "spatial_filter", "get_schema_info", "calculate_route",
-        "walking_isochrone", "analyze_satellite", "score_locations",
+        "geocode_location", "create_buffer", "find_tables_by_concept",
+        "get_schema_info", "get_table_columns", "execute_sql",
+        "spatial_filter", "calculate_route", "walking_isochrone",
+        "analyze_satellite", "score_locations",
+        "generate_voronoi", "generate_hexgrid", "generate_convex_hull", "generate_corridor",
+        "find_coverage_gaps", "compute_site_suitability",
+        "compute_kernel_density", "compute_equity_gaps",
+        "add_hypothetical_feature", "compare_scenarios",
+        "save_generated_layer",
     }
-    assert expected.issubset(set(TOOL_REGISTRY.keys()))
+    assert expected == set(TOOL_REGISTRY.keys())
 
 
 def _mock_hospital_rows():
@@ -236,3 +244,35 @@ def test_compute_equity_gaps_flags_underserved():
             service_col="hospital_count",
         )
     assert "error" not in result
+
+
+def test_add_hypothetical_feature_saves_to_postgis():
+    geom = {"type": "Point", "coordinates": [13.40, 52.47]}
+    with patch("app.utils.agent_tools.db_manager") as mock_db, \
+         patch("geopandas.GeoDataFrame.to_postgis") as mock_postgis:
+        mock_db.engine = MagicMock()
+        result = add_hypothetical_feature(
+            scenario_name="new_hospital_tempelhof",
+            geometry=geom,
+            properties={"name": "Hypothetical Hospital", "type": "hospital"},
+        )
+    mock_postgis.assert_called_once()
+    assert result["saved"] is True
+
+
+def test_compare_scenarios_returns_diff():
+    with patch("app.utils.agent_tools.db_manager") as mock_db, \
+         patch("geopandas.GeoDataFrame.to_postgis"):
+        mock_db.engine = MagicMock()
+        mock_db.execute_query.side_effect = [
+            _mock_service_df(),
+            _mock_service_df(),
+        ]
+        result = compare_scenarios(
+            baseline_table="public.osm_pharmacies",
+            scenario_table="temp_layers.layer_scenario_x",
+            radius_m=500,
+            clip_bbox={"min_lon": 13.3, "min_lat": 52.45,
+                       "max_lon": 13.5, "max_lat": 52.55},
+        )
+    assert result["type"] == "FeatureCollection"

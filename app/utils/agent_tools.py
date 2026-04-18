@@ -867,6 +867,103 @@ def compute_equity_gaps(service_table: str, district_table: str,
         return {"error": str(e)}
 
 
+def add_hypothetical_feature(scenario_name: str, geometry: Dict[str, Any],
+                              properties: Dict[str, Any] = None) -> Dict[str, Any]:
+    """
+    Add a hypothetical feature to a named scenario layer in temp_layers.
+    """
+    try:
+        fc = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": properties or {},
+            }],
+        }
+        safe = scenario_name.lower().replace(" ", "_")[:40]
+        layer_name = f"scenario_{safe}"
+        return save_generated_layer(fc, layer_name, f"Hypothetical scenario: {scenario_name}")
+    except Exception as e:
+        logger.error(f"add_hypothetical_feature error: {e}")
+        return {"error": str(e)}
+
+
+def compare_scenarios(baseline_table: str, scenario_table: str,
+                      radius_m: float, clip_bbox: Dict[str, float]) -> Dict[str, Any]:
+    """
+    Compare coverage gaps between a baseline and a scenario layer.
+    Returns a FeatureCollection showing improved vs unchanged gap polygons.
+    """
+    try:
+        clip_geojson = {
+            "type": "Polygon",
+            "coordinates": [[
+                [clip_bbox["min_lon"], clip_bbox["min_lat"]],
+                [clip_bbox["max_lon"], clip_bbox["min_lat"]],
+                [clip_bbox["max_lon"], clip_bbox["max_lat"]],
+                [clip_bbox["min_lon"], clip_bbox["max_lat"]],
+                [clip_bbox["min_lon"], clip_bbox["min_lat"]],
+            ]],
+        }
+
+        def _fetch_fc(table):
+            df = db_manager.execute_query(
+                f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {table}"
+            )
+            if df is None or df.empty:
+                return {"type": "FeatureCollection", "features": []}
+            return {
+                "type": "FeatureCollection",
+                "features": [
+                    {"type": "Feature",
+                     "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+                     "properties": {}}
+                    for _, row in df.iterrows()
+                ],
+            }
+
+        baseline_fc = _fetch_fc(baseline_table)
+        scenario_fc = _fetch_fc(scenario_table)
+
+        baseline_gaps = _coverage_gaps(baseline_fc, clip_geojson, radius_m)
+        scenario_gaps = _coverage_gaps(scenario_fc, clip_geojson, radius_m)
+
+        clip_shape = shape(clip_geojson)
+        empty = clip_shape.difference(clip_shape)
+
+        baseline_union = unary_union([shape(f["geometry"]) for f in baseline_gaps["features"]]) \
+            if baseline_gaps["features"] else empty
+        scenario_union = unary_union([shape(f["geometry"]) for f in scenario_gaps["features"]]) \
+            if scenario_gaps["features"] else empty
+
+        improved = baseline_union.difference(scenario_union)
+        unchanged = scenario_union
+
+        result_features = []
+        for g, label in [(improved, "improved"), (unchanged, "unchanged")]:
+            if g.is_empty:
+                continue
+            geoms = list(g.geoms) if hasattr(g, "geoms") else [g]
+            for geom in geoms:
+                if geom.area < 1e-8:
+                    continue
+                result_features.append({
+                    "type": "Feature",
+                    "geometry": mapping(geom),
+                    "properties": {"scenario": label},
+                })
+
+        result_fc = {"type": "FeatureCollection", "features": result_features}
+        saved = save_generated_layer(result_fc, "scenario_comparison", "Before/after scenario diff")
+        if "error" in saved:
+            return saved
+        return {**result_fc, **{k: v for k, v in saved.items() if k != "geojson"}}
+    except Exception as e:
+        logger.error(f"compare_scenarios error: {e}")
+        return {"error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # Tool registry — maps tool names to callables for the orchestrator
 # ---------------------------------------------------------------------------
@@ -883,13 +980,20 @@ TOOL_REGISTRY: Dict[str, Any] = {
     "walking_isochrone": walking_isochrone,
     "analyze_satellite": analyze_satellite,
     "score_locations": score_locations,
+    # --- Persistence ---
     "save_generated_layer": save_generated_layer,
+    # --- A: Geometry generation ---
     "generate_voronoi": generate_voronoi,
     "generate_hexgrid": generate_hexgrid,
     "generate_convex_hull": generate_convex_hull,
     "generate_corridor": generate_corridor,
+    # --- B: Suitability & coverage ---
     "find_coverage_gaps": find_coverage_gaps,
     "compute_site_suitability": compute_site_suitability,
+    # --- C: Analytical surfaces ---
     "compute_kernel_density": compute_kernel_density,
     "compute_equity_gaps": compute_equity_gaps,
+    # --- D: Scenario planning ---
+    "add_hypothetical_feature": add_hypothetical_feature,
+    "compare_scenarios": compare_scenarios,
 }
