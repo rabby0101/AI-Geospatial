@@ -69,7 +69,8 @@ def voronoi_from_points(features: Dict, clip_geojson: Optional[Dict] = None) -> 
                 "geometry": mapping(poly),
                 "properties": {**props_list[i], "voronoi_id": i},
             })
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Skipped Voronoi region {i}: {e}")
             continue
 
     return {"type": "FeatureCollection", "features": result_features}
@@ -189,6 +190,10 @@ def site_suitability(grid_features: Dict, criteria_scores: List[Dict]) -> Dict:
     total = np.zeros(n)
 
     for crit in criteria_scores:
+        if len(crit["scores"]) != n:
+            raise ValueError(
+                f"Criterion scores length {len(crit['scores'])} does not match grid size {n}"
+            )
         raw = np.array(crit["scores"], dtype=float)
         weight = float(crit.get("weight", 1.0))
         direction = crit.get("direction", "near")
@@ -230,17 +235,26 @@ def kernel_density(point_features: Dict, grid_features: Dict, bandwidth: Optiona
 
     kde = gaussian_kde(pts.T, bw_method=bandwidth)
 
-    centroids = np.array([
-        [shape(f["geometry"]).centroid.x, shape(f["geometry"]).centroid.y]
-        for f in grid_features["features"]
-    ]).T
+    valid_features = []
+    centroid_coords = []
+    for f in grid_features["features"]:
+        try:
+            c = shape(f["geometry"]).centroid
+            centroid_coords.append([c.x, c.y])
+            valid_features.append(f)
+        except Exception as e:
+            logger.debug(f"Skipped invalid geometry in kernel_density: {e}")
 
+    if not centroid_coords:
+        return grid_features
+
+    centroids = np.array(centroid_coords).T
     densities = kde(centroids)
     d_min, d_max = densities.min(), densities.max()
     normalized = (densities - d_min) / (d_max - d_min) if d_max > d_min else np.zeros(len(densities))
 
     out_features = []
-    for f, score in zip(grid_features["features"], normalized):
+    for f, score in zip(valid_features, normalized):
         out_features.append({
             **f,
             "properties": {**f.get("properties", {}), "score": round(float(score), 4)},
@@ -254,7 +268,10 @@ def equity_gap_analysis(district_data: List[Dict], service_col: str,
     counts = np.array([d.get(service_col, 0) for d in district_data], dtype=float)
 
     if population_col:
-        pops = np.array([max(d.get(population_col, 1), 1) for d in district_data], dtype=float)
+        pops = np.array([
+            max(float(d.get(population_col, 1) or 1), 1)
+            for d in district_data
+        ], dtype=float)
         rates = counts / pops * 10_000
     else:
         rates = counts.copy()
