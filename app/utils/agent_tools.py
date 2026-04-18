@@ -722,6 +722,151 @@ def generate_corridor(linestring_geojson: Dict[str, Any], width_m: float) -> Dic
         return {"error": str(e)}
 
 
+def find_coverage_gaps(service_table: str, radius_m: float,
+                       clip_bbox: Dict[str, float]) -> Dict[str, Any]:
+    try:
+        df = db_manager.execute_query(
+            f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {service_table}"
+        )
+        if df is None or df.empty:
+            return {"error": f"No features in {service_table}"}
+
+        service_fc = {
+            "type": "FeatureCollection",
+            "features": [
+                {"type": "Feature",
+                 "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+                 "properties": {}}
+                for _, row in df.iterrows()
+            ],
+        }
+
+        clip_geojson = {
+            "type": "Polygon",
+            "coordinates": [[
+                [clip_bbox["min_lon"], clip_bbox["min_lat"]],
+                [clip_bbox["max_lon"], clip_bbox["min_lat"]],
+                [clip_bbox["max_lon"], clip_bbox["max_lat"]],
+                [clip_bbox["min_lon"], clip_bbox["max_lat"]],
+                [clip_bbox["min_lon"], clip_bbox["min_lat"]],
+            ]],
+        }
+
+        result_fc = _coverage_gaps(service_fc, clip_geojson, radius_m)
+        layer_name = f"coverage_gaps_{service_table.split('.')[-1]}"
+        return save_generated_layer(result_fc, layer_name, f"Coverage gaps for {service_table}")
+    except Exception as e:
+        logger.error(f"find_coverage_gaps error: {e}")
+        return {"error": str(e)}
+
+
+def compute_site_suitability(bbox: Dict[str, float], cell_size_m: float,
+                              criteria: List[Dict[str, Any]]) -> Dict[str, Any]:
+    try:
+        grid = _hexagonal_grid(bbox, cell_size_m)
+        centroids = [shape(f["geometry"]).centroid for f in grid["features"]]
+
+        criteria_scores = []
+        for crit in criteria:
+            df = db_manager.execute_query(
+                f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {crit['table']}"
+            )
+            if df is None or df.empty:
+                continue
+
+            service_pts = [
+                shape(json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"])
+                for _, row in df.iterrows()
+            ]
+            if not service_pts:
+                continue
+
+            service_union = unary_union(service_pts)
+            distances = [c.distance(service_union) for c in centroids]
+
+            criteria_scores.append({
+                "scores": distances,
+                "weight": crit.get("weight", 1.0),
+                "direction": crit.get("direction", "near"),
+            })
+
+        if not criteria_scores:
+            return {"error": "No valid criteria — check table names and data"}
+
+        scored = _site_suitability(grid, criteria_scores)
+        return save_generated_layer(scored, "site_suitability", "Suitability-scored hex grid")
+    except Exception as e:
+        logger.error(f"compute_site_suitability error: {e}")
+        return {"error": str(e)}
+
+
+def compute_kernel_density(table: str, bbox: Dict[str, float],
+                           cell_size_m: float = 500) -> Dict[str, Any]:
+    try:
+        df = db_manager.execute_query(
+            f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {table}"
+        )
+        if df is None or df.empty:
+            return {"error": f"No features in {table}"}
+
+        point_fc = {
+            "type": "FeatureCollection",
+            "features": [
+                {"type": "Feature",
+                 "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+                 "properties": {}}
+                for _, row in df.iterrows()
+            ],
+        }
+
+        grid = _hexagonal_grid(bbox, cell_size_m)
+        scored = _kernel_density(point_fc, grid)
+        layer_name = f"kernel_density_{table.split('.')[-1]}"
+        return save_generated_layer(scored, layer_name, f"Kernel density of {table}")
+    except Exception as e:
+        logger.error(f"compute_kernel_density error: {e}")
+        return {"error": str(e)}
+
+
+def compute_equity_gaps(service_table: str, district_table: str,
+                        service_col: str = "service_count",
+                        population_col: Optional[str] = None) -> Dict[str, Any]:
+    try:
+        pop_select = f", d.{population_col}" if population_col else ""
+        pop_group = f", d.{population_col}" if population_col else ""
+        sql = f"""
+            SELECT d.name,
+                   ST_AsGeoJSON(ST_Transform(d.geom_25833, 4326)) AS geom,
+                   COUNT(s.geom_25833) AS {service_col}
+                   {pop_select}
+            FROM {district_table} d
+            LEFT JOIN {service_table} s
+              ON ST_Within(s.geom_25833, d.geom_25833)
+            GROUP BY d.name, d.geom_25833{pop_group}
+        """
+        df = db_manager.execute_query(sql)
+        if df is None or df.empty:
+            return {"error": "No district data returned"}
+
+        district_data = []
+        for _, row in df.iterrows():
+            entry = {
+                "name": row["name"],
+                "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+                service_col: int(row[service_col]),
+            }
+            if population_col and population_col in row.index:
+                entry[population_col] = int(row[population_col])
+            district_data.append(entry)
+
+        result_fc = _equity_gap_analysis(district_data, service_col, population_col)
+        return save_generated_layer(result_fc, f"equity_gaps_{service_col}",
+                                    f"Equity gap analysis: {service_col} per district")
+    except Exception as e:
+        logger.error(f"compute_equity_gaps error: {e}")
+        return {"error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # Tool registry — maps tool names to callables for the orchestrator
 # ---------------------------------------------------------------------------
@@ -738,4 +883,13 @@ TOOL_REGISTRY: Dict[str, Any] = {
     "walking_isochrone": walking_isochrone,
     "analyze_satellite": analyze_satellite,
     "score_locations": score_locations,
+    "save_generated_layer": save_generated_layer,
+    "generate_voronoi": generate_voronoi,
+    "generate_hexgrid": generate_hexgrid,
+    "generate_convex_hull": generate_convex_hull,
+    "generate_corridor": generate_corridor,
+    "find_coverage_gaps": find_coverage_gaps,
+    "compute_site_suitability": compute_site_suitability,
+    "compute_kernel_density": compute_kernel_density,
+    "compute_equity_gaps": compute_equity_gaps,
 }

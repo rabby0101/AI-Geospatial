@@ -13,6 +13,10 @@ from app.utils.agent_tools import (
     generate_convex_hull,
     generate_corridor,
     save_generated_layer,
+    find_coverage_gaps,
+    compute_site_suitability,
+    compute_kernel_density,
+    compute_equity_gaps,
 )
 
 
@@ -154,3 +158,81 @@ def test_save_generated_layer_writes_to_postgis():
 def test_save_generated_layer_empty_fc_returns_error():
     result = save_generated_layer({"type": "FeatureCollection", "features": []}, "empty")
     assert "error" in result
+
+
+def _mock_service_df():
+    import pandas as pd
+    return pd.DataFrame([
+        {"geom": '{"type":"Point","coordinates":[13.38,52.52]}'},
+        {"geom": '{"type":"Point","coordinates":[13.42,52.53]}'},
+    ])
+
+
+def _mock_district_df():
+    import pandas as pd
+    return pd.DataFrame([
+        {"name": "Mitte", "hospital_count": 10,
+         "geom": '{"type":"Polygon","coordinates":[[[13.37,52.50],[13.42,52.50],[13.42,52.55],[13.37,52.55],[13.37,52.50]]]}'},
+        {"name": "Neukoelln", "hospital_count": 2,
+         "geom": '{"type":"Polygon","coordinates":[[[13.43,52.45],[13.50,52.45],[13.50,52.50],[13.43,52.50],[13.43,52.45]]]}'},
+    ])
+
+
+def test_find_coverage_gaps_returns_fc():
+    with patch("app.utils.agent_tools.db_manager") as mock_db, \
+         patch("app.utils.agent_tools.save_generated_layer") as mock_save:
+        mock_db.execute_query.return_value = _mock_service_df()
+        mock_save.return_value = {"type": "FeatureCollection", "features": [], "saved": True}
+        result = find_coverage_gaps(
+            service_table="public.osm_pharmacies",
+            radius_m=500,
+            clip_bbox={"min_lon": 13.3, "min_lat": 52.45, "max_lon": 13.5, "max_lat": 52.55},
+        )
+    assert "error" not in result
+
+
+def test_compute_site_suitability_calls_save():
+    bbox = {"min_lon": 13.3, "min_lat": 52.45, "max_lon": 13.5, "max_lat": 52.55}
+    with patch("app.utils.agent_tools.db_manager") as mock_db, \
+         patch("app.utils.agent_tools.save_generated_layer") as mock_save:
+        mock_db.execute_query.return_value = _mock_service_df()
+        mock_save.return_value = {"saved": True, "table": "temp_layers.layer_x",
+                                   "feature_count": 5, "geojson": {"type": "FeatureCollection", "features": []}}
+        result = compute_site_suitability(
+            bbox=bbox,
+            cell_size_m=2000,
+            criteria=[{"table": "public.osm_pharmacies", "weight": 1.0, "direction": "far"}],
+        )
+    mock_save.assert_called_once()
+    assert "error" not in result
+
+
+def test_compute_kernel_density_calls_save():
+    bbox = {"min_lon": 13.3, "min_lat": 52.45, "max_lon": 13.5, "max_lat": 52.55}
+    with patch("app.utils.agent_tools.db_manager") as mock_db, \
+         patch("app.utils.agent_tools.save_generated_layer") as mock_save:
+        mock_db.execute_query.return_value = _mock_service_df()
+        mock_save.return_value = {"saved": True, "table": "temp_layers.layer_y",
+                                   "feature_count": 10, "geojson": {"type": "FeatureCollection", "features": []}}
+        result = compute_kernel_density(
+            table="public.osm_restaurants",
+            bbox=bbox,
+            cell_size_m=2000,
+        )
+    mock_save.assert_called_once()
+    assert "error" not in result
+
+
+def test_compute_equity_gaps_flags_underserved():
+    with patch("app.utils.agent_tools.db_manager") as mock_db, \
+         patch("app.utils.agent_tools.save_generated_layer") as mock_save:
+        mock_db.execute_query.return_value = _mock_district_df()
+        mock_save.return_value = {"type": "FeatureCollection",
+                                   "features": [{"properties": {"underserved": True}}],
+                                   "saved": True}
+        result = compute_equity_gaps(
+            service_table="public.osm_hospitals",
+            district_table="vector.wfs_schulen_schulen",
+            service_col="hospital_count",
+        )
+    assert "error" not in result

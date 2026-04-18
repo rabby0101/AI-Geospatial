@@ -233,7 +233,18 @@ def kernel_density(point_features: Dict, grid_features: Dict, bandwidth: Optiona
     if len(pts) < 2:
         return grid_features
 
-    kde = gaussian_kde(pts.T, bw_method=bandwidth)
+    try:
+        kde = gaussian_kde(pts.T, bw_method=bandwidth)
+    except np.linalg.LinAlgError:
+        # Singular covariance (e.g. collinear points) — return uniform scores
+        logger.warning("kernel_density: singular covariance, returning uniform scores")
+        return {
+            "type": "FeatureCollection",
+            "features": [
+                {**f, "properties": {**f.get("properties", {}), "score": 0.5}}
+                for f in grid_features["features"]
+            ],
+        }
 
     valid_features = []
     centroid_coords = []
