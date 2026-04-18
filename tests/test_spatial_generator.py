@@ -4,6 +4,10 @@ from app.utils.spatial_generator import (
     hexagonal_grid,
     convex_hull,
     corridor,
+    coverage_gaps,
+    site_suitability,
+    kernel_density,
+    equity_gap_analysis,
 )
 
 
@@ -106,3 +110,89 @@ def test_corridor_returns_polygon():
     assert result["type"] == "FeatureCollection"
     assert result["features"][0]["geometry"]["type"] in ("Polygon", "MultiPolygon")
     assert result["features"][0]["properties"]["width_m"] == 200
+
+
+SMALL_BBOX = {"min_lon": 13.3, "min_lat": 52.45, "max_lon": 13.5, "max_lat": 52.55}
+
+
+def test_convex_hull_empty_raises():
+    with pytest.raises(ValueError):
+        convex_hull({"type": "FeatureCollection", "features": []})
+
+
+def test_coverage_gaps_returns_fc():
+    services = _point_fc([(13.40, 52.50)])  # one service point in the middle
+    clip = {
+        "type": "Polygon",
+        "coordinates": [[[13.3, 52.45], [13.5, 52.45], [13.5, 52.55], [13.3, 52.55], [13.3, 52.45]]]
+    }
+    result = coverage_gaps(services, clip, radius_m=100)  # small radius -> should have gaps
+    assert result["type"] == "FeatureCollection"
+    assert len(result["features"]) > 0
+    for f in result["features"]:
+        assert f["properties"]["gap"] is True
+
+
+def test_coverage_gaps_no_gaps_when_fully_covered():
+    services = _point_fc([(13.40, 52.50)])
+    clip = {
+        "type": "Polygon",
+        "coordinates": [[[13.399, 52.499], [13.401, 52.499], [13.401, 52.501], [13.399, 52.501], [13.399, 52.499]]]
+    }
+    result = coverage_gaps(services, clip, radius_m=5000)  # huge radius -> no gaps
+    assert result["type"] == "FeatureCollection"
+    # all area is covered, should have no gaps
+    assert len(result["features"]) == 0
+
+
+def test_site_suitability_returns_sorted():
+    grid = hexagonal_grid(SMALL_BBOX, cell_size_m=2000)
+    n = len(grid["features"])
+    criteria = [{"scores": list(range(n)), "weight": 1.0, "direction": "near"}]
+    result = site_suitability(grid, criteria)
+    assert result["type"] == "FeatureCollection"
+    scores = [f["properties"]["suitability_score"] for f in result["features"]]
+    assert scores == sorted(scores, reverse=True)
+    assert all(0.0 <= s <= 1.0 for s in scores)
+
+
+def test_kernel_density_scores_normalized():
+    # Non-collinear points with enough spread to produce a non-singular KDE
+    # covariance and meaningful density variation across the grid.
+    pts = _point_fc([(13.35, 52.47), (13.40, 52.53), (13.45, 52.47),
+                     (13.38, 52.50), (13.42, 52.50)])
+    grid = hexagonal_grid(SMALL_BBOX, cell_size_m=500)
+    result = kernel_density(pts, grid)
+    assert result["type"] == "FeatureCollection"
+    scores = [f["properties"]["score"] for f in result["features"]]
+    assert all(0.0 <= s <= 1.0 for s in scores)
+    assert max(scores) == pytest.approx(1.0, abs=0.01)
+
+
+def test_equity_gap_analysis_flags_underserved():
+    district_data = [
+        {"name": "Rich", "geometry": {"type": "Point", "coordinates": [13.4, 52.5]}, "svc": 10},
+        {"name": "Poor", "geometry": {"type": "Point", "coordinates": [13.5, 52.5]}, "svc": 1},
+        {"name": "Mid",  "geometry": {"type": "Point", "coordinates": [13.45, 52.5]}, "svc": 5},
+    ]
+    result = equity_gap_analysis(district_data, service_col="svc")
+    assert result["type"] == "FeatureCollection"
+    props = {f["properties"]["name"]: f["properties"] for f in result["features"]}
+    assert props["Poor"]["underserved"] is True
+    assert props["Rich"]["underserved"] is False
+    assert "equity_score" in props["Poor"]
+    assert isinstance(props["Poor"]["equity_score"], float)
+
+
+def test_equity_gap_analysis_with_population():
+    district_data = [
+        {"name": "Dense", "geometry": {"type": "Point", "coordinates": [13.4, 52.5]},
+         "svc": 5, "pop": 100000},
+        {"name": "Sparse", "geometry": {"type": "Point", "coordinates": [13.5, 52.5]},
+         "svc": 5, "pop": 1000},
+    ]
+    result = equity_gap_analysis(district_data, service_col="svc", population_col="pop")
+    props = {f["properties"]["name"]: f["properties"] for f in result["features"]}
+    # Dense district has 5 services per 100k = 0.5 per 10k, Sparse = 50 per 10k
+    assert props["Dense"]["underserved"] is True
+    assert props["Dense"]["rate_per_10k"] is not None
