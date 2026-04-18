@@ -56,6 +56,17 @@ Available tools:
 - walking_isochrone(location: {lat,lon}, minutes: int, mode: "walking"|"cycling"|"driving") → GeoJSON FeatureCollection with reachable area polygon
 - analyze_satellite(bbox: dict, indices: list[str]) → GeoJSON FeatureCollection
 - score_locations(features: GeoJSON, criteria: list[str]) → GeoJSON FeatureCollection with score property
+- generate_voronoi(table: str, id_col: str="id", clip_table: str=None) → saves Voronoi polygons to temp_layers, returns {saved, table, feature_count, geojson}
+- generate_hexgrid(bbox: {min_lon,min_lat,max_lon,max_lat}, cell_size_m: float) → GeoJSON FeatureCollection of hex cells (not saved — pass to other tools)
+- generate_convex_hull(table: str) → GeoJSON FeatureCollection with single bounding Polygon
+- generate_corridor(linestring_geojson: GeoJSON LineString, width_m: float) → GeoJSON FeatureCollection with corridor Polygon
+- find_coverage_gaps(service_table: str, radius_m: float, clip_bbox: {min_lon,min_lat,max_lon,max_lat}) → saves gap polygons to temp_layers, returns {saved, table, feature_count, geojson}
+- compute_site_suitability(bbox: {min_lon,min_lat,max_lon,max_lat}, cell_size_m: float, criteria: [{table,weight,direction:"near"|"far"}]) → saves scored hex grid to temp_layers
+- compute_kernel_density(table: str, bbox: {min_lon,min_lat,max_lon,max_lat}, cell_size_m: float=500) → saves density-scored hex grid to temp_layers
+- compute_equity_gaps(service_table: str, district_table: str, service_col: str, population_col: str=None) → saves district equity scores to temp_layers
+- add_hypothetical_feature(scenario_name: str, geometry: GeoJSON, properties: dict={}) → saves hypothetical feature to temp_layers scenario layer
+- compare_scenarios(baseline_table: str, scenario_table: str, radius_m: float, clip_bbox: dict) → saves improved/unchanged gap diff to temp_layers
+- save_generated_layer(geojson: FeatureCollection, layer_name: str, description: str="") → saves any FeatureCollection to temp_layers, returns {saved, table, feature_count}
 
 Standard workflow for spatial queries (SQL-based):
 1. find_tables_by_concept — ALWAYS call this first. Extract the key domain concepts from
@@ -178,6 +189,27 @@ Rules:
   a second time if you could not identify the table needed for the query on the first pass.
 - Call tools one at a time; wait for each result before proceeding
 - If a tool returns an error, adjust and retry with corrected arguments
+
+Geometry generation workflow:
+- "Generate Voronoi zones for all hospitals" → generate_voronoi(table="public.osm_hospitals")
+- "Show the convex hull of all schools" → generate_convex_hull(table="public.osm_schools")
+- "Create a 200m corridor along [route]" → calculate_route first, then generate_corridor(linestring, width_m=200)
+- "Generate a 500m hex grid over Berlin" → generate_hexgrid(bbox={min_lon:13.088,min_lat:52.338,max_lon:13.761,max_lat:52.675}, cell_size_m=500)
+
+Coverage and suitability workflow:
+- "Find areas more than 1km from a pharmacy" → geocode_location to get bbox, then find_coverage_gaps(service_table="public.osm_pharmacies", radius_m=1000, clip_bbox=...)
+- "Best locations for a new clinic near transport, far from existing clinics" → compute_site_suitability(bbox=..., cell_size_m=500, criteria=[{table:"public.osm_transport_stops",weight:0.5,direction:"near"},{table:"public.osm_hospitals",weight:0.5,direction:"far"}])
+
+Analytical surface workflow:
+- "Show density of restaurants across Berlin" → compute_kernel_density(table="public.osm_restaurants", bbox={...berlin bbox...})
+- "Which districts have worst hospital coverage?" → compute_equity_gaps(service_table="public.osm_hospitals", district_table="vector.wfs_schulen_schulen", service_col="hospital_count")
+
+Scenario planning workflow:
+1. add_hypothetical_feature(scenario_name="new_hospital", geometry={...point...}, properties={type:"hospital"})
+2. compare_scenarios(baseline_table="public.osm_hospitals", scenario_table="temp_layers.layer_scenario_new_hospital_...", radius_m=1000, clip_bbox=...)
+
+Generated layer rule: when a spatial generation tool returns {saved: true, table: "temp_layers.X", geojson: ...},
+use {"use_last_result": true} as the Final Answer — the frontend renders the geojson from the result directly.
 """
 
 
