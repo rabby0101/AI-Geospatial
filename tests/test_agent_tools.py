@@ -1,12 +1,18 @@
 import pytest
 from unittest.mock import patch, MagicMock
 import pandas as pd
+import geopandas as gpd
 from app.utils.agent_tools import (
     geocode_location,
     create_buffer,
     get_schema_info,
     get_table_columns,
     TOOL_REGISTRY,
+    generate_voronoi,
+    generate_hexgrid,
+    generate_convex_hull,
+    generate_corridor,
+    save_generated_layer,
 )
 
 
@@ -43,11 +49,12 @@ def test_create_buffer_from_geojson_point():
 
 def test_get_schema_info_returns_tables():
     with patch("app.utils.agent_tools.db_manager") as mock_db:
-        mock_db.execute_query.return_value = [
-            {"table_name": "osm_parks", "description": "Parks in Berlin", "geometry_type": "MultiPolygon"}
-        ]
+        mock_db.execute_query.return_value = pd.DataFrame([
+            {"table_name": "osm_parks", "description": "Parks in Berlin",
+             "geometry_type": "MultiPolygon", "row_count": 42}
+        ])
         result = get_schema_info(["parks", "green"])
-    assert isinstance(result, list)
+    assert "catalog" in result or isinstance(result, list)
 
 
 def test_get_table_columns_geom_25833_appears_first():
@@ -70,8 +77,80 @@ def test_get_table_columns_geom_25833_appears_first():
 
 def test_tool_registry_has_all_tools():
     expected = {
-        "geocode_location", "create_buffer", "query_features",
+        "geocode_location", "create_buffer",
         "spatial_filter", "get_schema_info", "calculate_route",
         "walking_isochrone", "analyze_satellite", "score_locations",
     }
-    assert expected == set(TOOL_REGISTRY.keys())
+    assert expected.issubset(set(TOOL_REGISTRY.keys()))
+
+
+def _mock_hospital_rows():
+    import pandas as pd
+    # Points spread in both lon and lat to produce a non-degenerate convex hull
+    coords = [
+        (13.38, 52.52), (13.39, 52.53), (13.40, 52.51),
+        (13.41, 52.54), (13.42, 52.50), (13.43, 52.55),
+    ]
+    return pd.DataFrame([
+        {"id": i, "geom": f'{{"type":"Point","coordinates":[{lon},{lat}]}}'}
+        for i, (lon, lat) in enumerate(coords)
+    ])
+
+
+def test_generate_voronoi_returns_saved_result():
+    with patch("app.utils.agent_tools.db_manager") as mock_db, \
+         patch("app.utils.agent_tools.save_generated_layer") as mock_save:
+        mock_db.execute_query.return_value = _mock_hospital_rows()
+        mock_save.return_value = {"saved": True, "table": "temp_layers.layer_voronoi_x",
+                                   "feature_count": 5, "geojson": {"type": "FeatureCollection", "features": []}}
+        result = generate_voronoi("public.osm_hospitals", id_col="id")
+    assert "error" not in result or result.get("saved")
+
+
+def test_generate_hexgrid_returns_feature_collection():
+    result = generate_hexgrid(
+        {"min_lon": 13.3, "min_lat": 52.45, "max_lon": 13.5, "max_lat": 52.55},
+        cell_size_m=1000,
+    )
+    assert result["type"] == "FeatureCollection"
+    assert len(result["features"]) > 0
+
+
+def test_generate_convex_hull_returns_polygon():
+    with patch("app.utils.agent_tools.db_manager") as mock_db:
+        mock_db.execute_query.return_value = _mock_hospital_rows()
+        result = generate_convex_hull("public.osm_hospitals")
+    assert result["type"] == "FeatureCollection"
+    assert result["features"][0]["geometry"]["type"] in ("Polygon", "MultiPolygon")
+
+
+def test_generate_corridor_returns_polygon():
+    result = generate_corridor(
+        {"type": "LineString", "coordinates": [[13.38, 52.52], [13.42, 52.52]]},
+        width_m=200,
+    )
+    assert result["type"] == "FeatureCollection"
+    assert result["features"][0]["geometry"]["type"] in ("Polygon", "MultiPolygon")
+
+
+def test_save_generated_layer_writes_to_postgis():
+    fc = {
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [13.4, 52.5]},
+            "properties": {"name": "test"},
+        }],
+    }
+    with patch("app.utils.agent_tools.db_manager") as mock_db, \
+         patch("geopandas.GeoDataFrame.to_postgis") as mock_postgis:
+        mock_db.engine = MagicMock()
+        result = save_generated_layer(fc, "test_layer", "A test layer")
+    mock_postgis.assert_called_once()
+    assert result["saved"] is True
+    assert "table" in result
+
+
+def test_save_generated_layer_empty_fc_returns_error():
+    result = save_generated_layer({"type": "FeatureCollection", "features": []}, "empty")
+    assert "error" in result

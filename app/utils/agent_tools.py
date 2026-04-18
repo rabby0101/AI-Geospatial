@@ -3,16 +3,28 @@ Agent tools — each function does one thing and returns a plain dict.
 Success: dict with result data.
 Failure: dict with "error" key.
 """
+import hashlib
 import json
 import logging
 from typing import Any, Dict, List, Optional, Union
 
+import geopandas as gpd
 from shapely.geometry import Point, shape, mapping
-from shapely.ops import transform
+from shapely.ops import transform, unary_union
 import pyproj
 
 from app.utils.location_resolver import LocationResolver
 from app.utils.database import db_manager
+from app.utils.spatial_generator import (
+    voronoi_from_points,
+    hexagonal_grid as _hexagonal_grid,
+    convex_hull as _convex_hull,
+    corridor as _corridor,
+    coverage_gaps as _coverage_gaps,
+    site_suitability as _site_suitability,
+    kernel_density as _kernel_density,
+    equity_gap_analysis as _equity_gap_analysis,
+)
 
 logger = logging.getLogger(__name__)
 location_resolver = LocationResolver()
@@ -591,6 +603,119 @@ def find_tables_by_concept(concepts: List[str]) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"find_tables_by_concept error: {e}")
+        return {"error": str(e)}
+
+
+def save_generated_layer(geojson: Dict[str, Any], layer_name: str,
+                         description: str = "") -> Dict[str, Any]:
+    try:
+        features = geojson.get("features", [])
+        if not features:
+            return {"error": "No features to save"}
+
+        geometries = [shape(f["geometry"]) for f in features if f.get("geometry")]
+        props = [f.get("properties", {}) for f in features if f.get("geometry")]
+
+        gdf = gpd.GeoDataFrame(props, geometry=geometries, crs="EPSG:4326")
+        gdf["geom_25833"] = gdf.geometry.to_crs("EPSG:25833")
+        gdf = gdf.set_geometry("geom_25833")
+        gdf = gdf.drop(columns=["geometry"], errors="ignore")
+
+        safe = layer_name.lower().replace(" ", "_").replace("-", "_")
+        safe = "".join(c for c in safe if c.isalnum() or c == "_")[:40]
+        suffix = hashlib.md5(safe.encode()).hexdigest()[:8]
+        table_name = f"layer_{safe}_{suffix}"
+
+        if not db_manager.engine:
+            db_manager.initialize()
+
+        gdf.to_postgis(table_name, db_manager.engine,
+                       schema="temp_layers", if_exists="replace", index=False)
+
+        return {
+            "saved": True,
+            "table": f"temp_layers.{table_name}",
+            "feature_count": len(features),
+            "geojson": geojson,
+            "description": description,
+        }
+    except Exception as e:
+        logger.error(f"save_generated_layer error: {e}")
+        return {"error": str(e)}
+
+
+def generate_voronoi(table: str, id_col: str = "id",
+                     clip_table: Optional[str] = None) -> Dict[str, Any]:
+    try:
+        df = db_manager.execute_query(
+            f"SELECT {id_col}, ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {table}"
+        )
+        if df is None or df.empty:
+            return {"error": f"No features in {table}"}
+
+        features = []
+        for _, row in df.iterrows():
+            geom = json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"]
+            if geom.get("type") != "Point":
+                continue
+            features.append({
+                "type": "Feature",
+                "geometry": geom,
+                "properties": {id_col: row[id_col]},
+            })
+        point_fc = {"type": "FeatureCollection", "features": features}
+
+        clip_geojson = None
+        if clip_table:
+            clip_df = db_manager.execute_query(
+                f"SELECT ST_AsGeoJSON(ST_Transform(ST_Union(geom_25833),4326)) AS geom FROM {clip_table}"
+            )
+            if clip_df is not None and not clip_df.empty:
+                raw = clip_df.iloc[0]["geom"]
+                clip_geojson = json.loads(raw) if isinstance(raw, str) else raw
+
+        result_fc = voronoi_from_points(point_fc, clip_geojson)
+        layer_name = f"voronoi_{table.split('.')[-1]}"
+        return save_generated_layer(result_fc, layer_name, f"Voronoi zones for {table}")
+    except Exception as e:
+        logger.error(f"generate_voronoi error: {e}")
+        return {"error": str(e)}
+
+
+def generate_hexgrid(bbox: Dict[str, float], cell_size_m: float) -> Dict[str, Any]:
+    try:
+        return _hexagonal_grid(bbox, cell_size_m)
+    except Exception as e:
+        logger.error(f"generate_hexgrid error: {e}")
+        return {"error": str(e)}
+
+
+def generate_convex_hull(table: str) -> Dict[str, Any]:
+    try:
+        df = db_manager.execute_query(
+            f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {table}"
+        )
+        if df is None or df.empty:
+            return {"error": f"No features in {table}"}
+
+        features = [
+            {"type": "Feature",
+             "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+             "properties": {}}
+            for _, row in df.iterrows()
+        ]
+        fc = {"type": "FeatureCollection", "features": features}
+        return _convex_hull(fc)
+    except Exception as e:
+        logger.error(f"generate_convex_hull error: {e}")
+        return {"error": str(e)}
+
+
+def generate_corridor(linestring_geojson: Dict[str, Any], width_m: float) -> Dict[str, Any]:
+    try:
+        return _corridor(linestring_geojson, width_m)
+    except Exception as e:
+        logger.error(f"generate_corridor error: {e}")
         return {"error": str(e)}
 
 
