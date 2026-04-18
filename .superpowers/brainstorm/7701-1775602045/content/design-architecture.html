@@ -1,0 +1,137 @@
+<h2>Agentic System Design — ReAct Loop</h2>
+<p class="subtitle">Full architecture for the new AI Geospatial agent</p>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+
+  <!-- LEFT: ReAct Loop -->
+  <div>
+    <h3 style="color:#8a70d9; margin-top:0;">The ReAct Loop</h3>
+    <div style="background:#12121e; border:1px solid #333; border-radius:10px; padding:16px; font-size:13px;">
+
+      <div style="background:#1e1e3e; border-radius:8px; padding:12px; margin-bottom:12px; border-left: 3px solid #4a90d9;">
+        <div style="color:#4a90d9; font-size:11px; text-transform:uppercase; letter-spacing:1px;">1. User Question</div>
+        <div style="color:#fff; margin-top:4px;">"How many playgrounds within 500m of Neukölln Rathaus?"</div>
+      </div>
+
+      <div style="border: 1px dashed #444; border-radius:10px; padding:14px; margin-bottom:12px;">
+        <div style="color:#888; font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">ReAct Loop (repeats until done)</div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="background:#1e1a2e; border-left:3px solid #8a70d9; padding:8px 12px; border-radius:6px;">
+            <span style="color:#8a70d9; font-weight:600;">Thought</span>
+            <div style="color:#ccc; font-size:12px; margin-top:3px;">LLM reasons about what to do next, given all prior observations</div>
+          </div>
+          <div style="text-align:center; color:#555;">↓</div>
+          <div style="background:#1a2a1e; border-left:3px solid #60c060; padding:8px 12px; border-radius:6px;">
+            <span style="color:#60c060; font-weight:600;">Action</span>
+            <div style="color:#ccc; font-size:12px; margin-top:3px;">LLM outputs tool name + arguments as JSON</div>
+          </div>
+          <div style="text-align:center; color:#555;">↓</div>
+          <div style="background:#2a1e1a; border-left:3px solid #d08050; padding:8px 12px; border-radius:6px;">
+            <span style="color:#d08050; font-weight:600;">Tool Execution</span>
+            <div style="color:#ccc; font-size:12px; margin-top:3px;">Python runs the tool, returns structured result</div>
+          </div>
+          <div style="text-align:center; color:#555;">↓</div>
+          <div style="background:#1e2a1e; border-left:3px solid #60a080; padding:8px 12px; border-radius:6px;">
+            <span style="color:#60a080; font-weight:600;">Observation</span>
+            <div style="color:#ccc; font-size:12px; margin-top:3px;">Result appended to context; loop restarts</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#1e2e1e; border-radius:8px; padding:12px; border-left: 3px solid #60c060;">
+        <div style="color:#60c060; font-size:11px; text-transform:uppercase; letter-spacing:1px;">Final Answer</div>
+        <div style="color:#fff; margin-top:4px;">GeoJSON FeatureCollection → rendered on map</div>
+      </div>
+    </div>
+
+    <!-- SSE Streaming -->
+    <h3 style="color:#4a90d9; margin-top:20px;">SSE Streaming to Frontend</h3>
+    <div style="background:#12121e; border:1px solid #333; border-radius:10px; padding:14px; font-size:13px;">
+      <div style="color:#888; margin-bottom:10px;">Each event streamed in real-time:</div>
+      <div style="font-family:monospace; font-size:12px; line-height:2;">
+        <div><span style="color:#8a70d9;">event: thought</span> <span style="color:#ccc;">→ "I need to geocode the location first"</span></div>
+        <div><span style="color:#60c060;">event: action</span>  <span style="color:#ccc;">→ geocode_location("Neukölln Rathaus")</span></div>
+        <div><span style="color:#d08050;">event: tool_result</span> <span style="color:#ccc;">→ { lat: 52.48, lon: 13.43 }</span></div>
+        <div><span style="color:#8a70d9;">event: thought</span> <span style="color:#ccc;">→ "Now I'll create a 500m buffer"</span></div>
+        <div><span style="color:#60c060;">event: action</span>  <span style="color:#ccc;">→ create_buffer(coords, 500)</span></div>
+        <div><span style="color:#d08050;">event: tool_result</span> <span style="color:#ccc;">→ { geojson: POLYGON(...) }</span></div>
+        <div><span style="color:#60c060;">event: action</span>  <span style="color:#ccc;">→ query_database(...)</span></div>
+        <div><span style="color:#d08050;">event: tool_result</span> <span style="color:#ccc;">→ { features: [...14 items] }</span></div>
+        <div><span style="color:#60c060; font-weight:700;">event: final_answer</span> <span style="color:#7df;">→ GeoJSON on map ✓</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Tools + Files -->
+  <div>
+    <h3 style="color:#60c060; margin-top:0;">Available Tools</h3>
+    <div style="background:#12121e; border:1px solid #333; border-radius:10px; padding:14px; font-size:13px;">
+      <div style="display:flex; flex-direction:column; gap:7px;">
+        <div style="background:#1e2a1e; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <div><span style="color:#7df; font-family:monospace;">geocode_location</span><div style="color:#888; font-size:11px; margin-top:2px;">Name → coordinates + geometry</div></div>
+          <span style="background:#1a3a1a; color:#60c060; font-size:10px; padding:2px 7px; border-radius:4px;">Nominatim</span>
+        </div>
+        <div style="background:#1e2a1e; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <div><span style="color:#7df; font-family:monospace;">create_buffer</span><div style="color:#888; font-size:11px; margin-top:2px;">Geometry + radius → polygon</div></div>
+          <span style="background:#1a3a1a; color:#60c060; font-size:10px; padding:2px 7px; border-radius:4px;">PostGIS</span>
+        </div>
+        <div style="background:#1e2a1e; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <div><span style="color:#7df; font-family:monospace;">query_features</span><div style="color:#888; font-size:11px; margin-top:2px;">Natural language → SQL → GeoJSON</div></div>
+          <span style="background:#1a3a1a; color:#60c060; font-size:10px; padding:2px 7px; border-radius:4px;">LLM+PostGIS</span>
+        </div>
+        <div style="background:#1e2a1e; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <div><span style="color:#7df; font-family:monospace;">spatial_filter</span><div style="color:#888; font-size:11px; margin-top:2px;">Filter features by geometry (within/intersects)</div></div>
+          <span style="background:#1a3a1a; color:#60c060; font-size:10px; padding:2px 7px; border-radius:4px;">PostGIS</span>
+        </div>
+        <div style="background:#1e2a1e; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <div><span style="color:#7df; font-family:monospace;">calculate_route</span><div style="color:#888; font-size:11px; margin-top:2px;">Waypoints → optimal route GeoJSON</div></div>
+          <span style="background:#1a3a1a; color:#60c060; font-size:10px; padding:2px 7px; border-radius:4px;">pgRouting</span>
+        </div>
+        <div style="background:#1e2a1e; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <div><span style="color:#7df; font-family:monospace;">walking_isochrone</span><div style="color:#888; font-size:11px; margin-top:2px;">Location + time → reachable area polygon</div></div>
+          <span style="background:#1a3a1a; color:#60c060; font-size:10px; padding:2px 7px; border-radius:4px;">Valhalla</span>
+        </div>
+        <div style="background:#1e2a1e; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <div><span style="color:#7df; font-family:monospace;">analyze_satellite</span><div style="color:#888; font-size:11px; margin-top:2px;">Area + indices → spectral stats GeoJSON</div></div>
+          <span style="background:#1a3a1a; color:#60c060; font-size:10px; padding:2px 7px; border-radius:4px;">Sentinel-2</span>
+        </div>
+        <div style="background:#1e2a1e; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <div><span style="color:#7df; font-family:monospace;">score_locations</span><div style="color:#888; font-size:11px; margin-top:2px;">Features + criteria → MCDA ranked GeoJSON</div></div>
+          <span style="background:#1a3a1a; color:#60c060; font-size:10px; padding:2px 7px; border-radius:4px;">MCDA</span>
+        </div>
+        <div style="background:#1e2a1e; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <div><span style="color:#7df; font-family:monospace;">get_schema_info</span><div style="color:#888; font-size:11px; margin-top:2px;">Keywords → relevant tables + columns</div></div>
+          <span style="background:#1a3a1a; color:#60c060; font-size:10px; padding:2px 7px; border-radius:4px;">DB metadata</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Files -->
+    <h3 style="color:#d08050; margin-top:20px;">Files to Create / Modify</h3>
+    <div style="background:#12121e; border:1px solid #333; border-radius:10px; padding:14px; font-size:12px; font-family:monospace; line-height:2;">
+      <div style="color:#60c060;">+ app/routes/agent.py</div>
+      <div style="color:#888; font-family:sans-serif; font-size:11px; margin-left:12px; line-height:1.4; margin-bottom:6px;">SSE endpoint: POST /api/agent/query</div>
+
+      <div style="color:#60c060;">+ app/utils/agent_orchestrator.py</div>
+      <div style="color:#888; font-family:sans-serif; font-size:11px; margin-left:12px; line-height:1.4; margin-bottom:6px;">ReAct loop: runs Thought→Action→Observation</div>
+
+      <div style="color:#60c060;">+ app/utils/agent_tools.py</div>
+      <div style="color:#888; font-family:sans-serif; font-size:11px; margin-left:12px; line-height:1.4; margin-bottom:6px;">All 9 tool implementations</div>
+
+      <div style="color:#60c060;">+ app/models/agent_model.py</div>
+      <div style="color:#888; font-family:sans-serif; font-size:11px; margin-left:12px; line-height:1.4; margin-bottom:6px;">AgentRequest, AgentStep, AgentResponse models</div>
+
+      <div style="color:#d08050;">~ app/main.py</div>
+      <div style="color:#888; font-family:sans-serif; font-size:11px; margin-left:12px; line-height:1.4; margin-bottom:6px;">Register new /api/agent router</div>
+
+      <div style="color:#d08050;">~ frontend/index.html</div>
+      <div style="color:#888; font-family:sans-serif; font-size:11px; margin-left:12px; line-height:1.4; margin-bottom:6px;">Add SSE client + step-by-step progress UI</div>
+    </div>
+  </div>
+
+</div>
+
+<div style="background:#1a2020; border:1px solid #3a6060; border-radius:10px; padding:14px; margin-top:20px; font-size:13px; color:#ccc; line-height:1.7;">
+  <strong style="color:#7df;">Key design point:</strong> The old <code>/api/query</code> endpoint stays untouched. The new agent runs on <code>/api/agent/query</code> as a parallel path. You can switch between them in the frontend — useful while the agent is maturing.
+</div>

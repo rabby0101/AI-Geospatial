@@ -77,6 +77,7 @@ class RasterOperations:
         # Save if output path provided
         if output_path and profile:
             profile.update(
+                driver='GTiff',
                 dtype=rasterio.float32,
                 count=1,
                 compress='lzw',
@@ -162,7 +163,7 @@ class RasterOperations:
 
         # Save if requested
         if output_path and profile:
-            profile.update(dtype=rasterio.float32, count=1, compress='lzw')
+            profile.update(driver='GTiff', dtype=rasterio.float32, count=1, compress='lzw')
             with rasterio.open(output_path, 'w', **profile) as dst:
                 dst.write(ndvi_diff.astype(rasterio.float32), 1)
             logger.info(f"Saved NDVI difference to {output_path}")
@@ -306,9 +307,13 @@ class RasterOperations:
             transform = None
             raster_crs = None
 
-        # Reproject polygons if needed
-        if raster_crs and polygons.crs != raster_crs:
-            polygons = polygons.to_crs(raster_crs)
+        # Reproject polygons if needed (use EPSG int comparison — pyproj vs rasterio CRS
+        # objects may not compare equal with != even when they represent the same projection)
+        if raster_crs and polygons.crs:
+            raster_epsg = raster_crs.to_epsg()
+            polygon_epsg = polygons.crs.to_epsg()
+            if raster_epsg != polygon_epsg:
+                polygons = polygons.to_crs(raster_crs)
 
         results = {stat: [] for stat in stats}
         if categorical:
@@ -394,8 +399,10 @@ class RasterOperations:
         with rasterio.open(raster_path) as src:
             # Convert vector to GeoJSON-like format
             if isinstance(vector, gpd.GeoDataFrame):
-                # Reproject if needed
-                if vector.crs != src.crs:
+                # Reproject if needed (use EPSG int comparison for reliability)
+                vector_epsg = vector.crs.to_epsg() if vector.crs else None
+                src_epsg = src.crs.to_epsg() if src.crs else None
+                if vector_epsg != src_epsg:
                     vector = vector.to_crs(src.crs)
                 geoms = [feature['geometry'] for feature in vector.__geo_interface__['features']]
             else:
@@ -408,6 +415,7 @@ class RasterOperations:
                 # Save clipped raster
                 profile = src.profile.copy()
                 profile.update({
+                    'driver': 'GTiff',
                     'height': clipped_array.shape[1],
                     'width': clipped_array.shape[2],
                     'transform': clipped_transform,
@@ -550,7 +558,7 @@ class RasterOperations:
 
         # Save if requested
         if output_path and profile:
-            profile.update(dtype=rasterio.float32, count=1, compress='lzw')
+            profile.update(driver='GTiff', dtype=rasterio.float32, count=1, compress='lzw')
             with rasterio.open(output_path, 'w', **profile) as dst:
                 dst.write(result.astype(rasterio.float32), 1)
             logger.info(f"Saved raster calculation result to {output_path}")

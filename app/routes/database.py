@@ -1271,7 +1271,7 @@ def _run_schema_refresh():
     try:
         from app.utils.auto_discovery import AutoTableDiscovery
         from app.utils.schema_discovery import schema_discovery
-        from app.utils.deepseek import invalidate_query_cache
+        from app.utils.lmstudio_client import invalidate_query_cache
 
         result = AutoTableDiscovery.auto_discover_and_update()
         schema_discovery.refresh_cache()
@@ -1481,7 +1481,7 @@ async def wfs_import(body: WfsImportRequest):
 
     url = body.url.strip()
     layer_name = body.layer_name.strip()
-    max_features = min(body.max_features, 200_000)  # hard cap
+    max_features = min(body.max_features, 1_000_000)  # hard cap
 
     if not layer_name:
         raise HTTPException(status_code=400, detail="layer_name is required")

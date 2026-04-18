@@ -1128,7 +1128,7 @@ out skel qt;</textarea>
                     </div>
                     <div class="form-group">
                         <label>Max Features <span style="font-size:11px;color:var(--text2)">(cap to avoid large downloads)</span></label>
-                        <input id="wfsMaxFeatures" type="number" value="50000" min="1" max="200000">
+                        <input id="wfsMaxFeatures" type="number" value="50000" min="1" max="1000000">
                     </div>
                     <button class="btn primary lg" id="wfsImportBtn" onclick="doWfsImport()"><i class="fas fa-download"></i> Import Layer</button>
                     <div id="wfsImportProgress" style="margin-top:14px;font-size:12px;color:var(--text2);display:none">
@@ -1264,10 +1264,10 @@ out skel qt;</textarea>
         async function renderDetails(t) {
             const pane = document.getElementById('detailPane');
             const geom = t.geometry_type || 'None';
-            const descEsc = (t.description || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
-            const hintEsc = (t.usage_hint || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
+            const descEsc = (t.description || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            const hintEsc = (t.usage_hint || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
             let h = `<div class="d-head fade-in"><h2>${t.table_name}</h2><div style="display:flex;gap:8px">
-        <button class="btn" onclick="openTableDescModal('${t.table_name}','${descEsc}','${hintEsc}')"><i class="fas fa-edit"></i> Edit Desc</button>
+        <button class="btn" data-tbl="${t.table_name}" data-desc="${descEsc}" data-hint="${hintEsc}" onclick="openTableDescModal(this.dataset.tbl,this.dataset.desc,this.dataset.hint)"><i class="fas fa-edit"></i> Edit Desc</button>
         <button class="btn" onclick="loadPreview('${t.table_name}')"><i class="fas fa-eye"></i> Preview</button>
         <button class="btn" onclick="loadStats('${t.table_name}')"><i class="fas fa-chart-bar"></i> Stats</button>
     </div></div>`;
@@ -1275,10 +1275,6 @@ out skel qt;</textarea>
             h += `<div class="d-section fade-in"><div class="d-label">Description</div>
         <p style="line-height:1.6;color:#bbb">${t.description || '<em style="color:#666">No description</em>'}</p></div>`;
 
-            if (t.usage_hint) {
-                h += `<div class="d-section fade-in"><div class="d-label" style="color:#f0a500"><i class="fas fa-robot" style="margin-right:5px"></i>LLM Usage Hint</div>
-        <p style="line-height:1.6;color:#bbb;font-size:12px;white-space:pre-wrap">${t.usage_hint}</p></div>`;
-            }
 
             h += `<div class="d-section fade-in"><div class="d-label">Table Info</div><div class="d-grid">
         <div><strong>Schema:</strong> ${t.schema}</div>

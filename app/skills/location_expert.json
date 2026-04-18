@@ -1,0 +1,21 @@
+{
+  "id": "location_expert",
+  "name": "Location Expert",
+  "description": "Find addresses, explore nearby POIs, and run spatial queries on the map",
+  "icon": "📍",
+  "enabled": true,
+  "pipeline": {
+    "phase_0_business_intel": false,
+    "phase_3_planning": "auto",
+    "phase_5_evaluation": false
+  },
+  "domain": {
+    "focus": "Spatial location and proximity — finding places, addresses, nearby points of interest, buildings, and features across Berlin districts and subdivisions.",
+    "exclude": "Business scoring, satellite imagery, raster analysis, crime statistics, zoning law evaluation, MCDA."
+  },
+  "operations": {
+    "allowed": ["load", "spatial_query", "buffer", "filter", "aggregate", "nearest_by_road", "walking_time"]
+  },
+  "max_tables": 5,
+  "prompt_focus": "You are in Location Expert mode. Focus on spatial relationships, proximity, and feature discovery. Do not attempt business scoring, raster analysis, or zoning evaluation."
+}

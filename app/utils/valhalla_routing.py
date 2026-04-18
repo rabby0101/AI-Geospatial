@@ -247,51 +247,53 @@ class ValhallaRoutingService:
             costing="pedestrian", include_maneuvers=include_maneuvers
         )
 
-    def get_walking_isochrone(
+    def get_isochrone(
         self,
         lat: float,
         lon: float,
         time_minutes: float,
+        costing: str = "pedestrian",
         denoise: float = 0.5,
         generalize: float = 50
     ) -> IsochroneResult:
         """
-        Get walking isochrone polygon for a given time limit.
-        
+        Get isochrone polygon for a given time limit and transport mode.
+
         Args:
             lat, lon: Center point coordinates
-            time_minutes: Maximum walking time in minutes
+            time_minutes: Maximum travel time in minutes
+            costing: Valhalla costing model (pedestrian, bicycle, auto, etc.)
             denoise: Smoothing factor (0-1, higher = more smooth)
             generalize: Simplification threshold in meters
-            
+
         Returns:
             IsochroneResult with polygon geometry
         """
+        if costing not in SUPPORTED_COSTINGS:
+            return IsochroneResult(
+                success=False,
+                geometry=None,
+                time_minutes=time_minutes,
+                error=f"Unsupported costing: {costing}. Supported: {SUPPORTED_COSTINGS}"
+            )
         try:
+            costing_opts = DEFAULT_COSTING_OPTIONS.get(costing, {})
             request_body = {
                 "locations": [{"lat": lat, "lon": lon}],
-                "costing": "pedestrian",
-                "costing_options": {
-                    "pedestrian": {
-                        "walking_speed": WALKING_SPEED_KMH,
-                        "walkway_factor": 0.9,
-                        "sidewalk_factor": 0.95
-                    }
-                },
-                "contours": [
-                    {"time": time_minutes}  # Time in minutes
-                ],
+                "costing": costing,
+                "costing_options": {costing: costing_opts} if costing_opts else {},
+                "contours": [{"time": time_minutes}],
                 "denoise": denoise,
                 "generalize": generalize,
-                "polygons": True,  # Return polygon, not linestring
+                "polygons": True,
                 "show_locations": False
             }
-            
+
             response = self.client.post(
                 f"{self.base_url}/isochrone",
                 json=request_body
             )
-            
+
             if response.status_code != 200:
                 error_msg = response.text
                 logger.error(f"Valhalla isochrone error: {error_msg}")
@@ -301,14 +303,12 @@ class ValhallaRoutingService:
                     time_minutes=time_minutes,
                     error=f"Valhalla error: {error_msg}"
                 )
-            
+
             data = response.json()
-            
-            # Valhalla returns GeoJSON FeatureCollection
             features = data.get("features", [])
             if features:
                 geometry = features[0].get("geometry")
-                logger.info(f"✅ Valhalla isochrone: {time_minutes} min walking area generated")
+                logger.info(f"✅ Valhalla isochrone: {time_minutes} min {costing} area generated")
                 return IsochroneResult(
                     success=True,
                     geometry=geometry,
@@ -321,7 +321,7 @@ class ValhallaRoutingService:
                     time_minutes=time_minutes,
                     error="No isochrone generated"
                 )
-                
+
         except httpx.ConnectError:
             error_msg = f"Cannot connect to Valhalla at {self.base_url}. Is Valhalla running?"
             logger.error(error_msg)
@@ -341,6 +341,18 @@ class ValhallaRoutingService:
                 time_minutes=time_minutes,
                 error=str(e)
             )
+
+    def get_walking_isochrone(
+        self,
+        lat: float,
+        lon: float,
+        time_minutes: float,
+        denoise: float = 0.5,
+        generalize: float = 50
+    ) -> IsochroneResult:
+        """Convenience wrapper: pedestrian isochrone. Use get_isochrone for other modes."""
+        return self.get_isochrone(lat, lon, time_minutes, costing="pedestrian",
+                                  denoise=denoise, generalize=generalize)
 
     def get_multi_point_route(
         self,
