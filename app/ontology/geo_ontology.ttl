@@ -440,6 +440,105 @@
     :derivedFrom :berlin_ndvi_2018, :berlin_ndvi_2024 .
 
 # =============================================================================
+# KNOWLEDGE GRAPH PROPERTIES (for table concept mapping)
+# =============================================================================
+
+:synonym a owl:DatatypeProperty ;
+    rdfs:domain owl:Class ;
+    rdfs:range xsd:string ;
+    rdfs:label "synonym"@en ;
+    rdfs:comment "Natural language synonyms for this concept (multilingual)."@en .
+
+:mapsFromTag a owl:DatatypeProperty ;
+    rdfs:domain owl:Class ;
+    rdfs:range xsd:string ;
+    rdfs:label "maps from tag"@en ;
+    rdfs:comment "The analysis_patterns tag(s) in metadata.table_descriptions that map to this concept."@en .
+
+:hasPattern a owl:DatatypeProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range xsd:string ;
+    rdfs:label "has pattern"@en ;
+    rdfs:comment "An analysis_patterns tag associated with this dataset."@en .
+
+:relatedTo a owl:ObjectProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range :GeoDataset ;
+    rdfs:label "related to"@en ;
+    rdfs:comment "Another dataset commonly joined or used together with this one."@en .
+
+:hasKeyColumn a owl:DatatypeProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range xsd:string ;
+    rdfs:label "has key column"@en ;
+    rdfs:comment "An important column in this dataset."@en .
+
+:rowCount a owl:DatatypeProperty ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range xsd:integer ;
+    rdfs:label "row count"@en ;
+    rdfs:comment "Number of rows in the database table."@en .
+
+# =============================================================================
+# DOMAIN CONCEPT CLASSES (Berlin geospatial data)
+# =============================================================================
+
+:ZoningPlan a owl:Class ;
+    rdfs:subClassOf :AdministrativeDataset ;
+    rdfs:label "Zoning Plan"@en ;
+    rdfs:comment "Legally binding zoning plans (B-Pläne / Bebauungspläne) defining permitted land uses."@en ;
+    :synonym "B-Plan", "Bebauungsplan", "Bauleitplan", "Bauleitplanung",
+             "zoning plan", "zoning area", "land use regulation", "legally binding plan",
+             "development plan", "land use plan", "Flächennutzungsplan",
+             "Bebauungspläne", "B-Pläne" ;
+    :mapsFromTag "zoning", "land_use", "regulatory" .
+
+:ResidentialBuildingDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Residential Building Dataset"@en ;
+    rdfs:comment "Dataset containing residential buildings and housing footprints."@en ;
+    :synonym "residential buildings", "housing", "Wohngebäude", "Wohnbebauung",
+             "buildings", "Gebäude", "residential", "Wohnhäuser",
+             "building footprints", "Gebäudegrundrisse" ;
+    :mapsFromTag "land_use", "planning", "site_selection" .
+
+:DemographicDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Demographic Dataset"@en ;
+    rdfs:comment "Dataset containing population statistics, age groups, and demographic data."@en ;
+    :synonym "population", "age groups", "elderly", "Bevölkerung", "Altersgruppen",
+             "demographics", "Einwohner", "Bevölkerungsstruktur", "residents",
+             "Senioren", "senior citizens", "population by age", "Altersverteilung" ;
+    :mapsFromTag "demographics" .
+
+:PlanningAreaDataset a owl:Class ;
+    rdfs:subClassOf :AdministrativeDataset ;
+    rdfs:label "Planning Area Dataset"@en ;
+    rdfs:comment "Administrative planning areas: Planungsräume, districts, subdivisions."@en ;
+    :synonym "Planungsraum", "planning area", "district", "Bezirk", "subdivision",
+             "Stadtteil", "neighborhood", "administrative boundary",
+             "Verwaltungsbezirk", "Kiez", "quarter" ;
+    :mapsFromTag "planning", "coverage", "demographics" .
+
+:BusinessLocationDataset a owl:Class ;
+    rdfs:subClassOf :VectorDataset ;
+    rdfs:label "Business Location Dataset"@en ;
+    rdfs:comment "Dataset containing businesses, shops, commercial locations."@en ;
+    :synonym "business", "shop", "Gewerbe", "commerce", "retail",
+             "Einzelhandel", "Ladenlokal", "commercial", "Einkauf",
+             "supermarket", "Supermarkt", "store", "outlet" ;
+    :mapsFromTag "business_location", "site_selection" .
+
+:TransportNetworkDataset a owl:Class ;
+    rdfs:subClassOf :TransportDataset ;
+    rdfs:label "Transport Network Dataset"@en ;
+    rdfs:comment "Streets, cycling paths, public transport routes and stops."@en ;
+    :synonym "transport", "street", "road", "cycling", "bus", "Straße",
+             "Verkehr", "ÖPNV", "public transport", "route", "path",
+             "Radweg", "Fahrradweg", "S-Bahn", "U-Bahn" ;
+    :mapsFromTag "routing", "proximity_analysis" .
+
+# =============================================================================
 # INFERENCE RULES (for reasoning)
 # =============================================================================
 

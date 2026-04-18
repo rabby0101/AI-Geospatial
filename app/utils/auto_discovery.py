@@ -533,7 +533,7 @@ Return ONLY valid JSON (no markdown, no explanation) with exactly these keys:
   "analysis_patterns": ["tag1", "tag2"]
 }}
 
-For analysis_patterns, pick applicable tags from: proximity_analysis, routing, coverage, demographics, environmental, planning, emergency, lighting, site_selection, zoning, land_use, business_location, regulatory
+For analysis_patterns, generate 3-8 short lowercase tags (no spaces, use underscores) that describe what this data contains and what analyses it enables. Derive them directly from the table name, columns, and content — do not use a fixed list. Use terms a user would naturally search for (e.g. "energy_consumption", "kindergarten", "electricity", "childcare", "flood_risk", "noise_level"). Be specific and domain-accurate.
 
 Respond with ONLY the JSON object."""
 
@@ -759,6 +759,14 @@ Respond with ONLY the JSON object."""
         print(f"  ✅ Description: {metadata['description']}")
         if metadata.get("usage_hint"):
             print(f"  💡 Usage: {metadata['usage_hint']}")
+
+        # Write to knowledge graph
+        try:
+            from app.utils.semantic_layer import get_semantic_layer
+            get_semantic_layer().add_table_triples(table_name, metadata)
+            print(f"  🔗 Knowledge graph updated for {table_name}")
+        except Exception as e:
+            print(f"  ⚠️ Knowledge graph update failed for {table_name}: {e}")
 
         return metadata
 

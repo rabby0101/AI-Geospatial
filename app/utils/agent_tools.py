@@ -156,52 +156,6 @@ def get_schema_info(keywords: Optional[List[str]] = None, **_ignored) -> Union[L
         return {"error": str(e)}
 
 
-def query_features(description: str, within_geometry: Optional[Dict] = None) -> Dict[str, Any]:
-    """
-    Query the PostGIS database for features matching a natural language description,
-    optionally filtered to within a GeoJSON geometry.
-
-    Uses the existing LLM→SQL pipeline to translate the description into SQL.
-
-    Returns:
-        {"type": "FeatureCollection", "features": [...], "count": int}
-        or {"error": str}
-    """
-    try:
-        from app.utils.deepseek import parse_geospatial_query
-        from app.utils.spatial_engine import SpatialEngine
-
-        full_question = description
-        if within_geometry:
-            geom_str = json.dumps(within_geometry)
-            full_question = (
-                f"{description}. Only return features within this geometry: {geom_str[:300]}"
-            )
-
-        plan = parse_geospatial_query(
-            full_question,
-            context=None,
-            user_location=None,
-            selected_feature=None,
-            drawn_geometry=within_geometry,
-        )
-
-        engine = SpatialEngine()
-        result = engine.execute_plan(plan)
-
-        if result.get("success") is False:
-            return {"error": result.get("error", "Query returned no results")}
-
-        data = result.get("data", {})
-        features = data.get("features", []) if isinstance(data, dict) else []
-        return {
-            "type": "FeatureCollection",
-            "features": features,
-            "count": len(features),
-        }
-    except Exception as e:
-        logger.error(f"query_features error: {e}")
-        return {"error": str(e)}
 
 
 def spatial_filter(
@@ -392,30 +346,41 @@ def analyze_satellite(
 
 def score_locations(features: Dict[str, Any], criteria: List[str]) -> Dict[str, Any]:
     """
-    Score and rank GeoJSON features using MCDA.
+    Score and rank GeoJSON features using simple MCDA.
+
+    Normalises all numeric properties to [0, 1] and computes an average score.
 
     Args:
         features: GeoJSON FeatureCollection
-        criteria: List of scoring criteria, e.g. ["near schools", "low noise"]
+        criteria: List of scoring criteria (used as a label in properties)
 
     Returns:
         GeoJSON FeatureCollection with added "score" property or {"error": str}
     """
     try:
-        from app.utils.spatial_engine import SpatialEngine
-        from app.models.query_model import OperationPlan
         import geopandas as gpd
+        import numpy as np
 
         gdf = gpd.GeoDataFrame.from_features(features.get("features", []), crs="EPSG:4326")
         if gdf.empty:
             return {"error": "No features to score"}
 
-        engine = SpatialEngine()
-        query_str = ", ".join(criteria)
-        plan = OperationPlan(operations=[], reasoning=query_str)
-        scored_gdf = engine.apply_mcda_scoring(gdf, query_str, plan)
+        numeric_cols = gdf.select_dtypes(include=[np.number]).columns.tolist()
+        if numeric_cols:
+            normed = gdf[numeric_cols].copy()
+            for col in numeric_cols:
+                col_min, col_max = normed[col].min(), normed[col].max()
+                if col_max > col_min:
+                    normed[col] = (normed[col] - col_min) / (col_max - col_min)
+                else:
+                    normed[col] = 0.0
+            gdf["score"] = normed.mean(axis=1).round(4)
+        else:
+            gdf["score"] = 0.0
 
-        return json.loads(scored_gdf.to_json())
+        gdf["scoring_criteria"] = ", ".join(criteria)
+        gdf = gdf.sort_values("score", ascending=False)
+        return json.loads(gdf.to_json())
     except Exception as e:
         logger.error(f"score_locations error: {e}")
         return {"error": str(e)}
@@ -554,6 +519,81 @@ def execute_sql(sql: str) -> Dict[str, Any]:
         return {"error": str(e)}
 
 
+def find_tables_by_concept(concepts: List[str]) -> Dict[str, Any]:
+    """
+    Find database tables relevant to the given concepts using the knowledge graph.
+
+    Two-stage lookup:
+    1. Query RDF graph: match concept strings against ontology synonyms → resolve to analysis_pattern tags
+    2. Query DB: find tables whose analysis_patterns include those tags
+
+    Args:
+        concepts: List of concept strings in any language, e.g.
+                  ["zoning plan", "B-Plan"] or ["elderly population", "Altersgruppen"]
+
+    Returns:
+        {"tables": [{"table_name", "description", "analysis_patterns", "related_tables"}],
+         "count": int, "matched_tags": [...]}
+    """
+    try:
+        from app.utils.semantic_layer import get_semantic_layer
+        sl = get_semantic_layer()
+
+        # Stage 1: resolve concepts → tags via ontology synonyms
+        matched_tags: set = set()
+        for concept in concepts:
+            concept_lower = concept.lower().strip()
+            sparql = f"""
+                PREFIX : <http://geoassist.ai/ontology#>
+                SELECT ?tag WHERE {{
+                    ?class :synonym ?syn ;
+                           :mapsFromTag ?tag .
+                    FILTER(CONTAINS(LCASE(STR(?syn)), "{concept_lower}"))
+                }}
+            """
+            try:
+                results = sl.query_sparql(sparql)
+                matched_tags.update(r["tag"] for r in results if r.get("tag"))
+            except Exception:
+                pass
+
+        # Fallback: use concept words directly as tag candidates
+        if not matched_tags:
+            for concept in concepts:
+                for word in concept.lower().replace("-", "_").split():
+                    matched_tags.add(word)
+
+        if not matched_tags:
+            return {"tables": [], "count": 0, "matched_tags": [], "note": "No matching concepts found"}
+
+        # Stage 2: query DB for tables with those tags in analysis_patterns
+        # PostgreSQL text[] casts as {tag1,tag2,...} — no quotes around values
+        tag_conditions = " OR ".join(
+            f"analysis_patterns::text ILIKE '%{tag}%'" for tag in matched_tags
+        )
+        sql = f"""
+            SELECT table_name, description, analysis_patterns, related_tables
+            FROM metadata.table_descriptions
+            WHERE {tag_conditions}
+            ORDER BY table_name
+        """
+        df = db_manager.execute_query(sql)
+        if df is None or df.empty:
+            return {"tables": [], "count": 0, "matched_tags": list(matched_tags),
+                    "note": "No tables found for these concepts"}
+
+        tables = df.to_dict("records")
+        return {
+            "tables": tables,
+            "count": len(tables),
+            "matched_tags": list(matched_tags),
+        }
+
+    except Exception as e:
+        logger.error(f"find_tables_by_concept error: {e}")
+        return {"error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # Tool registry — maps tool names to callables for the orchestrator
 # ---------------------------------------------------------------------------
@@ -561,6 +601,7 @@ def execute_sql(sql: str) -> Dict[str, Any]:
 TOOL_REGISTRY: Dict[str, Any] = {
     "geocode_location": geocode_location,
     "create_buffer": create_buffer,
+    "find_tables_by_concept": find_tables_by_concept,
     "get_schema_info": get_schema_info,
     "get_table_columns": get_table_columns,
     "execute_sql": execute_sql,
@@ -569,6 +610,4 @@ TOOL_REGISTRY: Dict[str, Any] = {
     "walking_isochrone": walking_isochrone,
     "analyze_satellite": analyze_satellite,
     "score_locations": score_locations,
-    # kept but not in system prompt — available as fallback
-    "query_features": query_features,
 }

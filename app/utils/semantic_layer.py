@@ -483,6 +483,98 @@ class SemanticLayer:
         return stats
 
 
+    def load_graph(self, path: str) -> int:
+        """
+        Merge a Turtle (.ttl) graph file into the in-memory graph.
+        Called at startup to restore the persisted table graph.
+
+        Returns number of triples added.
+        """
+        p = Path(path)
+        if not p.exists():
+            logger.info(f"Graph file not found (first run?): {path}")
+            return 0
+        before = len(self.graph)
+        self.graph.parse(str(p), format="turtle")
+        added = len(self.graph) - before
+        logger.info(f"Loaded {added} triples from {path}")
+        return added
+
+    def add_table_triples(self, table_name: str, metadata: dict) -> None:
+        """
+        Write a single table's metadata as RDF triples into the graph,
+        then persist the updated graph to table_graph.ttl.
+
+        Called by AutoTableDiscovery when a new table is discovered.
+        """
+        dataset_uri = GEO[table_name]
+
+        # Remove any stale triples for this table first (safe upsert)
+        self.graph.remove((dataset_uri, None, None))
+
+        self.graph.add((dataset_uri, RDF.type, GEO.GeoDataset))
+        self.graph.add((dataset_uri, DCTERMS.title, Literal(table_name)))
+
+        desc = metadata.get("description") or ""
+        if desc:
+            self.graph.add((dataset_uri, DCTERMS.description, Literal(desc)))
+
+        rc = metadata.get("row_count")
+        if rc is not None:
+            try:
+                self.graph.add((dataset_uri, GEO.rowCount, Literal(int(rc))))
+            except (TypeError, ValueError):
+                pass
+
+        geom = metadata.get("geometry_type") or ""
+        if geom:
+            self.graph.add((dataset_uri, GEO.hasGeometryType, Literal(geom)))
+
+        for tag in metadata.get("analysis_patterns") or []:
+            self.graph.add((dataset_uri, GEO.hasPattern, Literal(tag)))
+
+        for related in metadata.get("related_tables") or []:
+            self.graph.add((dataset_uri, GEO.relatedTo, GEO[related]))
+
+        for col in metadata.get("key_columns") or []:
+            self.graph.add((dataset_uri, GEO.hasKeyColumn, Literal(col)))
+
+        self._persist_table_graph()
+
+    def remove_table_triples(self, table_name: str) -> None:
+        """
+        Remove all RDF triples for a table and persist the updated graph.
+        Called by SchemaWatcher when a table is deleted from the DB.
+        """
+        dataset_uri = GEO[table_name]
+        self.graph.remove((dataset_uri, None, None))
+        self._persist_table_graph()
+        logger.info(f"Removed RDF triples for table: {table_name}")
+
+    def _persist_table_graph(self) -> None:
+        """Serialize the current graph to the table_graph.ttl file."""
+        out_path = self.ontology_dir / "table_graph.ttl"
+        try:
+            self.graph.serialize(str(out_path), format="turtle")
+        except Exception as e:
+            logger.error(f"Failed to persist table graph: {e}")
+
+
+# =============================================================================
+# Module-level singleton — use get_semantic_layer() everywhere
+# =============================================================================
+
+_semantic_layer_instance: Optional["SemanticLayer"] = None
+
+
+def get_semantic_layer() -> "SemanticLayer":
+    """Return the shared SemanticLayer singleton, creating it on first call."""
+    global _semantic_layer_instance
+    if _semantic_layer_instance is None:
+        _semantic_layer_instance = SemanticLayer()
+    return _semantic_layer_instance
+
+
 # Convenience function for quick access
 def create_semantic_layer(ontology_dir: Optional[str] = None) -> SemanticLayer:
     """Create and return a SemanticLayer instance."""

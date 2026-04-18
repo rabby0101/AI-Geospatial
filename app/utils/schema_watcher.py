@@ -63,7 +63,7 @@ class SchemaWatcher:
         """
         from app.utils.schema_discovery import schema_discovery
         from app.utils.auto_discovery import AutoTableDiscovery
-        from app.utils.deepseek import invalidate_query_cache
+        from app.utils.lmstudio_client import invalidate_query_cache
 
         loop = asyncio.get_event_loop()
 
@@ -95,6 +95,11 @@ class SchemaWatcher:
                 schema_discovery.remove_table(table)
             except Exception as e:
                 print(f"  ⚠️ Failed to remove {table} from cache: {e}")
+            try:
+                from app.utils.semantic_layer import get_semantic_layer
+                get_semantic_layer().remove_table_triples(table)
+            except Exception as e:
+                print(f"  ⚠️ Failed to remove {table} from knowledge graph: {e}")
 
         # Refresh schema cache and invalidate LLM query cache
         await loop.run_in_executor(None, schema_discovery.refresh_cache)

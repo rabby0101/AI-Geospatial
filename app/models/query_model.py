@@ -1,82 +1,5 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
-from enum import Enum
-
-
-class OperationType(str, Enum):
-    """Types of geospatial operations"""
-    LOAD = "load"
-    SPATIAL_QUERY = "spatial_query"  # Direct PostGIS SQL query
-    RASTER_ANALYSIS = "raster_analysis"  # For NDVI, DEM, land cover analysis
-    ROUTING = "routing"  # Road network routing and connectivity analysis
-    BUFFER = "buffer"
-    CLIP = "clip"
-    INTERSECTION = "intersection"
-    UNION = "union"
-    DIFFERENCE = "difference"
-    COMPUTE = "compute"
-    AGGREGATE = "aggregate"
-    FILTER = "filter"
-    SORT = "sort"
-    RETURN = "return"
-
-    NEAREST_BY_ROAD = "nearest_by_road"  # Find nearest POI using road network distance
-    WALKING_TIME = "walking_time"  # Find POIs within walking time using road network
-
-
-class GeospatialOperation(BaseModel):
-    """Represents a single geospatial operation"""
-    operation: OperationType
-    parameters: Dict[str, Any] = Field(default_factory=dict)
-    description: Optional[str] = None
-
-
-class NLQuery(BaseModel):
-    """Natural language query input"""
-    question: str = Field(..., description="Natural language geospatial query")
-    context: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Additional context like city, timeframe, etc."
-    )
-    user_location: Optional[Dict[str, float]] = Field(
-        default=None,
-        description="User's GPS coordinates {'lat': latitude, 'lon': longitude}"
-    )
-    selected_feature: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Selected feature from map for context-aware queries {'geometry': 'WKT', 'geometry_type': 'Point/Polygon/...', 'properties': {...}, 'name': 'feature_name'}"
-    )
-    drawn_geometry: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Geometry drawn by user (GeoJSON geometry format) - used as spatial context for LLM"
-    )
-    llm_provider: Optional[str] = Field(
-        default=None,
-        description="LLM provider to use: 'deepseek', 'gemini', or 'gemma3'"
-    )
-    active_skill: Optional[str] = Field(
-        default=None,
-        description="Active skill ID (e.g. 'location_expert'). Scopes the pipeline to reduce token usage."
-    )
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "question": "Find all flood zones within 2 km of hospitals in Berlin.",
-                "context": {"city": "Berlin", "buffer_distance": 2000},
-                "user_location": {"lat": 52.52, "lon": 13.405}
-            }
-        }
-
-
-class OperationPlan(BaseModel):
-    """Structured plan from LLM"""
-    operations: List[GeospatialOperation]
-    reasoning: Optional[str] = None
-    datasets_required: List[str] = Field(default_factory=list)
-    layer_name: Optional[str] = Field(default=None, description="Generated layer name for the result")
-    system_prompt: Optional[str] = Field(default=None, description="System prompt sent to DeepSeek (for debugging)")
-    user_prompt: Optional[str] = Field(default=None, description="User prompt sent to DeepSeek (for debugging)")
 
 
 class QueryResponse(BaseModel):
@@ -134,22 +57,6 @@ class QueryResponse(BaseModel):
                 "execution_time": 1.23
             }
         }
-
-
-class DatasetInfo(BaseModel):
-    """Information about available datasets"""
-    name: str
-    type: str  # raster or vector
-    description: str
-    path: Optional[str] = ""  # Made optional for database tables
-    schema: Optional[str] = "vector"  # Database schema
-    row_count: Optional[int] = None
-    geometry_type: Optional[str] = None
-    columns: Optional[List[str]] = Field(default_factory=list)
-    crs: Optional[str] = "EPSG:4326"
-    bounds: Optional[List[float]] = None
-    temporal_range: Optional[Dict[str, str]] = None
-    tags: List[str] = Field(default_factory=list)
 
 
 class DirectionStep(BaseModel):

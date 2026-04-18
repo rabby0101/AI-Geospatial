@@ -47,12 +47,6 @@ app.add_middleware(
 async def startup_event():
     """Initialize database connection, auto-discover tables, and start SchemaWatcher"""
     load_skills()
-    from app.utils.agent_trace_store import init_trace_table
-    try:
-        init_trace_table()
-        print("✅ Agent trace table ready")
-    except Exception as e:
-        print(f"⚠️  Agent trace table init failed: {e}")
     print("🚀 Starting Cognitive Geospatial Assistant API...")
     print("📊 Initializing database connection...")
 
@@ -72,6 +66,13 @@ async def startup_event():
         if db_manager.test_connection():
             print("✅ Database connection successful")
 
+            from app.utils.agent_trace_store import init_trace_table
+            try:
+                init_trace_table()
+                print("✅ Agent trace table ready")
+            except Exception as e:
+                print(f"⚠️  Agent trace table init failed: {e}")
+
             # Auto-discover new tables and generate rich descriptions
             print("🔍 Auto-discovering tables...")
             result = auto_discovery.auto_discover_and_update()
@@ -79,6 +80,18 @@ async def startup_event():
                 print(f"✅ Found and added {result['new_tables_found']} new table(s)")
             else:
                 print("✅ All tables are already documented")
+
+            # Load knowledge graph (table concept index)
+            print("🧠 Loading knowledge graph...")
+            try:
+                from app.utils.semantic_layer import get_semantic_layer
+                from pathlib import Path
+                sl = get_semantic_layer()
+                graph_path = Path(__file__).parent / "ontology" / "table_graph.ttl"
+                triples = sl.load_graph(str(graph_path))
+                print(f"✅ Knowledge graph loaded ({triples} table triples)")
+            except Exception as e:
+                print(f"⚠️  Knowledge graph load failed (run scripts/migrate_db_to_graph.py): {e}")
 
             # Start background schema watcher
             from app.utils.schema_watcher import SchemaWatcher

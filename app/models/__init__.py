@@ -1,3 +1,3 @@
-from .query_model import NLQuery, GeospatialOperation, QueryResponse
+from .query_model import QueryResponse
 
-__all__ = ["NLQuery", "GeospatialOperation", "QueryResponse"]
+__all__ = ["QueryResponse"]

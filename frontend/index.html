@@ -1015,6 +1015,14 @@
             pointer-events: auto;
         }
 
+        /* Model dropdown text color override */
+        [data-theme='light'] .model-dropdown li a {
+            color: #000 !important;
+        }
+        .model-dropdown li a {
+            color: #fff !important;
+        }
+
         /* Main Chat Bar styles removed (Migrated to Tailwind/DaisyUI) */
 
         /* Tab Pills Row */
@@ -1809,8 +1817,8 @@
             padding: 10px 14px;
             background: rgba(0,0,0,0.2);
         }
-        .panel-section-scroll.reasoning { height: 130px; }
-        .panel-section-scroll.sql       { height: 110px; }
+        .panel-section-scroll.reasoning { height: 430px; }
+        .panel-section-scroll.sql       { height: 210px; }
         .panel-section-body {
             padding: 8px 14px;
             background: rgba(0,0,0,0.2);
@@ -1869,6 +1877,12 @@
             font-size: 11px;
             line-height: 1.5;
         }
+
+        /* Panel Results - Light theme overrides */
+        [data-theme='light'] .panel-results-stat      { background: rgba(0,0,0,0.05); }
+        [data-theme='light'] .panel-results-stat-value  { color: #1a6faa; }
+        [data-theme='light'] .panel-results-stat-label  { color: #718096; }
+        [data-theme='light'] .panel-results-desc        { color: var(--text-secondary); }
 
         /* Floating Collapse Toggle Buttons */
         .panel-toggle-btn {
@@ -3152,6 +3166,13 @@
         .badge-error    { background: #3a1e1e; color: #e07070; }
         .agent-content  { color: #ccc; line-height: 1.5; word-break: break-word; flex: 1; }
 
+        /* Agent panel step badges - Light theme overrides */
+        [data-theme='light'] .badge-thought  { background: #ece4f7; color: #5b3fa0; }
+        [data-theme='light'] .badge-action   { background: #e2f0e2; color: #2d7a2d; }
+        [data-theme='light'] .badge-result    { background: #f7ece2; color: #a35520; }
+        [data-theme='light'] .badge-error     { background: #f7e2e2; color: #b03030; }
+        [data-theme='light'] .agent-content  { color: var(--text-primary); }
+
         /* Panel Legend Container */
         [data-theme='light'] .panel-legend-container {
             background: rgba(240, 240, 240, 0.5);
@@ -3613,7 +3634,7 @@
                                                 <i data-lucide="chevron-up" class="w-3 h-3 opacity-50"></i>
                                             </label>
                                             <ul tabindex="0"
-                                                class="dropdown-content z-[100] menu p-2 shadow-[0_8px_32px_rgba(0,0,0,0.2)] bg-base-100/30 backdrop-blur-2xl rounded-box w-48 mb-2 border border-white/20 dark:border-white/10">
+                                                class="dropdown-content z-[100] menu p-2 shadow-[0_8px_32px_rgba(0,0,0,0.3)] bg-base-100/70 backdrop-blur-2xl rounded-box w-48 mb-2 border border-white/20 dark:border-white/10 model-dropdown">
                                                 <li><a onmousedown="event.preventDefault(); selectLLMProvider('deepseek', 'DeepSeek')"
                                                         class="flex items-center gap-2">
                                                         <span
@@ -3795,6 +3816,9 @@
                 </div>
 
             </div>
+
+            <!-- Legacy layer operations view (non-agent layers) -->
+            <div id="panelLegacyContent" style="display:none;"></div>
         </div>
     </div>
 
@@ -6768,8 +6792,7 @@ LIMIT 10</textarea>
                 content = '<div class="no-selection">No operations data available</div>';
             }
 
-            operationsContent.innerHTML = content;
-            operationsPanel.classList.remove('operations-panel-hidden');
+            _showLegacyContent(content);
 
             // Tell Leaflet the container size changed (after CSS animation completes)
             setTimeout(() => {
@@ -9530,8 +9553,10 @@ LIMIT 10</textarea>
         function _showPanelSections() {
             const noSel    = document.getElementById('panelNoSelection');
             const sections = document.getElementById('panelSections');
+            const legacy   = document.getElementById('panelLegacyContent');
             const panel    = document.getElementById('operationsPanel');
             if (noSel)    noSel.style.display    = 'none';
+            if (legacy)   legacy.style.display   = 'none';
             if (sections) sections.style.display = 'block';
             if (panel)    panel.classList.remove('collapsed');
         }
@@ -9541,6 +9566,17 @@ LIMIT 10</textarea>
             const sections = document.getElementById('panelSections');
             if (noSel)    noSel.style.display    = '';
             if (sections) sections.style.display = 'none';
+        }
+
+        function _showLegacyContent(html) {
+            const noSel    = document.getElementById('panelNoSelection');
+            const sections = document.getElementById('panelSections');
+            const legacy   = document.getElementById('panelLegacyContent');
+            const panel    = document.getElementById('operationsPanel');
+            if (noSel)    noSel.style.display    = 'none';
+            if (sections) sections.style.display = 'none';
+            if (legacy)   { legacy.innerHTML = html; legacy.style.display = ''; }
+            if (panel)    panel.classList.remove('operations-panel-hidden');
         }
 
         function _clearPanelSections() {

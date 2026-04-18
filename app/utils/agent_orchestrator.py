@@ -15,7 +15,7 @@ import requests
 
 from app.models.agent_model import AgentStep, AgentFinalAnswer
 from app.utils.agent_tools import TOOL_REGISTRY
-from app.utils.deepseek import query_lmstudio
+from app.utils.lmstudio_client import query_lmstudio
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ Summary: <one sentence>
 Layer: <snake_case_layer_name>
 
 Available tools:
+- find_tables_by_concept(concepts: list[str]) → {tables: [{table_name, description, analysis_patterns, related_tables}], count, matched_tags}
 - geocode_location(name: str) → {lat, lon, display_name, geometry}
 - create_buffer(geometry_or_coords: dict, radius_m: int) → GeoJSON Polygon
 - get_schema_info() → compact catalog of ALL available tables with name, description, geometry_type, row_count
@@ -57,7 +58,14 @@ Available tools:
 - score_locations(features: GeoJSON, criteria: list[str]) → GeoJSON FeatureCollection with score property
 
 Standard workflow for spatial queries (SQL-based):
-1. get_schema_info — get the full table catalog, pick the tables relevant to the query
+1. find_tables_by_concept — ALWAYS call this first. Extract the key domain concepts from
+   the user's question (e.g. "zoning plan", "elderly population", "pharmacy", "B-Plan",
+   "residential building") and pass them as a list. Works in any language — German or English.
+   This uses the knowledge graph to return exactly the right tables, regardless of their
+   technical names (e.g. "wfs_bplan_a_bp_iv" for "B-Pläne").
+   Example: find_tables_by_concept({"concepts": ["zoning plan", "B-Plan", "residential building"]})
+2. get_table_columns — inspect column names and sample values for the tables returned in step 1
+3. get_schema_info — only if find_tables_by_concept returned no results for an unusual query
 2. get_table_columns — inspect column names, types, and sample values before writing SQL
 3. geocode_location — resolve any named place to coordinates (if needed)
 4. create_buffer — if a distance/radius is involved
@@ -100,6 +108,28 @@ execute_sql rules:
 - For spatial filter with a buffer polygon use:
   WHERE ST_Within(ST_Transform(geom_25833, 4326), ST_SetSRID(ST_GeomFromGeoJSON('<polygon_json>'), 4326))
   or ST_Intersects for partial overlap
+- COMPUTED METRICS IN SQL: Any derived metric you reason about (ratios, rates,
+  per-capita values, percentages, densities, scores) MUST be expressed as an
+  explicit SQL expression in the SELECT clause — not just mentioned in the Summary.
+  This makes every computed field available as a GeoJSON property, which the map
+  exposes in the gradient dropdown for visualization.
+  Pattern (adapt column names to the actual query):
+    CAST(count_col AS FLOAT) / NULLIF(base_col, 0) AS ratio_name
+    CAST(count_col AS FLOAT) / NULLIF(base_col / 1000.0, 0) AS per_1000_name
+    ST_Area(geom_25833) / NULLIF(count_col, 0) AS area_per_unit
+  Always use NULLIF to guard against division by zero.
+  Rule: if you would mention a computed number in the Summary, include it as a
+  named SQL column too.
+- DATA GRANULARITY — always go deepest by default: When get_schema_info shows
+  multiple tables covering the same topic at different geographic scales, always
+  pick the most granular (finest) one unless the user explicitly asks for a
+  coarser level (e.g. "by district", "by Bezirk").
+  How to identify granularity:
+    row_count: more rows = finer geography (prefer higher)
+    description keywords fine: "Planungsraum", "PLZ", "block", "subdivision"
+    description keywords coarse: "district", "Bezirk", "region", "city-wide"
+  Rationale: coarse tables hide concentration hotspots that only appear in
+  fine-grained data. Default to maximum available detail.
 
 Spatial tips:
 - GEOMETRY COLUMN: ALL tables use geom_25833 (EPSG:25833, units = metres).
@@ -144,7 +174,8 @@ Rules:
   Do NOT try to echo the geometry coordinates — always use {"use_last_result": true}.
 - Never guess table names — always call get_schema_info first
 - Never guess column names — always call get_table_columns before writing SQL
-- Once you have inspected the schema and columns, proceed directly to execute_sql — do NOT call get_schema_info again
+- After inspecting the schema, proceed directly to execute_sql. Only call get_schema_info
+  a second time if you could not identify the table needed for the query on the first pass.
 - Call tools one at a time; wait for each result before proceeding
 - If a tool returns an error, adjust and retry with corrected arguments
 """
@@ -162,7 +193,7 @@ def _call_llm(messages: list, provider: str = "deepseek") -> str:
         "model": "deepseek-chat",
         "messages": messages,
         "temperature": 0.1,
-        "max_tokens": 2048,
+        "max_tokens": 8192,
     }
     resp = requests.post(
         DEEPSEEK_URL,

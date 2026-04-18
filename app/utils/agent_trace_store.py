@@ -8,11 +8,19 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import text
 from app.utils.database import db_manager
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def _engine():
     """Return the shared application engine, initialising if needed."""
     if not db_manager.engine:
         db_manager.initialize()
+    if not db_manager.engine:
+        raise RuntimeError(
+            "agent_trace_store: db_manager.engine is None after initialize() — "
+            "check DATABASE_URL and DB connectivity"
+        )
     return db_manager.engine
 
 
@@ -54,8 +62,8 @@ def save_trace(
         conn.execute(
             text("""
                 INSERT INTO vector.agent_traces (query_id, steps, sql_queries, tables_used, results)
-                VALUES (:query_id, :steps::jsonb, :sql_queries::jsonb,
-                        :tables_used::jsonb, :results::jsonb)
+                VALUES (:query_id, CAST(:steps AS jsonb), CAST(:sql_queries AS jsonb),
+                        CAST(:tables_used AS jsonb), CAST(:results AS jsonb))
                 ON CONFLICT (query_id) DO UPDATE SET
                     steps       = EXCLUDED.steps,
                     sql_queries = EXCLUDED.sql_queries,
@@ -71,6 +79,7 @@ def save_trace(
             },
         )
         conn.commit()
+        logger.debug("agent_trace_store: saved trace query_id=%s", query_id)
 
 
 def get_trace(query_id: str) -> Optional[Dict[str, Any]]:
