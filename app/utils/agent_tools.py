@@ -616,6 +616,9 @@ def save_generated_layer(geojson: Dict[str, Any], layer_name: str,
         geometries = [shape(f["geometry"]) for f in features if f.get("geometry")]
         props = [f.get("properties", {}) for f in features if f.get("geometry")]
 
+        if not geometries:
+            return {"error": "No features with valid geometries to save"}
+
         gdf = gpd.GeoDataFrame(props, geometry=geometries, crs="EPSG:4326")
         gdf["geom_25833"] = gdf.geometry.to_crs("EPSG:25833")
         gdf = gdf.set_geometry("geom_25833")
@@ -635,7 +638,7 @@ def save_generated_layer(geojson: Dict[str, Any], layer_name: str,
         return {
             "saved": True,
             "table": f"temp_layers.{table_name}",
-            "feature_count": len(features),
+            "feature_count": len(geometries),
             "geojson": geojson,
             "description": description,
         }
