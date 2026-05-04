@@ -13,6 +13,9 @@ import tempfile
 import shutil
 import hashlib
 import time as _time
+import re
+import csv
+import io
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
@@ -25,6 +28,58 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 router = APIRouter(prefix="/api/database", tags=["database"])
+
+IDENTIFIER_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+
+ALLOWED_COLUMN_TYPES = {
+    "text": "TEXT",
+    "varchar": "VARCHAR",
+    "integer": "INTEGER",
+    "bigint": "BIGINT",
+    "double": "DOUBLE PRECISION",
+    "numeric": "NUMERIC",
+    "boolean": "BOOLEAN",
+    "date": "DATE",
+    "timestamp": "TIMESTAMP",
+    "geometry": "geometry(Geometry, 4326)",
+}
+
+
+def _validate_identifier(value: str, label: str = "identifier") -> str:
+    if not value or not IDENTIFIER_RE.fullmatch(value):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid {label}. Use lowercase letters, numbers and underscores, starting with a letter.",
+        )
+    return value
+
+
+def _quote_ident(value: str) -> str:
+    return f'"{_validate_identifier(value)}"'
+
+
+def _normalize_column_type(raw_type: str) -> str:
+    key = (raw_type or "").strip().lower()
+    if key not in ALLOWED_COLUMN_TYPES:
+        allowed = ", ".join(sorted(ALLOWED_COLUMN_TYPES))
+        raise HTTPException(status_code=400, detail=f"Unsupported column type. Allowed: {allowed}")
+    return ALLOWED_COLUMN_TYPES[key]
+
+
+def _get_vector_columns(inspector, table_name: str) -> List[Dict]:
+    if not inspector.has_table(table_name, schema="vector"):
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
+    return inspector.get_columns(table_name, schema="vector")
+
+
+def _get_column_names(inspector, table_name: str) -> List[str]:
+    return [c["name"] for c in _get_vector_columns(inspector, table_name)]
+
+
+def _get_primary_key_columns(inspector, table_name: str) -> List[str]:
+    pk = inspector.get_pk_constraint(table_name, schema="vector") or {}
+    return pk.get("constrained_columns") or []
+
 
 # Database connection helper
 def get_db_engine():
