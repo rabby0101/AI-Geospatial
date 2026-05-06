@@ -3,16 +3,28 @@ Agent tools — each function does one thing and returns a plain dict.
 Success: dict with result data.
 Failure: dict with "error" key.
 """
+import hashlib
 import json
 import logging
 from typing import Any, Dict, List, Optional, Union
 
+import geopandas as gpd
 from shapely.geometry import Point, shape, mapping
-from shapely.ops import transform
+from shapely.ops import transform, unary_union
 import pyproj
 
 from app.utils.location_resolver import LocationResolver
 from app.utils.database import db_manager
+from app.utils.spatial_generator import (
+    voronoi_from_points,
+    hexagonal_grid as _hexagonal_grid,
+    convex_hull as _convex_hull,
+    corridor as _corridor,
+    coverage_gaps as _coverage_gaps,
+    site_suitability as _site_suitability,
+    kernel_density as _kernel_density,
+    equity_gap_analysis as _equity_gap_analysis,
+)
 
 logger = logging.getLogger(__name__)
 location_resolver = LocationResolver()
@@ -594,6 +606,364 @@ def find_tables_by_concept(concepts: List[str]) -> Dict[str, Any]:
         return {"error": str(e)}
 
 
+def save_generated_layer(geojson: Dict[str, Any], layer_name: str,
+                         description: str = "") -> Dict[str, Any]:
+    try:
+        features = geojson.get("features", [])
+        if not features:
+            return {"error": "No features to save"}
+
+        geometries = [shape(f["geometry"]) for f in features if f.get("geometry")]
+        props = [f.get("properties", {}) for f in features if f.get("geometry")]
+
+        if not geometries:
+            return {"error": "No features with valid geometries to save"}
+
+        gdf = gpd.GeoDataFrame(props, geometry=geometries, crs="EPSG:4326")
+        gdf["geom_25833"] = gdf.geometry.to_crs("EPSG:25833")
+        gdf = gdf.set_geometry("geom_25833")
+        gdf = gdf.drop(columns=["geometry"], errors="ignore")
+
+        safe = layer_name.lower().replace(" ", "_").replace("-", "_")
+        safe = "".join(c for c in safe if c.isalnum() or c == "_")[:40]
+        suffix = hashlib.md5(safe.encode()).hexdigest()[:8]
+        table_name = f"layer_{safe}_{suffix}"
+
+        if not db_manager.engine:
+            db_manager.initialize()
+
+        gdf.to_postgis(table_name, db_manager.engine,
+                       schema="temp_layers", if_exists="replace", index=False)
+
+        return {
+            "saved": True,
+            "table": f"temp_layers.{table_name}",
+            "feature_count": len(geometries),
+            "geojson": geojson,
+            "description": description,
+        }
+    except Exception as e:
+        logger.error(f"save_generated_layer error: {e}")
+        return {"error": str(e)}
+
+
+def generate_voronoi(table: str, id_col: str = "id",
+                     clip_table: Optional[str] = None) -> Dict[str, Any]:
+    try:
+        df = db_manager.execute_query(
+            f"SELECT {id_col}, ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {table}"
+        )
+        if df is None or df.empty:
+            return {"error": f"No features in {table}"}
+
+        features = []
+        for _, row in df.iterrows():
+            geom = json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"]
+            if geom.get("type") != "Point":
+                continue
+            features.append({
+                "type": "Feature",
+                "geometry": geom,
+                "properties": {id_col: row[id_col]},
+            })
+        point_fc = {"type": "FeatureCollection", "features": features}
+
+        clip_geojson = None
+        if clip_table:
+            clip_df = db_manager.execute_query(
+                f"SELECT ST_AsGeoJSON(ST_Transform(ST_Union(geom_25833),4326)) AS geom FROM {clip_table}"
+            )
+            if clip_df is not None and not clip_df.empty:
+                raw = clip_df.iloc[0]["geom"]
+                clip_geojson = json.loads(raw) if isinstance(raw, str) else raw
+
+        result_fc = voronoi_from_points(point_fc, clip_geojson)
+        layer_name = f"voronoi_{table.split('.')[-1]}"
+        return save_generated_layer(result_fc, layer_name, f"Voronoi zones for {table}")
+    except Exception as e:
+        logger.error(f"generate_voronoi error: {e}")
+        return {"error": str(e)}
+
+
+def generate_hexgrid(bbox: Dict[str, float], cell_size_m: float) -> Dict[str, Any]:
+    try:
+        return _hexagonal_grid(bbox, cell_size_m)
+    except Exception as e:
+        logger.error(f"generate_hexgrid error: {e}")
+        return {"error": str(e)}
+
+
+def generate_convex_hull(table: str) -> Dict[str, Any]:
+    try:
+        df = db_manager.execute_query(
+            f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {table}"
+        )
+        if df is None or df.empty:
+            return {"error": f"No features in {table}"}
+
+        features = [
+            {"type": "Feature",
+             "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+             "properties": {}}
+            for _, row in df.iterrows()
+        ]
+        fc = {"type": "FeatureCollection", "features": features}
+        return _convex_hull(fc)
+    except Exception as e:
+        logger.error(f"generate_convex_hull error: {e}")
+        return {"error": str(e)}
+
+
+def generate_corridor(linestring_geojson: Dict[str, Any], width_m: float) -> Dict[str, Any]:
+    try:
+        return _corridor(linestring_geojson, width_m)
+    except Exception as e:
+        logger.error(f"generate_corridor error: {e}")
+        return {"error": str(e)}
+
+
+def find_coverage_gaps(service_table: str, radius_m: float,
+                       clip_bbox: Dict[str, float]) -> Dict[str, Any]:
+    try:
+        df = db_manager.execute_query(
+            f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {service_table}"
+        )
+        if df is None or df.empty:
+            return {"error": f"No features in {service_table}"}
+
+        service_fc = {
+            "type": "FeatureCollection",
+            "features": [
+                {"type": "Feature",
+                 "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+                 "properties": {}}
+                for _, row in df.iterrows()
+            ],
+        }
+
+        clip_geojson = {
+            "type": "Polygon",
+            "coordinates": [[
+                [clip_bbox["min_lon"], clip_bbox["min_lat"]],
+                [clip_bbox["max_lon"], clip_bbox["min_lat"]],
+                [clip_bbox["max_lon"], clip_bbox["max_lat"]],
+                [clip_bbox["min_lon"], clip_bbox["max_lat"]],
+                [clip_bbox["min_lon"], clip_bbox["min_lat"]],
+            ]],
+        }
+
+        result_fc = _coverage_gaps(service_fc, clip_geojson, radius_m)
+        layer_name = f"coverage_gaps_{service_table.split('.')[-1]}"
+        return save_generated_layer(result_fc, layer_name, f"Coverage gaps for {service_table}")
+    except Exception as e:
+        logger.error(f"find_coverage_gaps error: {e}")
+        return {"error": str(e)}
+
+
+def compute_site_suitability(bbox: Dict[str, float], cell_size_m: float,
+                              criteria: List[Dict[str, Any]]) -> Dict[str, Any]:
+    try:
+        grid = _hexagonal_grid(bbox, cell_size_m)
+        centroids = [shape(f["geometry"]).centroid for f in grid["features"]]
+
+        criteria_scores = []
+        for crit in criteria:
+            df = db_manager.execute_query(
+                f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {crit['table']}"
+            )
+            if df is None or df.empty:
+                continue
+
+            service_pts = [
+                shape(json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"])
+                for _, row in df.iterrows()
+            ]
+            if not service_pts:
+                continue
+
+            service_union = unary_union(service_pts)
+            distances = [c.distance(service_union) for c in centroids]
+
+            criteria_scores.append({
+                "scores": distances,
+                "weight": crit.get("weight", 1.0),
+                "direction": crit.get("direction", "near"),
+            })
+
+        if not criteria_scores:
+            return {"error": "No valid criteria — check table names and data"}
+
+        scored = _site_suitability(grid, criteria_scores)
+        return save_generated_layer(scored, "site_suitability", "Suitability-scored hex grid")
+    except Exception as e:
+        logger.error(f"compute_site_suitability error: {e}")
+        return {"error": str(e)}
+
+
+def compute_kernel_density(table: str, bbox: Dict[str, float],
+                           cell_size_m: float = 500) -> Dict[str, Any]:
+    try:
+        df = db_manager.execute_query(
+            f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {table}"
+        )
+        if df is None or df.empty:
+            return {"error": f"No features in {table}"}
+
+        point_fc = {
+            "type": "FeatureCollection",
+            "features": [
+                {"type": "Feature",
+                 "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+                 "properties": {}}
+                for _, row in df.iterrows()
+            ],
+        }
+
+        grid = _hexagonal_grid(bbox, cell_size_m)
+        scored = _kernel_density(point_fc, grid)
+        layer_name = f"kernel_density_{table.split('.')[-1]}"
+        return save_generated_layer(scored, layer_name, f"Kernel density of {table}")
+    except Exception as e:
+        logger.error(f"compute_kernel_density error: {e}")
+        return {"error": str(e)}
+
+
+def compute_equity_gaps(service_table: str, district_table: str,
+                        service_col: str = "service_count",
+                        population_col: Optional[str] = None) -> Dict[str, Any]:
+    try:
+        pop_select = f", d.{population_col}" if population_col else ""
+        pop_group = f", d.{population_col}" if population_col else ""
+        sql = f"""
+            SELECT d.name,
+                   ST_AsGeoJSON(ST_Transform(d.geom_25833, 4326)) AS geom,
+                   COUNT(s.geom_25833) AS {service_col}
+                   {pop_select}
+            FROM {district_table} d
+            LEFT JOIN {service_table} s
+              ON ST_Within(s.geom_25833, d.geom_25833)
+            GROUP BY d.name, d.geom_25833{pop_group}
+        """
+        df = db_manager.execute_query(sql)
+        if df is None or df.empty:
+            return {"error": "No district data returned"}
+
+        district_data = []
+        for _, row in df.iterrows():
+            entry = {
+                "name": row["name"],
+                "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+                service_col: int(row[service_col]),
+            }
+            if population_col and population_col in row.index:
+                entry[population_col] = int(row[population_col])
+            district_data.append(entry)
+
+        result_fc = _equity_gap_analysis(district_data, service_col, population_col)
+        return save_generated_layer(result_fc, f"equity_gaps_{service_col}",
+                                    f"Equity gap analysis: {service_col} per district")
+    except Exception as e:
+        logger.error(f"compute_equity_gaps error: {e}")
+        return {"error": str(e)}
+
+
+def add_hypothetical_feature(scenario_name: str, geometry: Dict[str, Any],
+                              properties: Dict[str, Any] = None) -> Dict[str, Any]:
+    """
+    Add a hypothetical feature to a named scenario layer in temp_layers.
+    """
+    try:
+        fc = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": properties or {},
+            }],
+        }
+        safe = scenario_name.lower().replace(" ", "_")[:40]
+        layer_name = f"scenario_{safe}"
+        return save_generated_layer(fc, layer_name, f"Hypothetical scenario: {scenario_name}")
+    except Exception as e:
+        logger.error(f"add_hypothetical_feature error: {e}")
+        return {"error": str(e)}
+
+
+def compare_scenarios(baseline_table: str, scenario_table: str,
+                      radius_m: float, clip_bbox: Dict[str, float]) -> Dict[str, Any]:
+    """
+    Compare coverage gaps between a baseline and a scenario layer.
+    Returns a FeatureCollection showing improved vs unchanged gap polygons.
+    """
+    try:
+        clip_geojson = {
+            "type": "Polygon",
+            "coordinates": [[
+                [clip_bbox["min_lon"], clip_bbox["min_lat"]],
+                [clip_bbox["max_lon"], clip_bbox["min_lat"]],
+                [clip_bbox["max_lon"], clip_bbox["max_lat"]],
+                [clip_bbox["min_lon"], clip_bbox["max_lat"]],
+                [clip_bbox["min_lon"], clip_bbox["min_lat"]],
+            ]],
+        }
+
+        def _fetch_fc(table):
+            df = db_manager.execute_query(
+                f"SELECT ST_AsGeoJSON(ST_Transform(geom_25833, 4326)) AS geom FROM {table}"
+            )
+            if df is None or df.empty:
+                return {"type": "FeatureCollection", "features": []}
+            return {
+                "type": "FeatureCollection",
+                "features": [
+                    {"type": "Feature",
+                     "geometry": json.loads(row["geom"]) if isinstance(row["geom"], str) else row["geom"],
+                     "properties": {}}
+                    for _, row in df.iterrows()
+                ],
+            }
+
+        baseline_fc = _fetch_fc(baseline_table)
+        scenario_fc = _fetch_fc(scenario_table)
+
+        baseline_gaps = _coverage_gaps(baseline_fc, clip_geojson, radius_m)
+        scenario_gaps = _coverage_gaps(scenario_fc, clip_geojson, radius_m)
+
+        clip_shape = shape(clip_geojson)
+        empty = clip_shape.difference(clip_shape)
+
+        baseline_union = unary_union([shape(f["geometry"]) for f in baseline_gaps["features"]]) \
+            if baseline_gaps["features"] else empty
+        scenario_union = unary_union([shape(f["geometry"]) for f in scenario_gaps["features"]]) \
+            if scenario_gaps["features"] else empty
+
+        improved = baseline_union.difference(scenario_union)
+        unchanged = scenario_union
+
+        result_features = []
+        for g, label in [(improved, "improved"), (unchanged, "unchanged")]:
+            if g.is_empty:
+                continue
+            geoms = list(g.geoms) if hasattr(g, "geoms") else [g]
+            for geom in geoms:
+                if geom.area < 1e-8:
+                    continue
+                result_features.append({
+                    "type": "Feature",
+                    "geometry": mapping(geom),
+                    "properties": {"scenario": label},
+                })
+
+        result_fc = {"type": "FeatureCollection", "features": result_features}
+        saved = save_generated_layer(result_fc, "scenario_comparison", "Before/after scenario diff")
+        if "error" in saved:
+            return saved
+        return {**result_fc, **{k: v for k, v in saved.items() if k != "geojson"}}
+    except Exception as e:
+        logger.error(f"compare_scenarios error: {e}")
+        return {"error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # Tool registry — maps tool names to callables for the orchestrator
 # ---------------------------------------------------------------------------
@@ -610,4 +980,20 @@ TOOL_REGISTRY: Dict[str, Any] = {
     "walking_isochrone": walking_isochrone,
     "analyze_satellite": analyze_satellite,
     "score_locations": score_locations,
+    # --- Persistence ---
+    "save_generated_layer": save_generated_layer,
+    # --- A: Geometry generation ---
+    "generate_voronoi": generate_voronoi,
+    "generate_hexgrid": generate_hexgrid,
+    "generate_convex_hull": generate_convex_hull,
+    "generate_corridor": generate_corridor,
+    # --- B: Suitability & coverage ---
+    "find_coverage_gaps": find_coverage_gaps,
+    "compute_site_suitability": compute_site_suitability,
+    # --- C: Analytical surfaces ---
+    "compute_kernel_density": compute_kernel_density,
+    "compute_equity_gaps": compute_equity_gaps,
+    # --- D: Scenario planning ---
+    "add_hypothetical_feature": add_hypothetical_feature,
+    "compare_scenarios": compare_scenarios,
 }

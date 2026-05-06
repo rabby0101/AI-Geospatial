@@ -5,7 +5,7 @@ Database schema and metadata management endpoints
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, UploadFile, File, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, text, inspect, literal
 from sqlalchemy.orm import Session
 import os
 import json
@@ -13,6 +13,9 @@ import tempfile
 import shutil
 import hashlib
 import time as _time
+import re
+import csv
+import io
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
@@ -25,6 +28,219 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 router = APIRouter(prefix="/api/database", tags=["database"])
+
+IDENTIFIER_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+MAX_IDENTIFIER_LENGTH = 63
+
+ALLOWED_COLUMN_TYPES = {
+    "text": "TEXT",
+    "varchar": "VARCHAR",
+    "integer": "INTEGER",
+    "bigint": "BIGINT",
+    "double": "DOUBLE PRECISION",
+    "numeric": "NUMERIC",
+    "boolean": "BOOLEAN",
+    "date": "DATE",
+    "timestamp": "TIMESTAMP",
+    "geometry": "geometry(Geometry, 4326)",
+}
+
+
+def _validate_identifier(value: str, label: str = "identifier") -> str:
+    if not value or len(value) > MAX_IDENTIFIER_LENGTH or not IDENTIFIER_RE.fullmatch(value):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid {label}. Use lowercase letters, numbers and underscores, starting with a letter, up to {MAX_IDENTIFIER_LENGTH} characters.",
+        )
+    return value
+
+
+def _quote_ident(value: str) -> str:
+    return f'"{_validate_identifier(value)}"'
+
+
+def _normalize_column_type(raw_type: str) -> str:
+    key = (raw_type or "").strip().lower()
+    if key not in ALLOWED_COLUMN_TYPES:
+        allowed = ", ".join(sorted(ALLOWED_COLUMN_TYPES))
+        raise HTTPException(status_code=400, detail=f"Unsupported column type. Allowed: {allowed}")
+    return ALLOWED_COLUMN_TYPES[key]
+
+
+def _get_vector_columns(inspector, table_name: str) -> List[Dict]:
+    if not inspector.has_table(table_name, schema="vector"):
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
+    return inspector.get_columns(table_name, schema="vector")
+
+
+def _get_column_names(inspector, table_name: str) -> List[str]:
+    return [c["name"] for c in _get_vector_columns(inspector, table_name)]
+
+
+def _get_primary_key_columns(inspector, table_name: str) -> List[str]:
+    pk = inspector.get_pk_constraint(table_name, schema="vector") or {}
+    return pk.get("constrained_columns") or []
+
+
+def _validate_structured_control_identifiers(column_names: List[str], label: str = "column name") -> List[str]:
+    unsafe = [
+        name
+        for name in column_names
+        if not name or len(name) > MAX_IDENTIFIER_LENGTH or not IDENTIFIER_RE.fullmatch(name)
+    ]
+    if unsafe:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported {label}(s) for row controls: {', '.join(unsafe)}",
+        )
+    return column_names
+
+
+def _validate_structured_control_columns(columns: List[Dict]) -> List[str]:
+    column_names = [c["name"] for c in columns]
+    return _validate_structured_control_identifiers(column_names)
+
+
+def _validate_values_against_columns(values: Dict[str, object], column_names: List[str]) -> Dict[str, object]:
+    unknown = sorted(set(values.keys()) - set(column_names))
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown column(s): {', '.join(unknown)}")
+    return values
+
+
+def _build_row_predicate(row_ref: Dict[str, object], pk_columns: List[str]) -> tuple[str, Dict[str, object]]:
+    _validate_structured_control_identifiers(pk_columns, "primary key column")
+    if pk_columns:
+        missing = [c for c in pk_columns if c not in row_ref]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Missing primary key value(s): {', '.join(missing)}")
+        clauses = [f'"{c}" = :pk_{i}' for i, c in enumerate(pk_columns)]
+        return " AND ".join(clauses), {f"pk_{i}": row_ref[c] for i, c in enumerate(pk_columns)}
+
+    ctid = row_ref.get("_row_ref")
+    if not ctid:
+        raise HTTPException(status_code=400, detail="Missing _row_ref for table without primary key")
+    return "ctid = :row_ctid", {"row_ctid": ctid}
+
+
+def _compile_default_literal(engine, value: str) -> str:
+    return str(literal(value).compile(dialect=engine.dialect, compile_kwargs={"literal_binds": True}))
+
+
+class RowCreateRequest(BaseModel):
+    values: Dict[str, object]
+
+
+class RowMutationRequest(BaseModel):
+    row_ref: Dict[str, object]
+    values: Dict[str, object]
+
+
+class RowRefRequest(BaseModel):
+    row_ref: Dict[str, object]
+
+
+class ColumnCreateRequest(BaseModel):
+    name: str
+    data_type: str
+    nullable: bool = True
+    default: Optional[str] = None
+    description: Optional[str] = None
+    english_name: Optional[str] = None
+    example_value: Optional[str] = None
+    is_german: bool = False
+    updated_by: Optional[str] = "api_user"
+
+
+class ColumnRenameRequest(BaseModel):
+    new_name: str
+
+
+class ColumnNullableRequest(BaseModel):
+    nullable: bool
+
+
+class ColumnDefaultRequest(BaseModel):
+    default: Optional[str] = None
+
+
+class ColumnTypeRequest(BaseModel):
+    data_type: str
+
+
+class IndexCreateRequest(BaseModel):
+    name: Optional[str] = None
+    columns: List[str]
+    method: str = "btree"
+
+
+class TableCloneRequest(BaseModel):
+    new_name: str
+    include_data: bool = True
+
+
+class TableCreateRequest(BaseModel):
+    table_name: str
+    columns: List[ColumnCreateRequest]
+
+
+def _validate_unique_items(values: List[str], label: str) -> List[str]:
+    seen = set()
+    duplicates = []
+    for value in values:
+        if value in seen and value not in duplicates:
+            duplicates.append(value)
+        seen.add(value)
+    if duplicates:
+        raise HTTPException(status_code=400, detail=f"Duplicate {label}(s): {', '.join(duplicates)}")
+    return values
+
+
+def _validate_index_method(method: str) -> str:
+    normalized = (method or "").strip().lower()
+    if normalized not in {"btree", "gist"}:
+        raise HTTPException(status_code=400, detail="Unsupported index method. Allowed: btree, gist")
+    return normalized
+
+
+def _generated_index_name(table_name: str, columns: List[str]) -> str:
+    base = f"idx_{table_name}_{'_'.join(columns)}"
+    if len(base) <= MAX_IDENTIFIER_LENGTH:
+        return _validate_identifier(base, "index name")
+
+    digest = hashlib.sha1(base.encode("ascii")).hexdigest()[:8]
+    suffix = f"_{digest}"
+    prefix_length = MAX_IDENTIFIER_LENGTH - len(suffix)
+    prefix = base[:prefix_length].rstrip("_")
+    return _validate_identifier(f"{prefix}{suffix}", "index name")
+
+
+def _serialize_database_value(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if value is not None and not isinstance(value, (str, int, float, bool)):
+        return str(value)
+    return value
+
+
+def _get_existing_vector_index(conn, index_name: str) -> Optional[Dict[str, object]]:
+    row = conn.execute(
+        text("""
+            SELECT table_cls.relname AS table_name, rel_cls.relkind AS relation_kind
+            FROM pg_class rel_cls
+            JOIN pg_namespace rel_ns ON rel_ns.oid = rel_cls.relnamespace
+            LEFT JOIN pg_index index_meta ON index_meta.indexrelid = rel_cls.oid
+            LEFT JOIN pg_class table_cls ON table_cls.oid = index_meta.indrelid
+            WHERE rel_ns.nspname = 'vector'
+              AND rel_cls.relname = :index_name
+            LIMIT 1
+        """),
+        {"index_name": index_name},
+    ).fetchone()
+    if not row:
+        return None
+    return {"table_name": row[0], "relation_kind": row[1], "column_names": []}
+
 
 # Database connection helper
 def get_db_engine():
@@ -145,6 +361,37 @@ async def list_tables():
     except Exception as e:
         logger.error(f"Error listing tables: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/tables/create")
+async def create_table(body: TableCreateRequest):
+    table_name = _validate_identifier(body.table_name, "table name")
+    if not body.columns:
+        raise HTTPException(status_code=400, detail="At least one column is required")
+
+    column_names = [_validate_identifier(column.name, "column name") for column in body.columns]
+    _validate_unique_items(column_names, "column")
+    column_defs = []
+
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    if inspector.has_table(table_name, schema="vector"):
+        raise HTTPException(status_code=409, detail=f"Table '{table_name}' already exists")
+
+    for column, column_name in zip(body.columns, column_names):
+        sql_type = _normalize_column_type(column.data_type)
+        default_sql = ""
+        if column.default is not None:
+            default_sql = f" DEFAULT {_compile_default_literal(engine, column.default)}"
+        nullable_sql = "" if column.nullable else " NOT NULL"
+        column_defs.append(f'"{column_name}" {sql_type}{default_sql}{nullable_sql}')
+
+    with engine.connect() as conn:
+        conn.execute(text(f'CREATE TABLE vector."{table_name}" ({", ".join(column_defs)})'))
+        conn.commit()
+
+    _log_change(engine, table_name, "table_create", {"columns": column_names})
+    return {"success": True, "table_name": table_name, "message": f"Table vector.{table_name} created"}
 
 
 @router.get("/tables/{table_name}")
@@ -396,6 +643,169 @@ async def update_column_description(
     except Exception as e:
         logger.error(f"Error updating column description: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/tables/{table_name}/columns")
+async def add_column(table_name: str, body: ColumnCreateRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    column_name = _validate_identifier(body.name, "column name")
+    sql_type = _normalize_column_type(body.data_type)
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    existing = _get_column_names(inspector, table_name)
+    if column_name in existing:
+        raise HTTPException(status_code=409, detail=f"Column '{column_name}' already exists")
+
+    nullable_sql = "" if body.nullable else " NOT NULL"
+    default_sql = ""
+    if body.default is not None:
+        default_sql = f" DEFAULT {_compile_default_literal(engine, body.default)}"
+
+    with engine.connect() as conn:
+        conn.execute(text(f'ALTER TABLE vector."{table_name}" ADD COLUMN "{column_name}" {sql_type}{default_sql}{nullable_sql}'))
+        if body.description or body.english_name or body.example_value:
+            conn.execute(
+                text("""
+                    INSERT INTO metadata.column_descriptions
+                    (table_name, column_name, description, english_name, example_value, is_german, data_type, updated_by)
+                    VALUES (:table_name, :column_name, :description, :english_name, :example_value, :is_german, :data_type, :updated_by)
+                """),
+                {
+                    "table_name": table_name,
+                    "column_name": column_name,
+                    "description": body.description,
+                    "english_name": body.english_name,
+                    "example_value": body.example_value,
+                    "is_german": body.is_german,
+                    "data_type": sql_type,
+                    "updated_by": body.updated_by,
+                },
+            )
+        conn.commit()
+
+    _log_change(
+        engine,
+        table_name,
+        "column_add",
+        {
+            "column": column_name,
+            "type": sql_type,
+            "metadata": bool(body.description or body.english_name or body.example_value),
+        },
+    )
+    return {"success": True, "message": f"Column {column_name} added"}
+
+
+@router.put("/tables/{table_name}/columns/{column_name}/rename")
+async def rename_column(table_name: str, column_name: str, body: ColumnRenameRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    column_name = _validate_identifier(column_name, "column name")
+    new_name = _validate_identifier(body.new_name, "new column name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    columns = _get_column_names(inspector, table_name)
+    if column_name not in columns:
+        raise HTTPException(status_code=404, detail=f"Column '{column_name}' not found")
+    if new_name in columns:
+        raise HTTPException(status_code=409, detail=f"Column '{new_name}' already exists")
+
+    with engine.connect() as conn:
+        conn.execute(text(f'ALTER TABLE vector."{table_name}" RENAME COLUMN "{column_name}" TO "{new_name}"'))
+        conn.execute(
+            text("UPDATE metadata.column_descriptions SET column_name = :new WHERE table_name = :table AND column_name = :old"),
+            {"new": new_name, "table": table_name, "old": column_name},
+        )
+        conn.commit()
+
+    _log_change(engine, table_name, "column_rename", {"old_name": column_name, "new_name": new_name})
+    return {"success": True, "message": f"Column {column_name} renamed to {new_name}"}
+
+
+@router.put("/tables/{table_name}/columns/{column_name}/nullable")
+async def set_column_nullable(table_name: str, column_name: str, body: ColumnNullableRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    column_name = _validate_identifier(column_name, "column name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    if column_name not in _get_column_names(inspector, table_name):
+        raise HTTPException(status_code=404, detail=f"Column '{column_name}' not found")
+    action = "DROP NOT NULL" if body.nullable else "SET NOT NULL"
+
+    with engine.connect() as conn:
+        conn.execute(text(f'ALTER TABLE vector."{table_name}" ALTER COLUMN "{column_name}" {action}'))
+        conn.commit()
+
+    _log_change(engine, table_name, "column_nullable", {"column": column_name, "nullable": body.nullable})
+    return {"success": True, "message": f"Column {column_name} nullable set to {body.nullable}"}
+
+
+@router.put("/tables/{table_name}/columns/{column_name}/default")
+async def set_column_default(table_name: str, column_name: str, body: ColumnDefaultRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    column_name = _validate_identifier(column_name, "column name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    if column_name not in _get_column_names(inspector, table_name):
+        raise HTTPException(status_code=404, detail=f"Column '{column_name}' not found")
+
+    with engine.connect() as conn:
+        if body.default is None:
+            conn.execute(text(f'ALTER TABLE vector."{table_name}" ALTER COLUMN "{column_name}" DROP DEFAULT'))
+        else:
+            default_literal = _compile_default_literal(engine, body.default)
+            conn.execute(text(f'ALTER TABLE vector."{table_name}" ALTER COLUMN "{column_name}" SET DEFAULT {default_literal}'))
+        conn.commit()
+
+    _log_change(engine, table_name, "column_default", {"column": column_name, "has_default": body.default is not None})
+    return {"success": True, "message": f"Column {column_name} default updated"}
+
+
+@router.put("/tables/{table_name}/columns/{column_name}/type")
+async def set_column_type(table_name: str, column_name: str, body: ColumnTypeRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    column_name = _validate_identifier(column_name, "column name")
+    sql_type = _normalize_column_type(body.data_type)
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    if column_name not in _get_column_names(inspector, table_name):
+        raise HTTPException(status_code=404, detail=f"Column '{column_name}' not found")
+
+    with engine.connect() as conn:
+        conn.execute(text(f'ALTER TABLE vector."{table_name}" ALTER COLUMN "{column_name}" TYPE {sql_type} USING "{column_name}"::{sql_type}'))
+        conn.execute(
+            text("""
+                UPDATE metadata.column_descriptions
+                SET data_type = :data_type,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE table_name = :table AND column_name = :column
+            """),
+            {"data_type": sql_type, "table": table_name, "column": column_name},
+        )
+        conn.commit()
+
+    _log_change(engine, table_name, "column_type", {"column": column_name, "type": sql_type})
+    return {"success": True, "message": f"Column {column_name} type changed"}
+
+
+@router.delete("/tables/{table_name}/columns/{column_name}")
+async def drop_column(table_name: str, column_name: str):
+    table_name = _validate_identifier(table_name, "table name")
+    column_name = _validate_identifier(column_name, "column name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    if column_name not in _get_column_names(inspector, table_name):
+        raise HTTPException(status_code=404, detail=f"Column '{column_name}' not found")
+
+    with engine.connect() as conn:
+        conn.execute(text(f'ALTER TABLE vector."{table_name}" DROP COLUMN "{column_name}"'))
+        conn.execute(
+            text("DELETE FROM metadata.column_descriptions WHERE table_name = :table AND column_name = :column"),
+            {"table": table_name, "column": column_name},
+        )
+        conn.commit()
+
+    _log_change(engine, table_name, "column_drop", {"column": column_name})
+    return {"success": True, "message": f"Column {column_name} dropped"}
 
 
 @router.get("/schema-for-prompt")
@@ -1128,19 +1538,17 @@ async def preview_table(
     When filter_col and filter_val are provided, returns all rows (up to 500)
     where filter_col::text ILIKE '%filter_val%'.
     """
+    table_name = _validate_identifier(table_name, "table name")
     engine = get_db_engine()
 
     # Validate table exists
     inspector = inspect(engine)
-    if not inspector.has_table(table_name, schema="vector"):
-        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
 
     try:
-        with engine.connect() as conn:
-            # Get column info to detect geometry columns
-            cols = inspector.get_columns(table_name, schema="vector")
-            col_names = [c["name"] for c in cols]
+        cols = _get_vector_columns(inspector, table_name)
+        col_names = _validate_structured_control_columns(cols)
 
+        with engine.connect() as conn:
             # Validate filter_col against real column names to prevent SQL injection
             if filter_col and filter_col not in col_names:
                 raise HTTPException(status_code=400, detail=f"Unknown column: {filter_col}")
@@ -1191,6 +1599,165 @@ async def preview_table(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/tables/{table_name}/rows")
+async def browse_rows(
+    table_name: str,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    sort_col: Optional[str] = None,
+    sort_dir: str = Query("asc", pattern="^(asc|desc)$"),
+    filter_col: Optional[str] = None,
+    filter_val: Optional[str] = None,
+):
+    table_name = _validate_identifier(table_name, "table name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    cols = _get_vector_columns(inspector, table_name)
+    col_names = _validate_structured_control_columns(cols)
+    pk_columns = _get_primary_key_columns(inspector, table_name)
+    _validate_structured_control_identifiers(pk_columns, "primary key column")
+
+    if sort_col and sort_col not in col_names:
+        raise HTTPException(status_code=400, detail=f"Unknown sort column: {sort_col}")
+    if filter_col and filter_col not in col_names:
+        raise HTTPException(status_code=400, detail=f"Unknown filter column: {filter_col}")
+
+    offset = (page - 1) * per_page
+    params: Dict[str, object] = {"limit": per_page, "offset": offset}
+
+    select_parts = ['ctid::text AS "_row_ref"'] if not pk_columns else []
+    for col in cols:
+        if "geometry" in str(col["type"]).lower():
+            select_parts.append(f'ST_AsText("{col["name"]}") AS "{col["name"]}"')
+        else:
+            select_parts.append(f'"{col["name"]}"')
+
+    where_sql = ""
+    if filter_col and filter_val is not None:
+        where_sql = f'WHERE "{filter_col}"::text ILIKE :filter_val'
+        params["filter_val"] = f"%{filter_val}%"
+
+    order_sql = f'ORDER BY "{sort_col}" {sort_dir.upper()}' if sort_col else ""
+
+    with engine.connect() as conn:
+        total = conn.execute(text(f'SELECT COUNT(*) FROM vector."{table_name}" {where_sql}'), params).scalar() or 0
+        result = conn.execute(
+            text(f'SELECT {", ".join(select_parts)} FROM vector."{table_name}" {where_sql} {order_sql} LIMIT :limit OFFSET :offset'),
+            params,
+        )
+        columns = list(result.keys())
+        rows = [dict(zip(columns, row)) for row in result.fetchall()]
+
+    for row in rows:
+        for key, value in row.items():
+            if isinstance(value, datetime):
+                row[key] = value.isoformat()
+            elif value is not None and not isinstance(value, (str, int, float, bool)):
+                row[key] = str(value)
+
+    return {
+        "success": True,
+        "table_name": table_name,
+        "columns": columns,
+        "rows": rows,
+        "pk_columns": pk_columns,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": (total + per_page - 1) // per_page,
+    }
+
+
+@router.post("/tables/{table_name}/rows")
+async def insert_row(table_name: str, body: RowCreateRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    col_names = _validate_structured_control_columns(_get_vector_columns(inspector, table_name))
+    values = _validate_values_against_columns(body.values, col_names)
+    if not values:
+        raise HTTPException(status_code=400, detail="At least one column value is required")
+
+    insert_cols = list(values.keys())
+    col_sql = ", ".join(f'"{c}"' for c in insert_cols)
+    val_sql = ", ".join(f":v_{i}" for i, _ in enumerate(insert_cols))
+    params = {f"v_{i}": values[c] for i, c in enumerate(insert_cols)}
+
+    with engine.connect() as conn:
+        conn.execute(text(f'INSERT INTO vector."{table_name}" ({col_sql}) VALUES ({val_sql})'), params)
+        conn.commit()
+
+    _log_change(engine, table_name, "row_insert", {"columns": insert_cols})
+    return {"success": True, "message": "Row inserted"}
+
+
+@router.put("/tables/{table_name}/rows")
+async def update_row(table_name: str, body: RowMutationRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    col_names = _validate_structured_control_columns(_get_vector_columns(inspector, table_name))
+    pk_columns = _get_primary_key_columns(inspector, table_name)
+    values = _validate_values_against_columns(body.values, col_names)
+    if not values:
+        raise HTTPException(status_code=400, detail="At least one column value is required")
+
+    predicate_sql, predicate_params = _build_row_predicate(body.row_ref, pk_columns)
+    set_cols = list(values.keys())
+    set_sql = ", ".join(f'"{c}" = :v_{i}' for i, c in enumerate(set_cols))
+    params = {f"v_{i}": values[c] for i, c in enumerate(set_cols)}
+    params.update(predicate_params)
+
+    with engine.connect() as conn:
+        result = conn.execute(text(f'UPDATE vector."{table_name}" SET {set_sql} WHERE {predicate_sql}'), params)
+        conn.commit()
+
+    _log_change(engine, table_name, "row_update", {"columns": set_cols})
+    return {"success": True, "updated": result.rowcount}
+
+
+@router.delete("/tables/{table_name}/rows")
+async def delete_row(table_name: str, body: RowRefRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    _validate_structured_control_columns(_get_vector_columns(inspector, table_name))
+    pk_columns = _get_primary_key_columns(inspector, table_name)
+    predicate_sql, params = _build_row_predicate(body.row_ref, pk_columns)
+
+    with engine.connect() as conn:
+        result = conn.execute(text(f'DELETE FROM vector."{table_name}" WHERE {predicate_sql}'), params)
+        conn.commit()
+
+    _log_change(engine, table_name, "row_delete", {"row_ref": body.row_ref})
+    return {"success": True, "deleted": result.rowcount}
+
+
+@router.post("/tables/{table_name}/rows/duplicate")
+async def duplicate_row(table_name: str, body: RowRefRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    cols = _get_vector_columns(inspector, table_name)
+    col_names = _validate_structured_control_columns(cols)
+    pk_columns = _get_primary_key_columns(inspector, table_name)
+    predicate_sql, params = _build_row_predicate(body.row_ref, pk_columns)
+    copy_cols = [c for c in col_names if c not in pk_columns]
+    if not copy_cols:
+        raise HTTPException(status_code=400, detail="No non-primary-key columns available to duplicate")
+    col_sql = ", ".join(f'"{c}"' for c in copy_cols)
+
+    with engine.connect() as conn:
+        result = conn.execute(
+            text(f'INSERT INTO vector."{table_name}" ({col_sql}) SELECT {col_sql} FROM vector."{table_name}" WHERE {predicate_sql}'),
+            params,
+        )
+        conn.commit()
+
+    _log_change(engine, table_name, "row_duplicate", {"row_ref": body.row_ref})
+    return {"success": True, "duplicated": result.rowcount}
+
+
 # ---------------------------------------------------------------------------
 # COLUMN STATS
 # ---------------------------------------------------------------------------
@@ -1198,14 +1765,14 @@ async def preview_table(
 @router.get("/tables/{table_name}/stats")
 async def table_stats(table_name: str):
     """Return basic statistics for each column (count, distinct, nulls, min, max)."""
+    table_name = _validate_identifier(table_name, "table name")
     engine = get_db_engine()
 
     inspector = inspect(engine)
-    if not inspector.has_table(table_name, schema="vector"):
-        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
 
     try:
-        cols = inspector.get_columns(table_name, schema="vector")
+        cols = _get_vector_columns(inspector, table_name)
+        _validate_structured_control_columns(cols)
         stats = []
 
         with engine.connect() as conn:
@@ -1260,6 +1827,245 @@ async def table_stats(table_name: str):
     except Exception as e:
         logger.error(f"Stats error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Structured table controls
+# ---------------------------------------------------------------------------
+
+@router.get("/tables/{table_name}/indexes")
+async def list_table_indexes(table_name: str):
+    table_name = _validate_identifier(table_name, "table name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    _get_vector_columns(inspector, table_name)
+    return {"success": True, "table_name": table_name, "indexes": inspector.get_indexes(table_name, schema="vector")}
+
+
+@router.post("/tables/{table_name}/indexes")
+async def create_table_index(table_name: str, body: IndexCreateRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    method = _validate_index_method(body.method)
+    if not body.columns:
+        raise HTTPException(status_code=400, detail="At least one index column is required")
+
+    requested_columns = [_validate_identifier(column, "index column") for column in body.columns]
+    _validate_unique_items(requested_columns, "index column")
+
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    known_columns = _validate_structured_control_columns(_get_vector_columns(inspector, table_name))
+    unknown = [column for column in requested_columns if column not in known_columns]
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown column(s): {', '.join(unknown)}")
+
+    index_name = _validate_identifier(body.name, "index name") if body.name else _generated_index_name(table_name, requested_columns)
+    column_sql = ", ".join(f'"{column}"' for column in requested_columns)
+
+    with engine.connect() as conn:
+        existing_index = _get_existing_vector_index(conn, index_name)
+        if existing_index:
+            existing_table = existing_index["table_name"]
+            if existing_table == table_name:
+                raise HTTPException(status_code=409, detail=f"Index '{index_name}' already exists on table '{table_name}'")
+            if not existing_table:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Relation '{index_name}' already exists in schema 'vector'",
+                )
+            raise HTTPException(
+                status_code=409,
+                detail=f"Index '{index_name}' already exists on table '{existing_table}' in schema 'vector'",
+            )
+
+        conn.execute(text(f'CREATE INDEX "{index_name}" ON vector."{table_name}" USING {method.upper()} ({column_sql})'))
+        conn.commit()
+
+    _log_change(engine, table_name, "index_create", {"index": index_name, "columns": requested_columns, "method": method})
+    return {"success": True, "index_name": index_name, "message": f"Index {index_name} created"}
+
+
+@router.delete("/tables/{table_name}/indexes/{index_name}")
+async def drop_table_index(table_name: str, index_name: str):
+    table_name = _validate_identifier(table_name, "table name")
+    index_name = _validate_identifier(index_name, "index name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    _get_vector_columns(inspector, table_name)
+    table_indexes = inspector.get_indexes(table_name, schema="vector")
+    if index_name not in {index.get("name") for index in table_indexes}:
+        raise HTTPException(status_code=404, detail=f"Index '{index_name}' not found on table '{table_name}'")
+
+    with engine.connect() as conn:
+        conn.execute(text(f'DROP INDEX IF EXISTS vector."{index_name}"'))
+        conn.commit()
+
+    _log_change(engine, table_name, "index_drop", {"index": index_name})
+    return {"success": True, "message": f"Index {index_name} dropped"}
+
+
+@router.post("/tables/{table_name}/clone")
+async def clone_table(table_name: str, body: TableCloneRequest):
+    table_name = _validate_identifier(table_name, "table name")
+    new_name = _validate_identifier(body.new_name, "new table name")
+    if new_name == table_name:
+        raise HTTPException(status_code=400, detail="Clone target must be different from the source table")
+
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    if not inspector.has_table(table_name, schema="vector"):
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
+    if inspector.has_table(new_name, schema="vector"):
+        raise HTTPException(status_code=409, detail=f"Table '{new_name}' already exists")
+
+    data_sql = "WITH DATA" if body.include_data else "WITH NO DATA"
+    with engine.connect() as conn:
+        conn.execute(text(f'CREATE TABLE vector."{new_name}" AS TABLE vector."{table_name}" {data_sql}'))
+        conn.execute(
+            text("""
+                INSERT INTO metadata.table_descriptions
+                    (table_name, description, category, source, geometry_type, usage_hint, row_count, updated_by)
+                SELECT
+                    :new_name,
+                    description,
+                    category,
+                    source,
+                    geometry_type,
+                    usage_hint,
+                    CASE WHEN :include_data THEN row_count ELSE 0 END,
+                    'system'
+                FROM metadata.table_descriptions
+                WHERE table_name = :table_name
+                ON CONFLICT (table_name) DO UPDATE SET
+                    description = EXCLUDED.description,
+                    category = EXCLUDED.category,
+                    source = EXCLUDED.source,
+                    geometry_type = EXCLUDED.geometry_type,
+                    usage_hint = EXCLUDED.usage_hint,
+                    row_count = EXCLUDED.row_count,
+                    updated_at = CURRENT_TIMESTAMP
+            """),
+            {"table_name": table_name, "new_name": new_name, "include_data": body.include_data},
+        )
+        conn.execute(
+            text("DELETE FROM metadata.column_descriptions WHERE table_name = :new_name"),
+            {"new_name": new_name},
+        )
+        conn.execute(
+            text("""
+                INSERT INTO metadata.column_descriptions
+                    (table_name, column_name, description, data_type, example_value, english_name, is_german, updated_by)
+                SELECT
+                    :new_name,
+                    column_name,
+                    description,
+                    data_type,
+                    example_value,
+                    english_name,
+                    is_german,
+                    'system'
+                FROM metadata.column_descriptions
+                WHERE table_name = :table_name
+            """),
+            {"table_name": table_name, "new_name": new_name},
+        )
+        conn.execute(
+            text("""
+                INSERT INTO metadata.custom_datasets
+                    (table_name, original_filename, file_format, row_count, column_count, has_geometry, uploaded_by)
+                SELECT
+                    :new_name,
+                    original_filename,
+                    file_format,
+                    CASE WHEN :include_data THEN row_count ELSE 0 END,
+                    column_count,
+                    has_geometry,
+                    'system'
+                FROM metadata.custom_datasets
+                WHERE table_name = :table_name
+                ON CONFLICT (table_name) DO UPDATE SET
+                    original_filename = EXCLUDED.original_filename,
+                    file_format       = EXCLUDED.file_format,
+                    row_count         = EXCLUDED.row_count,
+                    column_count      = EXCLUDED.column_count,
+                    has_geometry      = EXCLUDED.has_geometry,
+                    uploaded_at       = CURRENT_TIMESTAMP,
+                    uploaded_by       = EXCLUDED.uploaded_by
+            """),
+            {"table_name": table_name, "new_name": new_name, "include_data": body.include_data},
+        )
+        conn.commit()
+
+    _log_change(engine, new_name, "table_clone", {"source": table_name, "include_data": body.include_data})
+    return {"success": True, "table_name": new_name, "message": f"Table vector.{table_name} cloned to vector.{new_name}"}
+
+
+@router.post("/tables/{table_name}/truncate")
+async def truncate_table(table_name: str):
+    table_name = _validate_identifier(table_name, "table name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    _get_vector_columns(inspector, table_name)
+
+    with engine.connect() as conn:
+        conn.execute(text(f'TRUNCATE TABLE vector."{table_name}"'))
+        conn.execute(
+            text("""
+                UPDATE metadata.table_descriptions
+                SET row_count = 0,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE table_name = :table_name
+            """),
+            {"table_name": table_name},
+        )
+        conn.execute(
+            text("""
+                UPDATE metadata.custom_datasets
+                SET row_count = 0,
+                    uploaded_at = CURRENT_TIMESTAMP
+                WHERE table_name = :table_name
+            """),
+            {"table_name": table_name},
+        )
+        conn.commit()
+
+    _log_change(engine, table_name, "table_truncate", {"row_count": 0})
+    return {"success": True, "table_name": table_name, "row_count": 0, "message": f"Table vector.{table_name} truncated"}
+
+
+@router.get("/tables/{table_name}/export")
+async def export_table_csv(table_name: str, limit: int = Query(1000, ge=1, le=10000)):
+    table_name = _validate_identifier(table_name, "table name")
+    engine = get_db_engine()
+    inspector = inspect(engine)
+    cols = _get_vector_columns(inspector, table_name)
+    col_names = _validate_structured_control_columns(cols)
+
+    select_parts = []
+    for col in cols:
+        if "geometry" in str(col["type"]).lower():
+            select_parts.append(f'ST_AsText("{col["name"]}") AS "{col["name"]}"')
+        else:
+            select_parts.append(f'"{col["name"]}"')
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    with engine.connect() as conn:
+        result = conn.execute(
+            text(f'SELECT {", ".join(select_parts)} FROM vector."{table_name}" LIMIT :limit'),
+            {"limit": limit},
+        )
+        columns = list(result.keys()) or col_names
+        writer.writerow(columns)
+        for row in result.fetchall():
+            writer.writerow([_serialize_database_value(value) for value in row])
+
+    return JSONResponse({
+        "success": True,
+        "filename": f"{table_name}.csv",
+        "csv": output.getvalue(),
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -1724,6 +2530,10 @@ async def wfs_import(body: WfsImportRequest):
 _overpass_cache: Dict[str, dict] = {}
 _OVERPASS_CACHE_TTL = 600  # seconds
 _OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+_OVERPASS_HEADERS = {
+    "User-Agent": "AI-Geospatial/1.0 (Python/requests)",
+    "Accept": "application/json",
+}
 
 _OVERPASS_SYSTEM_PROMPT = (
     "You are an Overpass QL expert. Generate a valid Overpass QL query for the user's request.\n"
@@ -1772,6 +2582,7 @@ def _execute_overpass_query(query: str, timeout: int = 25):
             resp = _req.post(
                 _OVERPASS_URL,
                 data={"data": query},
+                headers=_OVERPASS_HEADERS,
                 timeout=timeout + 30,
             )
             if resp.status_code in (429, 504):
