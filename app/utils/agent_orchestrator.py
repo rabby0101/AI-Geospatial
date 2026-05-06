@@ -192,6 +192,10 @@ Rules:
 - Call tools one at a time; wait for each result before proceeding
 - If a tool returns an error, adjust and retry with corrected arguments
 
+- If the user provides ONLY a location/address with no question:
+  → geocode_location to resolve it
+  → Return a GeoJSON FeatureCollection with the point geometry as-is
+
 Geometry generation workflow:
 - "Generate Voronoi zones for all hospitals" → generate_voronoi(table="public.osm_hospitals")
 - "Show the convex hull of all schools" → generate_convex_hull(table="public.osm_schools")
