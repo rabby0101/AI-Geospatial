@@ -483,6 +483,66 @@
             margin-top: 10px
         }
 
+        .control-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px
+        }
+
+        .control-row input,
+        .control-row select,
+        .row-editor-input {
+            padding: 7px 10px;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 12px;
+            font-family: var(--font)
+        }
+
+        .control-row input {
+            min-width: 150px
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 5px;
+            white-space: nowrap
+        }
+
+        .row-actions .btn {
+            padding: 6px 8px
+        }
+
+        .op-band {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            background: rgba(255, 255, 255, .02);
+            margin-bottom: 10px
+        }
+
+        .op-band.danger {
+            border-color: rgba(244, 67, 54, .28);
+            background: rgba(244, 67, 54, .06)
+        }
+
+        .op-band .op-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px
+        }
+
+        .op-band .op-copy {
+            color: var(--text2);
+            font-size: 12px;
+            line-height: 1.45;
+            margin-bottom: 10px
+        }
+
         /* OSM TAB */
         .osm-panel {
             flex-direction: column;
@@ -1145,12 +1205,9 @@ out skel qt;</textarea>
     <!-- MODALS -->
     <div class="modal-bg" id="editModal">
         <div class="modal">
-            <h3>Edit Column Description</h3>
-            <div class="form-group"><label>Column</label>
-                <div id="editColName"
-                    style="font-family:var(--mono);font-size:13px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px">
-                </div>
-            </div>
+            <h3>Edit Column</h3>
+            <div class="form-group"><label>Column Name</label><input id="editColName"
+                    placeholder="column_name"></div>
             <div class="form-group"><label>Description</label><textarea id="editColDesc"
                     placeholder="What does this column contain?"></textarea></div>
             <div class="form-group"><label>English Name</label><input id="editColEnglish"
@@ -1214,6 +1271,11 @@ out skel qt;</textarea>
         const API = '/api/database';
         let tables = [], selectedTable = null, editingTable = null, editingColumn = null;
         let changelogPage = 1, uploadFile = null;
+        let currentRowsPage = 1;
+        let currentTableSubtab = 'overview';
+        let currentTableDataView = 'overview';
+        const tableDetailsCache = {};
+        const tableRowsMetaCache = {};
 
         // ── Tab switching ──
         document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
@@ -1240,9 +1302,10 @@ out skel qt;</textarea>
             document.getElementById('tablesList').innerHTML = filtered.map(t => {
                 const dot = t.description ? 'green' : (t.category || t.source) ? 'yellow' : 'red';
                 const active = selectedTable === t.table_name ? 'active' : '';
-                return `<div class="t-item ${active}" onclick="selectTable('${t.table_name}')" oncontextmenu="showContextMenu(event, '${t.table_name}')">
+                const tableName = t.table_name || '';
+                return `<div class="t-item ${active}" data-table="${escapeAttr(tableName)}" onclick="selectTable(this.dataset.table)" oncontextmenu="showContextMenu(event, this.dataset.table)">
             <div class="dot ${dot}"></div>
-            <div class="name">${t.table_name}</div>
+            <div class="name">${escapeHtml(tableName)}</div>
             <div class="rows">${(t.row_count || 0).toLocaleString()}</div>
         </div>`;
             }).join('');
@@ -1263,58 +1326,84 @@ out skel qt;</textarea>
 
         async function renderDetails(t) {
             const pane = document.getElementById('detailPane');
-            const geom = t.geometry_type || 'None';
-            const descEsc = (t.description || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-            const hintEsc = (t.usage_hint || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-            let h = `<div class="d-head fade-in"><h2>${t.table_name}</h2><div style="display:flex;gap:8px">
-        <button class="btn" data-tbl="${t.table_name}" data-desc="${descEsc}" data-hint="${hintEsc}" onclick="openTableDescModal(this.dataset.tbl,this.dataset.desc,this.dataset.hint)"><i class="fas fa-edit"></i> Edit Desc</button>
-        <button class="btn" onclick="loadPreview('${t.table_name}')"><i class="fas fa-eye"></i> Preview</button>
-        <button class="btn" onclick="loadStats('${t.table_name}')"><i class="fas fa-chart-bar"></i> Stats</button>
+            tableDetailsCache[t.table_name] = t;
+            currentRowsPage = 1;
+            currentTableSubtab = 'overview';
+            currentTableDataView = 'overview';
+            let h = `<div class="d-head fade-in"><h2>${escapeHtml(t.table_name)}</h2><div style="display:flex;gap:8px">
+        <button class="btn" data-tbl="${escapeAttr(t.table_name)}" data-desc="${escapeAttr(t.description || '')}" data-hint="${escapeAttr(t.usage_hint || '')}" onclick="openTableDescModal(this.dataset.tbl,this.dataset.desc,this.dataset.hint)"><i class="fas fa-edit"></i> Edit Desc</button>
     </div></div>`;
-
-            h += `<div class="d-section fade-in"><div class="d-label">Description</div>
-        <p style="line-height:1.6;color:#bbb">${t.description || '<em style="color:#666">No description</em>'}</p></div>`;
-
-
-            h += `<div class="d-section fade-in"><div class="d-label">Table Info</div><div class="d-grid">
-        <div><strong>Schema:</strong> ${t.schema}</div>
-        <div><strong>Records:</strong> ${(t.row_count || 0).toLocaleString()}</div>
-        <div><strong>Geometry:</strong> ${geom}</div>
-        <div><strong>Columns:</strong> ${t.columns.length}</div>
-    </div></div>`;
-
-            h += `<div class="d-section fade-in"><div class="d-label">Columns</div><div class="col-grid">`;
-            t.columns.forEach(c => {
-                const miss = !c.metadata || !c.metadata.description;
-                const bd = miss ? 'rgba(244,67,54,.2)' : 'var(--border)';
-                const meta = JSON.stringify(c.metadata || {}).replace(/"/g, '&quot;');
-                h += `<div class="col-card" style="border-color:${bd}">
-            <div class="cn">${c.name}</div><div class="ct">${c.type}</div>
-            <div class="cd">${c.metadata?.description || '<em style="color:#666">No description</em>'}</div>
-            <button class="btn" style="margin-top:6px" onclick="openColModal('${t.table_name}','${c.name}',${meta})"><i class="fas fa-edit"></i> Edit</button>
-        </div>`;
-            });
-            h += '</div></div>';
-            h += '<div id="previewSection"></div><div id="statsSection"></div>';
+            h += `
+  <div class="d-section fade-in">
+    <div class="tab-bar" style="margin:0 0 14px;padding:0;border:none">
+      <div class="tab active table-subtab" data-subtab="overview" onclick="switchTableSubtab('overview',${jsString(t.table_name)})"><i class="fas fa-circle-info"></i> Overview</div>
+      <div class="tab table-subtab" data-subtab="rows" onclick="switchTableSubtab('rows',${jsString(t.table_name)})"><i class="fas fa-table"></i> Rows</div>
+      <div class="tab table-subtab" data-subtab="columns" onclick="switchTableSubtab('columns',${jsString(t.table_name)})"><i class="fas fa-columns"></i> Columns</div>
+      <div class="tab table-subtab" data-subtab="indexes" onclick="switchTableSubtab('indexes',${jsString(t.table_name)})"><i class="fas fa-bolt"></i> Indexes</div>
+      <div class="tab table-subtab" data-subtab="ops" onclick="switchTableSubtab('ops',${jsString(t.table_name)})"><i class="fas fa-toolbox"></i> Operations</div>
+    </div>
+    <div id="tableControlPane"></div>
+  </div>`;
             pane.innerHTML = h;
+            renderOverview(t.table_name);
+        }
+
+        function renderOverview(tableName) {
+            currentTableSubtab = 'overview';
+            currentTableDataView = 'overview';
+            const t = tableDetailsCache[tableName];
+            const pane = document.getElementById('tableControlPane');
+            if (!t || !pane) return;
+            const geom = t.geometry_type || 'None';
+            const noDescription = '<em style="color:#666">No description</em>';
+            pane.innerHTML = `
+                <div class="d-section fade-in">
+                    <div class="d-label">Description</div>
+                    <p style="line-height:1.6;color:#bbb">${t.description ? escapeHtml(t.description) : noDescription}</p>
+                </div>
+                <div class="d-section fade-in">
+                    <div class="d-label">Table Info</div>
+                    <div class="d-grid">
+                        <div><strong>Schema:</strong> ${escapeHtml(t.schema)}</div>
+                        <div><strong>Records:</strong> ${(t.row_count || 0).toLocaleString()}</div>
+                        <div><strong>Geometry:</strong> ${escapeHtml(geom)}</div>
+                        <div><strong>Columns:</strong> ${escapeHtml(t.columns.length)}</div>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <button class="btn" onclick="loadPreview(${jsString(tableName)})"><i class="fas fa-eye"></i> Preview</button>
+                    <button class="btn" onclick="loadStats(${jsString(tableName)})"><i class="fas fa-chart-bar"></i> Stats</button>
+                </div>`;
         }
 
         function _buildPreviewTable(d, columns) {
-            let th = columns.map(c => `<th>${c}</th>`).join('');
+            let th = columns.map(c => `<th>${escapeHtml(c)}</th>`).join('');
             let tb = d.rows.length
-                ? d.rows.map(row => '<tr>' + columns.map(c => `<td title="${String(row[c] ?? '')}">${String(row[c] ?? '').substring(0, 80)}</td>`).join('') + '</tr>').join('')
+                ? d.rows.map(row => '<tr>' + columns.map(c => {
+                    const raw = row[c] ?? '';
+                    const display = String(raw).length > 80 ? String(raw).substring(0, 80) + '...' : String(raw);
+                    return `<td title="${escapeAttr(raw)}">${escapeHtml(display)}</td>`;
+                }).join('') + '</tr>').join('')
                 : `<tr><td colspan="${columns.length}" style="text-align:center;color:var(--text2);padding:16px">No rows match</td></tr>`;
             return `<table class="preview-table"><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table>`;
         }
 
         async function loadPreview(name) {
-            const sec = document.getElementById('previewSection');
+            currentTableSubtab = 'overview';
+            currentTableDataView = 'preview';
+            const requestedTable = selectedTable;
+            const requestedSubtab = currentTableSubtab;
+            const requestedView = currentTableDataView;
+            document.querySelectorAll('.table-subtab').forEach(x => x.classList.toggle('active', x.dataset.subtab === 'overview'));
+            const sec = document.getElementById('previewSection') || document.getElementById('tableControlPane');
+            if (!sec) return;
             sec.innerHTML = '<div class="d-section fade-in"><div class="d-label">Data Preview</div><div class="spinner"></div></div>';
             try {
-                const r = await fetch(API + '/tables/' + name + '/preview?limit=20');
+                const r = await fetch(API + '/tables/' + encodeURIComponent(name) + '/preview?limit=20');
                 const d = await r.json();
+                if (!isCurrentTableControlRequest(name, requestedTable, requestedSubtab, requestedView)) return;
                 if (!d.success) { sec.innerHTML = '<div class="d-section"><div class="d-label">Preview</div><p style="color:var(--text2)">No data</p></div>'; return; }
-                const colOpts = d.columns.map(c => `<option value="${c}">${c}</option>`).join('');
+                const colOpts = d.columns.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
                 sec.innerHTML = `
                   <div class="d-section fade-in">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
@@ -1324,15 +1413,20 @@ out skel qt;</textarea>
                           <option value="">— column —</option>${colOpts}
                         </select>
                         <input id="filterVal" placeholder="Filter value…" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:12px;width:160px"
-                          onkeydown="if(event.key==='Enter')filterPreview('${name}')"/>
-                        <button class="btn" onclick="filterPreview('${name}')">Filter</button>
-                        <button class="btn" onclick="clearFilter('${name}')">Clear</button>
+                          onkeydown="if(event.key==='Enter')filterPreview(${jsString(name)})"/>
+                        <button class="btn" onclick="filterPreview(${jsString(name)})">Filter</button>
+                        <button class="btn" onclick="clearFilter(${jsString(name)})">Clear</button>
+                        <button class="btn" onclick="switchTableSubtab('rows', ${jsString(name)})"><i class="fas fa-table"></i> Rows</button>
                         <span id="filterSpinner" style="display:none" class="spinner" style="width:14px;height:14px"></span>
                       </div>
                     </div>
                     <div class="preview-wrap" id="previewTableWrap">${_buildPreviewTable(d, d.columns)}</div>
                   </div>`;
-            } catch (e) { sec.innerHTML = '<div class="d-section"><p style="color:var(--red)">Error loading preview</p></div>'; }
+            } catch (e) {
+                if (isCurrentTableControlRequest(name, requestedTable, requestedSubtab, requestedView)) {
+                    sec.innerHTML = '<div class="d-section"><p style="color:var(--red)">Error loading preview</p></div>';
+                }
+            }
         }
 
         async function filterPreview(name) {
@@ -1343,7 +1437,7 @@ out skel qt;</textarea>
             if (spinner) spinner.style.display = 'inline-block';
             try {
                 const params = new URLSearchParams({ limit: 500, filter_col: col, filter_val: val });
-                const r = await fetch(`${API}/tables/${name}/preview?${params}`);
+                const r = await fetch(`${API}/tables/${encodeURIComponent(name)}/preview?${params}`);
                 const d = await r.json();
                 if (!d.success) return;
                 document.getElementById('previewTableWrap').innerHTML = _buildPreviewTable(d, d.columns);
@@ -1366,33 +1460,43 @@ out skel qt;</textarea>
         }
 
         async function loadStats(name) {
-            const sec = document.getElementById('statsSection');
+            currentTableSubtab = 'overview';
+            currentTableDataView = 'stats';
+            const requestedTable = selectedTable;
+            const requestedSubtab = currentTableSubtab;
+            const requestedView = currentTableDataView;
+            document.querySelectorAll('.table-subtab').forEach(x => x.classList.toggle('active', x.dataset.subtab === 'overview'));
+            const sec = document.getElementById('statsSection') || document.getElementById('tableControlPane');
+            if (!sec) return;
             sec.innerHTML = '<div class="d-section fade-in"><div class="d-label">Column Statistics</div><div class="spinner"></div></div>';
             try {
-                const r = await fetch(API + '/tables/' + name + '/stats');
+                const r = await fetch(API + '/tables/' + encodeURIComponent(name) + '/stats');
                 const d = await r.json();
+                if (!isCurrentTableControlRequest(name, requestedTable, requestedSubtab, requestedView)) return;
                 if (!d.success) { sec.innerHTML = ''; return; }
                 let h = `<div class="d-section fade-in"><div class="d-label">Column Statistics (${d.total_rows.toLocaleString()} rows)</div><div class="col-grid">`;
                 d.columns.forEach(c => {
-                    let info = `<div class="cn">${c.column}</div><div class="ct">${c.type}</div>`;
+                    let info = `<div class="cn">${escapeHtml(c.column)}</div><div class="ct">${escapeHtml(c.type)}</div>`;
                     if (c.is_geometry) { info += '<div class="cd">Geometry column</div>'; }
                     else {
-                        info += `<div class="cd" style="font-size:11px">Non-null: ${c.non_null?.toLocaleString() || '?'} | Null: ${c.null_count?.toLocaleString() || '?'} | Distinct: ${c.distinct?.toLocaleString() || '?'}`;
-                        if (c.min !== undefined) info += `<br>Min: ${c.min} | Max: ${c.max} | Avg: ${c.avg}`;
-                        if (c.samples) info += `<br>Samples: ${c.samples.map(s => s.substring(0, 30)).join(', ')}`;
+                        info += `<div class="cd" style="font-size:11px">Non-null: ${escapeHtml(c.non_null?.toLocaleString() || '?')} | Null: ${escapeHtml(c.null_count?.toLocaleString() || '?')} | Distinct: ${escapeHtml(c.distinct?.toLocaleString() || '?')}`;
+                        if (c.min !== undefined) info += `<br>Min: ${escapeHtml(c.min)} | Max: ${escapeHtml(c.max)} | Avg: ${escapeHtml(c.avg)}`;
+                        if (c.samples) info += `<br>Samples: ${escapeHtml(c.samples.map(s => String(s).substring(0, 30)).join(', '))}`;
                         info += '</div>';
                     }
                     h += `<div class="col-card">${info}</div>`;
                 });
-                h += '</div></div>';
+                h += `</div><button class="btn" style="margin-top:12px" onclick="switchTableSubtab('rows', ${jsString(name)})"><i class="fas fa-table"></i> Rows</button></div>`;
                 sec.innerHTML = h;
-            } catch (e) { sec.innerHTML = ''; }
+            } catch (e) {
+                if (isCurrentTableControlRequest(name, requestedTable, requestedSubtab, requestedView)) sec.innerHTML = '';
+            }
         }
 
         // ── MODALS ──
         function openColModal(tbl, col, meta) {
             editingTable = tbl; editingColumn = col;
-            document.getElementById('editColName').textContent = tbl + '.' + col;
+            document.getElementById('editColName').value = col;
             document.getElementById('editColDesc').value = meta?.description || '';
             document.getElementById('editColEnglish').value = meta?.english_name || '';
             document.getElementById('editColExample').value = meta?.example_value || '';
@@ -1409,16 +1513,31 @@ out skel qt;</textarea>
         document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); }));
 
         async function saveColumnDesc() {
+            const returnSubtab = currentTableSubtab;
+            const nextColumn = document.getElementById('editColName').value.trim();
+            if (!nextColumn) { alert('Enter a column name.'); return; }
             const p = new URLSearchParams({
-                table_name: editingTable, column_name: editingColumn,
+                table_name: editingTable, column_name: nextColumn,
                 description: document.getElementById('editColDesc').value,
                 english_name: document.getElementById('editColEnglish').value,
                 example_value: document.getElementById('editColExample').value
             });
             try {
+                if (nextColumn !== editingColumn) {
+                    await apiJson(`${API}/tables/${encodeURIComponent(editingTable)}/columns/${encodeURIComponent(editingColumn)}/rename`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ new_name: nextColumn })
+                    });
+                    editingColumn = nextColumn;
+                }
                 const r = await fetch(API + '/columns?' + p, { method: 'POST' });
                 const d = await r.json();
-                if (d.success) { closeModal('editModal'); selectTable(editingTable); }
+                if (d.success) {
+                    closeModal('editModal');
+                    await selectTable(editingTable);
+                    if (returnSubtab === 'columns') switchTableSubtab('columns', editingTable);
+                }
                 else alert('Error: ' + (d.detail || 'Unknown'));
             } catch (e) { alert('Error: ' + e.message); }
         }
@@ -1500,6 +1619,485 @@ out skel qt;</textarea>
                 }
             }
         });
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttr(value) {
+            return escapeHtml(value);
+        }
+
+        function jsString(value) {
+            return `'${String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/\r/g, '\\r')
+                .replace(/\n/g, '\\n')
+                .replace(/</g, '\\x3c')}'`;
+        }
+
+        function tableColumnInfo(tableName) {
+            return tableDetailsCache[tableName]?.columns || [];
+        }
+
+        function isGeometryColumn(column) {
+            return String(column?.type || '').toLowerCase().includes('geometry');
+        }
+
+        function isLikelyGeometryColumnName(name) {
+            return ['geom', 'geometry', 'the_geom', 'wkb_geometry'].includes(String(name || '').toLowerCase());
+        }
+
+        function isEditableDataColumn(name, pkCols, detailsCols) {
+            if (name === '_row_ref' || pkCols.includes(name)) return false;
+            const column = detailsCols.find(c => c.name === name);
+            if (column) return !isGeometryColumn(column);
+            return !isLikelyGeometryColumnName(name);
+        }
+
+        function selectedValues(selectEl) {
+            return Array.from(selectEl?.selectedOptions || []).map(option => option.value).filter(Boolean);
+        }
+
+        function isCurrentTableControlRequest(tableName, requestedTable, requestedSubtab, requestedView) {
+            return selectedTable === requestedTable
+                && requestedTable === tableName
+                && currentTableSubtab === requestedSubtab
+                && currentTableDataView === requestedView;
+        }
+
+        function isCurrentTableSubtabRequest(tableName, requestedTable, requestedSubtab) {
+            return selectedTable === requestedTable
+                && requestedTable === tableName
+                && currentTableSubtab === requestedSubtab;
+        }
+
+        async function apiJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data.success === false) {
+                throw new Error(data.detail || data.message || `Request failed (${response.status})`);
+            }
+            return data;
+        }
+
+        function switchTableSubtab(tab, tableName) {
+            currentTableSubtab = tab;
+            currentTableDataView = tab;
+            document.querySelectorAll('.table-subtab').forEach(x => x.classList.toggle('active', x.dataset.subtab === tab));
+            if (tab === 'overview') renderOverview(tableName);
+            if (tab === 'rows') loadRows(tableName, currentRowsPage || 1);
+            if (tab === 'columns') renderColumnControls(tableName);
+            if (tab === 'indexes') loadIndexes(tableName);
+            if (tab === 'ops') renderTableOps(tableName);
+        }
+
+        async function loadRows(tableName, page = 1) {
+            currentTableSubtab = 'rows';
+            currentRowsPage = page;
+            currentTableDataView = 'rows';
+            const requestedTable = selectedTable;
+            const requestedSubtab = currentTableSubtab;
+            const requestedView = currentTableDataView;
+            const pane = document.getElementById('tableControlPane');
+            if (!pane) return;
+            document.querySelectorAll('.table-subtab').forEach(x => x.classList.toggle('active', x.dataset.subtab === 'rows'));
+            pane.innerHTML = '<div class="empty"><div class="spinner"></div>Loading rows...</div>';
+            try {
+                const params = new URLSearchParams({ page, per_page: 50 });
+                const d = await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/rows?${params}`);
+                if (!isCurrentTableControlRequest(tableName, requestedTable, requestedSubtab, requestedView)) return;
+                tableRowsMetaCache[tableName] = {
+                    columns: d.columns || [],
+                    pk_columns: d.pk_columns || [],
+                    page: d.page || page,
+                    total_pages: d.total_pages || 1,
+                    total: d.total || 0
+                };
+
+                const columns = d.columns || [];
+                const th = columns.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '<th>Actions</th>';
+                const body = (d.rows || []).length
+                    ? d.rows.map(row => {
+                        const encodedRow = encodeURIComponent(JSON.stringify(row));
+                        const encodedPk = encodeURIComponent(JSON.stringify(d.pk_columns || []));
+                        const ref = JSON.stringify(buildRowRef(row, d.pk_columns || []));
+                        const cells = columns.map(c => {
+                            const raw = row[c] ?? '';
+                            const display = String(raw).length > 80 ? String(raw).substring(0, 80) + '...' : String(raw);
+                            return `<td title="${escapeAttr(raw)}">${escapeHtml(display)}</td>`;
+                        }).join('');
+                        return `<tr>${cells}<td>
+                            <div class="row-actions">
+                                <button class="btn" title="Edit row" data-row="${escapeAttr(encodedRow)}" data-pk="${escapeAttr(encodedPk)}" onclick="openRowEditor(${jsString(tableName)}, this.dataset.row, this.dataset.pk)"><i class="fas fa-edit"></i></button>
+                                <button class="btn" title="Duplicate row" data-ref="${escapeAttr(ref)}" onclick="duplicateRow(${jsString(tableName)}, JSON.parse(this.dataset.ref))"><i class="fas fa-copy"></i></button>
+                                <button class="btn danger" title="Delete row" data-ref="${escapeAttr(ref)}" onclick="deleteRow(${jsString(tableName)}, JSON.parse(this.dataset.ref))"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td></tr>`;
+                    }).join('')
+                    : `<tr><td colspan="${columns.length + 1}" style="text-align:center;color:var(--text2);padding:16px">No rows on this page</td></tr>`;
+
+                pane.innerHTML = `
+                    <div class="control-row" style="justify-content:space-between">
+                        <div class="control-row" style="margin:0">
+                            <button class="btn primary" onclick="openRowEditor(${jsString(tableName)}, '', '${escapeAttr(encodeURIComponent(JSON.stringify(d.pk_columns || [])))}')"><i class="fas fa-plus"></i> Add Row</button>
+                            <button class="btn" onclick="loadRows(${jsString(tableName)}, ${Number(d.page || 1)})"><i class="fas fa-rotate-right"></i> Refresh</button>
+                        </div>
+                        <div style="font-size:12px;color:var(--text2)">Page ${escapeHtml(d.page || 1)} of ${escapeHtml(d.total_pages || 1)} · ${escapeHtml((d.total || 0).toLocaleString())} rows</div>
+                    </div>
+                    <div class="preview-wrap"><table class="preview-table"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div>
+                    <div class="pagination">
+                        <button class="btn" ${d.page <= 1 ? 'disabled' : ''} onclick="loadRows(${jsString(tableName)}, ${Number(d.page || 1) - 1})"><i class="fas fa-chevron-left"></i></button>
+                        <button class="btn" ${d.page >= (d.total_pages || 1) ? 'disabled' : ''} onclick="loadRows(${jsString(tableName)}, ${Number(d.page || 1) + 1})"><i class="fas fa-chevron-right"></i></button>
+                    </div>`;
+            } catch (e) {
+                if (isCurrentTableControlRequest(tableName, requestedTable, requestedSubtab, requestedView)) {
+                    pane.innerHTML = `<p style="color:var(--red);font-size:13px">${escapeHtml(e.message || 'Could not load rows.')}</p>`;
+                }
+            }
+        }
+
+        function buildRowRef(row, pkColumns) {
+            if (pkColumns && pkColumns.length) {
+                const ref = {};
+                pkColumns.forEach(c => ref[c] = row[c]);
+                return ref;
+            }
+            return { _row_ref: row._row_ref };
+        }
+
+        function openRowEditor(tableName, encodedRow, encodedPkCols) {
+            document.getElementById('rowEditorModal')?.remove();
+            const row = encodedRow ? JSON.parse(decodeURIComponent(encodedRow)) : {};
+            const pkCols = JSON.parse(decodeURIComponent(encodedPkCols || '%5B%5D'));
+            const detailsCols = tableColumnInfo(tableName);
+            const rowsMeta = tableRowsMetaCache[tableName] || {};
+            const detailNames = detailsCols.map(c => c.name);
+            const candidateNames = detailNames.length ? detailNames : (rowsMeta.columns || []);
+            const insertFields = candidateNames.filter(name => isEditableDataColumn(name, pkCols, detailsCols));
+            const editFields = Object.keys(row).filter(name => isEditableDataColumn(name, pkCols, detailsCols));
+            const fields = encodedRow ? editFields : insertFields;
+            const fieldsHtml = fields.length
+                ? fields.map(name => `
+                    <div class="form-group">
+                        <label>${escapeHtml(name)}</label>
+                        <input class="row-editor-input" data-row-field="${escapeAttr(name)}" value="${escapeAttr(row[name] ?? '')}">
+                    </div>`).join('')
+                : '<p style="color:var(--text2);font-size:13px">No editable non-key, non-geometry columns are available.</p>';
+            const rowRef = encodedRow ? JSON.stringify(buildRowRef(row, pkCols)) : '';
+            const modal = document.createElement('div');
+            modal.className = 'modal-bg active';
+            modal.id = 'rowEditorModal';
+            modal.setAttribute('data-original-row', encodedRow ? encodeURIComponent(JSON.stringify(row)) : '');
+            modal.innerHTML = `
+                <div class="modal" style="max-width:620px">
+                    <h3>${encodedRow ? 'Edit Row' : 'Add Row'}</h3>
+                    ${fieldsHtml}
+                    <div class="modal-actions">
+                        <button class="btn" onclick="document.getElementById('rowEditorModal')?.remove()">Cancel</button>
+                        <button class="btn primary" ${fields.length ? '' : 'disabled'} data-ref="${escapeAttr(rowRef)}" onclick="saveRow(${jsString(tableName)}, this.dataset.ref ? JSON.parse(this.dataset.ref) : null)">Save</button>
+                    </div>
+                </div>`;
+            modal.addEventListener('click', event => {
+                if (event.target === modal) modal.remove();
+            });
+            document.body.appendChild(modal);
+        }
+
+        function collectRowValues(isUpdate) {
+            const modal = document.getElementById('rowEditorModal');
+            const values = {};
+            const originalRow = isUpdate && modal?.dataset.originalRow
+                ? JSON.parse(decodeURIComponent(modal.dataset.originalRow))
+                : {};
+            document.querySelectorAll('#rowEditorModal [data-row-field]').forEach(input => {
+                const field = input.dataset.rowField;
+                const nextValue = input.value;
+                if (!isUpdate) {
+                    if (nextValue !== '') values[field] = nextValue;
+                    return;
+                }
+                const hasOriginal = Object.prototype.hasOwnProperty.call(originalRow, field);
+                const originalValue = originalRow[field];
+                if (hasOriginal && originalValue === null && nextValue === '') return;
+                if (hasOriginal && String(originalValue ?? '') === nextValue) return;
+                values[field] = nextValue;
+            });
+            return values;
+        }
+
+        async function saveRow(tableName, rowRef) {
+            const values = rowRef ? collectRowValues(true) : collectRowValues(false);
+            if (rowRef && !Object.keys(values).length) {
+                alert('No changes to save.');
+                return;
+            }
+            const options = rowRef
+                ? { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ row_ref: rowRef, values }) }
+                : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values }) };
+            try {
+                await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/rows`, options);
+                document.getElementById('rowEditorModal')?.remove();
+                await loadRows(tableName, rowRef ? currentRowsPage : 1);
+                await loadTables();
+            } catch (e) {
+                alert(e.message || 'Could not save row');
+            }
+        }
+
+        async function deleteRow(tableName, rowRef) {
+            if (!confirm('Delete this row?')) return;
+            try {
+                await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/rows`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ row_ref: rowRef })
+                });
+                await loadRows(tableName, currentRowsPage);
+                await loadTables();
+            } catch (e) {
+                alert(e.message || 'Could not delete row');
+            }
+        }
+
+        async function duplicateRow(tableName, rowRef) {
+            try {
+                await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/rows/duplicate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ row_ref: rowRef })
+                });
+                await loadRows(tableName, currentRowsPage);
+                await loadTables();
+            } catch (e) {
+                alert(e.message || 'Could not duplicate row');
+            }
+        }
+
+        function renderColumnControls(tableName) {
+            const columns = tableColumnInfo(tableName);
+            const noDescription = '<em style="color:#666">No description</em>';
+            const rows = columns.length
+                ? columns.map(c => {
+                    const miss = !c.metadata || !c.metadata.description;
+                    const meta = JSON.stringify(c.metadata || {});
+                    const details = [
+                        c.metadata?.english_name ? `<div style="font-size:11px;color:var(--text2);margin-top:6px">English: ${escapeHtml(c.metadata.english_name)}</div>` : '',
+                        c.metadata?.example_value ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Example: <span style="font-family:var(--mono)">${escapeHtml(c.metadata.example_value)}</span></div>` : ''
+                    ].join('');
+                    return `<tr>
+                    <td>
+                        <div style="font-family:var(--mono);font-weight:600">${escapeHtml(c.name)}</div>
+                    </td>
+                    <td><span class="ct">${escapeHtml(c.type)}</span></td>
+                    <td style="border-left:3px solid ${miss ? 'rgba(244,67,54,.35)' : 'rgba(76,175,80,.35)'}">
+                        <div>${c.metadata?.description ? escapeHtml(c.metadata.description) : noDescription}</div>
+                        ${details}
+                    </td>
+                    <td>
+                        <div class="row-actions">
+                            <button class="btn" data-meta="${escapeAttr(meta)}" onclick="openColModal(${jsString(tableName)}, ${jsString(c.name)}, JSON.parse(this.dataset.meta))"><i class="fas fa-edit"></i> Edit</button>
+                            <button class="btn danger" onclick="dropColumn(${jsString(tableName)}, ${jsString(c.name)})"><i class="fas fa-trash"></i> Drop</button>
+                        </div>
+                    </td>
+                </tr>`;
+                }).join('')
+                : '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px">No columns found</td></tr>';
+            document.getElementById('tableControlPane').innerHTML = `
+                <div class="d-section fade-in">
+                    <div class="d-label">Columns</div>
+                <div class="control-row">
+                    <input id="newColName" placeholder="column_name" autocomplete="off">
+                    <select id="newColType">
+                        <option value="text">text</option>
+                        <option value="varchar">varchar</option>
+                        <option value="integer">integer</option>
+                        <option value="bigint">bigint</option>
+                        <option value="double">double</option>
+                        <option value="numeric">numeric</option>
+                        <option value="boolean">boolean</option>
+                        <option value="date">date</option>
+                        <option value="timestamp">timestamp</option>
+                        <option value="geometry">geometry</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <input id="newColDesc" placeholder="Description" autocomplete="off" style="min-width:260px;flex:1">
+                    <input id="newColEnglish" placeholder="English name" autocomplete="off">
+                    <input id="newColExample" placeholder="Example value" autocomplete="off">
+                    <button class="btn primary" onclick="addColumn(${jsString(tableName)})"><i class="fas fa-plus"></i> Add Column</button>
+                </div>
+                    <div class="preview-wrap"><table class="preview-table"><thead><tr><th>Name</th><th>Type</th><th>Description</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>
+                </div>`;
+        }
+
+        async function addColumn(tableName) {
+            const name = document.getElementById('newColName').value.trim();
+            const data_type = document.getElementById('newColType').value;
+            const description = document.getElementById('newColDesc').value.trim();
+            const english_name = document.getElementById('newColEnglish').value.trim();
+            const example_value = document.getElementById('newColExample').value.trim();
+            if (!name) { alert('Enter a column name.'); return; }
+            try {
+                await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/columns`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        data_type,
+                        description: description || null,
+                        english_name: english_name || null,
+                        example_value: example_value || null
+                    })
+                });
+                await selectTable(tableName);
+                switchTableSubtab('columns', tableName);
+            } catch (e) {
+                alert(e.message || 'Could not add column');
+            }
+        }
+
+        async function dropColumn(tableName, columnName) {
+            if (!confirm(`Drop column ${columnName}?`)) return;
+            try {
+                await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/columns/${encodeURIComponent(columnName)}`, { method: 'DELETE' });
+                await selectTable(tableName);
+                switchTableSubtab('columns', tableName);
+            } catch (e) {
+                alert(e.message || 'Could not drop column');
+            }
+        }
+
+        async function loadIndexes(tableName) {
+            const requestedTable = selectedTable;
+            const requestedSubtab = currentTableSubtab;
+            const pane = document.getElementById('tableControlPane');
+            pane.innerHTML = '<div class="empty"><div class="spinner"></div>Loading indexes...</div>';
+            try {
+                const d = await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/indexes`);
+                if (!isCurrentTableSubtabRequest(tableName, requestedTable, requestedSubtab)) return;
+                const columns = tableColumnInfo(tableName).map(c => c.name).filter(Boolean);
+                const columnOptions = columns.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+                const rows = (d.indexes || []).length
+                    ? d.indexes.map(i => `<tr>
+                        <td>${escapeHtml(i.name)}</td>
+                        <td>${escapeHtml((i.column_names || []).join(', '))}</td>
+                        <td><button class="btn danger" onclick="dropIndex(${jsString(tableName)}, ${jsString(i.name)})"><i class="fas fa-trash"></i> Drop</button></td>
+                    </tr>`).join('')
+                    : '<tr><td colspan="3" style="text-align:center;color:var(--text2);padding:16px">No indexes reported</td></tr>';
+                pane.innerHTML = `
+                    <div class="control-row">
+                        <input id="newIndexName" placeholder="index_name optional" autocomplete="off">
+                        <select id="newIndexColumns" multiple size="3" style="min-width:220px">${columnOptions}</select>
+                        <select id="newIndexMethod"><option value="btree">btree</option><option value="gist">gist</option></select>
+                        <button class="btn primary" onclick="addIndex(${jsString(tableName)})"><i class="fas fa-plus"></i> Add Index</button>
+                    </div>
+                    <div class="preview-wrap"><table class="preview-table"><thead><tr><th>Name</th><th>Columns</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+            } catch (e) {
+                if (isCurrentTableSubtabRequest(tableName, requestedTable, requestedSubtab)) {
+                    pane.innerHTML = `<p style="color:var(--red);font-size:13px">${escapeHtml(e.message || 'Could not load indexes.')}</p>`;
+                }
+            }
+        }
+
+        async function addIndex(tableName) {
+            const name = document.getElementById('newIndexName').value.trim() || null;
+            const columns = selectedValues(document.getElementById('newIndexColumns'));
+            const method = document.getElementById('newIndexMethod').value;
+            if (!columns.length) { alert('Select at least one column for the index.'); return; }
+            try {
+                await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/indexes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, columns, method })
+                });
+                await loadIndexes(tableName);
+            } catch (e) {
+                alert(e.message || 'Could not add index');
+            }
+        }
+
+        async function dropIndex(tableName, indexName) {
+            if (!confirm(`Drop index ${indexName}?`)) return;
+            try {
+                await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/indexes/${encodeURIComponent(indexName)}`, { method: 'DELETE' });
+                await loadIndexes(tableName);
+            } catch (e) {
+                alert(e.message || 'Could not drop index');
+            }
+        }
+
+        function renderTableOps(tableName) {
+            document.getElementById('tableControlPane').innerHTML = `
+                <div class="op-band">
+                    <div class="op-title"><i class="fas fa-copy"></i> Clone Table</div>
+                    <div class="op-copy">Create a new vector table with the same structure and optionally the same rows.</div>
+                    <button class="btn" onclick="cloneTablePrompt(${jsString(tableName)})"><i class="fas fa-copy"></i> Clone Table</button>
+                </div>
+                <div class="op-band">
+                    <div class="op-title"><i class="fas fa-download"></i> Export CSV</div>
+                    <div class="op-copy">Download up to the backend export limit as CSV, with geometry rendered as text.</div>
+                    <button class="btn" onclick="exportTable(${jsString(tableName)})"><i class="fas fa-download"></i> Export CSV</button>
+                </div>
+                <div class="op-band danger">
+                    <div class="op-title" style="color:var(--red)"><i class="fas fa-eraser"></i> Truncate Rows</div>
+                    <div class="op-copy">Remove all rows from this table while keeping the table and metadata.</div>
+                    <button class="btn danger" onclick="truncateTable(${jsString(tableName)})"><i class="fas fa-eraser"></i> Truncate</button>
+                </div>`;
+        }
+
+        async function cloneTablePrompt(tableName) {
+            const new_name = prompt('Clone table as', `${tableName}_copy`);
+            if (!new_name) return;
+            const include_data = confirm('Include existing rows in the clone?');
+            try {
+                const d = await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/clone`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_name, include_data })
+                });
+                await loadTables();
+                if (d.table_name) selectTable(d.table_name);
+            } catch (e) {
+                alert(e.message || 'Could not clone table');
+            }
+        }
+
+        async function truncateTable(tableName) {
+            if (!confirm(`Truncate all rows in ${tableName}?`)) return;
+            try {
+                await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/truncate`, { method: 'POST' });
+                await selectTable(tableName);
+                await loadTables();
+            } catch (e) {
+                alert(e.message || 'Could not truncate table');
+            }
+        }
+
+        async function exportTable(tableName) {
+            try {
+                const d = await apiJson(`${API}/tables/${encodeURIComponent(tableName)}/export`);
+                const blob = new Blob([d.csv || ''], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = d.filename || `${tableName}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                alert(e.message || 'Could not export table');
+            }
+        }
 
         // ── OVERPASS IMPORT TAB ──
         const BERLIN_BBOX = '52.338,13.088,52.675,13.761';
@@ -1738,20 +2336,25 @@ out skel qt;</textarea>
             container.innerHTML = '<div class="empty"><div class="spinner"></div>Loading...</div>';
             try {
                 let url = API + `/changelog?page=${changelogPage}&per_page=30`;
-                if (action) url += '&action=' + action;
-                if (table) url += '&table_name=' + table;
+                if (action) url += '&action=' + encodeURIComponent(action);
+                if (table) url += '&table_name=' + encodeURIComponent(table);
                 const r = await fetch(url);
                 const d = await r.json();
                 if (!d.success || !d.entries.length) { container.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><p>No changelog entries</p></div>'; document.getElementById('changelogPagination').innerHTML = ''; return; }
                 container.innerHTML = d.entries.map(e => {
-                    const iconClass = (e.action.includes('osm') || e.action === 'overpass_import') ? 'osm' : e.action === 'upload' ? 'upload' : e.action === 'delete' ? 'delete' : e.action === 'wfs_import' ? 'wfs' : 'desc';
-                    const iconFA = (e.action.includes('osm') || e.action === 'overpass_import') ? 'fa-globe' : e.action === 'upload' ? 'fa-upload' : e.action === 'delete' ? 'fa-trash' : e.action === 'wfs_import' ? 'fa-link' : 'fa-pen';
-                    const det = e.details ? Object.entries(e.details).map(([k, v]) => `<span style="margin-right:10px"><strong>${k}:</strong> ${typeof v === 'object' ? JSON.stringify(v) : v}</span>`).join('') : '';
+                    const actionRaw = String(e.action || '');
+                    const iconClass = (actionRaw.includes('osm') || actionRaw === 'overpass_import') ? 'osm' : actionRaw === 'upload' ? 'upload' : actionRaw === 'delete' ? 'delete' : actionRaw === 'wfs_import' ? 'wfs' : 'desc';
+                    const iconFA = (actionRaw.includes('osm') || actionRaw === 'overpass_import') ? 'fa-globe' : actionRaw === 'upload' ? 'fa-upload' : actionRaw === 'delete' ? 'fa-trash' : actionRaw === 'wfs_import' ? 'fa-link' : 'fa-pen';
+                    const details = e.details && typeof e.details === 'object' ? e.details : null;
+                    const det = details ? Object.entries(details).map(([k, v]) => {
+                        const detailValue = v && typeof v === 'object' ? JSON.stringify(v) : v;
+                        return `<span style="margin-right:10px"><strong>${escapeHtml(k)}:</strong> ${escapeHtml(detailValue)}</span>`;
+                    }).join('') : '';
                     return `<div class="log-entry fade-in">
                 <div class="log-icon ${iconClass}"><i class="fas ${iconFA}"></i></div>
                 <div class="log-body">
-                    <div class="action">${e.action}</div>
-                    <div class="meta">${e.table_name || '—'} · ${e.performed_by} · ${new Date(e.created_at).toLocaleString()}</div>
+                    <div class="action">${escapeHtml(actionRaw)}</div>
+                    <div class="meta">${escapeHtml(e.table_name || '—')} · ${escapeHtml(e.performed_by || '')} · ${escapeHtml(new Date(e.created_at).toLocaleString())}</div>
                     ${det ? '<div class="det">' + det + '</div>' : ''}
                 </div>
             </div>`;
@@ -1760,7 +2363,7 @@ out skel qt;</textarea>
                 let pg = '';
                 if (d.total_pages > 1) {
                     pg += `<button class="btn" ${changelogPage <= 1 ? 'disabled' : ''} onclick="loadChangelog(${changelogPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
-                    pg += `<span style="font-size:12px;color:var(--text2)">Page ${d.page} of ${d.total_pages}</span>`;
+                    pg += `<span style="font-size:12px;color:var(--text2)">Page ${escapeHtml(d.page)} of ${escapeHtml(d.total_pages)}</span>`;
                     pg += `<button class="btn" ${changelogPage >= d.total_pages ? 'disabled' : ''} onclick="loadChangelog(${changelogPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
                 }
                 document.getElementById('changelogPagination').innerHTML = pg;
