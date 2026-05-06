@@ -2,6 +2,16 @@ from pydantic import BaseModel
 from typing import Any, Dict, List, Literal, Optional
 
 
+class AttachmentRef(BaseModel):
+    """Lightweight pointer to an uploaded attachment (full metadata lives in
+    the server-side manifest at /tmp/attachments_{session_id}/manifest.json)."""
+    ref_id: str
+    kind: Literal["pdf", "tabular", "satellite", "image"]
+    filename: str
+    size: Optional[int] = None
+    summary: Optional[str] = None
+
+
 class AgentRequest(BaseModel):
     question: str
     llm_provider: Optional[str] = "deepseek"
@@ -10,6 +20,7 @@ class AgentRequest(BaseModel):
     selected_feature: Optional[Dict[str, Any]] = None
     session_id: Optional[str] = None
     selected_features: Optional[List[Dict[str, Any]]] = None
+    attachments: Optional[List[AttachmentRef]] = None
     max_iterations: int = 40
 
     class Config:

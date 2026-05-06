@@ -6,6 +6,7 @@ Failure: dict with "error" key.
 import hashlib
 import json
 import logging
+from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union
 
 import geopandas as gpd
@@ -317,42 +318,177 @@ def walking_isochrone(location: Dict[str, float], minutes: int, mode: str = "wal
         return {"error": str(e)}
 
 
-def analyze_satellite(
-    bbox: Dict[str, Any],
-    indices: List[str],
-    date_range: Optional[Dict[str, str]] = None,
+def compute_spectral_index(
+    index: str = "NDVI",
+    date: Optional[str] = None,
+    geometry: Optional[Dict[str, Any]] = None,
+    boundary_sql: Optional[str] = None,
+    bbox: Optional[Dict[str, float]] = None,
+    polygons_sql: Optional[str] = None,
+    area_label: str = "area",
 ) -> Dict[str, Any]:
     """
-    Run satellite spectral analysis over a bounding box.
+    Compute a spectral index (NDVI/EVI/SAVI/NDWI/NDBI) over any area using
+    satellite files attached to the current session.
 
-    Args:
-        bbox: GeoJSON Polygon or {"min_lon", "min_lat", "max_lon", "max_lat"}
-        indices: List of spectral indices, e.g. ["NDVI", "NDWI"]
-        date_range: Optional {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
+    Exactly one geometry source must be supplied:
+      geometry:     GeoJSON Polygon/MultiPolygon (e.g. drawn on the map)
+      boundary_sql: SQL returning a single geometry column (derive with schema tools)
+      bbox:         {min_lon, min_lat, max_lon, max_lat}
 
-    Returns:
-        GeoJSON FeatureCollection with stats or {"error": str}
+    polygons_sql: Optional SQL returning (id/name, geometry) rows for sub-area
+                  zonal statistics at any granularity (Flurstück, districts, grid…).
+                  Defaults to the same geometry as boundary_sql.
+    area_label:   Label used in the saved layer name and metadata.
+
+    Returns GeoJSON FeatureCollection with {index}_mean per polygon + choropleth
+    metadata, or {"error": ...}.
     """
     try:
-        from app.utils.satellite_processor import SatelliteProcessor
-
-        if isinstance(bbox, dict) and "type" in bbox:
-            geom = shape(bbox)
-            bounds = geom.bounds  # (min_lon, min_lat, max_lon, max_lat)
-        elif all(k in bbox for k in ("min_lon", "min_lat", "max_lon", "max_lat")):
-            bounds = (bbox["min_lon"], bbox["min_lat"], bbox["max_lon"], bbox["max_lat"])
-        else:
-            return {
-                "error": "bbox must be a GeoJSON Polygon or dict with min_lon/min_lat/max_lon/max_lat"
-            }
-
-        processor = SatelliteProcessor()
-        result = processor.analyze_area(bounds=bounds, indices=indices, date_range=date_range)
-        if result is None:
-            return {"error": "No satellite data found for this area and time range"}
-        return result
+        from app.utils.attachment_store import current_session_id
+        from app.routes.satellite import _load_session, _session_dir
+        from app.utils.satellite_processor import (
+            REQUIRED_BANDS,
+            calculate_index,
+            compute_single_date_zonal_stats,
+            crop_to_area,
+            identify_covering_tiles,
+            mosaic_tiles,
+        )
     except Exception as e:
-        logger.error(f"analyze_satellite error: {e}")
+        return {"error": f"Satellite pipeline unavailable: {e}"}
+
+    # ── Resolve geometry source → boundary_sql ──────────────────────────────
+    sources = [s for s in (geometry, boundary_sql, bbox) if s is not None]
+    if len(sources) == 0:
+        return {"error": "Provide exactly one of: geometry, boundary_sql, or bbox."}
+    if len(sources) > 1:
+        return {"error": "Provide only one geometry source (geometry, boundary_sql, or bbox)."}
+
+    if geometry is not None:
+        geojson_str = json.dumps(geometry).replace("'", "''")
+        resolved_boundary = f"SELECT ST_GeomFromGeoJSON('{geojson_str}') AS geometry"
+    elif boundary_sql is not None:
+        resolved_boundary = boundary_sql
+    else:  # bbox
+        if not all(k in bbox for k in ("min_lon", "min_lat", "max_lon", "max_lat")):
+            return {"error": "bbox must have keys: min_lon, min_lat, max_lon, max_lat"}
+        resolved_boundary = (
+            f"SELECT ST_MakeEnvelope("
+            f"{bbox['min_lon']},{bbox['min_lat']},"
+            f"{bbox['max_lon']},{bbox['max_lat']},4326) AS geometry"
+        )
+
+    if polygons_sql is None:
+        polygons_sql = resolved_boundary
+
+    # ── Session & index validation ───────────────────────────────────────────
+    sid = current_session_id.get()
+    if not sid:
+        return {"error": "No active session — attach satellite files via the chat attach button first."}
+
+    session_files = _load_session(sid)
+    if not session_files:
+        return {
+            "error": "No satellite files in this session. "
+                     "Attach a Sentinel-2 SAFE .zip or band .tif files first."
+        }
+
+    idx_lower = index.lower()
+    if idx_lower not in REQUIRED_BANDS:
+        return {
+            "error": f"Unknown index '{index}'. "
+                     f"Supported: {list(REQUIRED_BANDS.keys())}"
+        }
+
+    # ── Pick date ────────────────────────────────────────────────────────────
+    if not date:
+        available = sorted({e["date"] for e in session_files if e.get("date")})
+        if not available:
+            return {"error": "Uploaded tiles have no date metadata — please specify date='YYYY-MM-DD'."}
+        date = available[0]
+
+    work_dir = _session_dir(sid) / "work"
+    work_dir.mkdir(parents=True, exist_ok=True)
+    safe_date = date.replace("-", "")
+    safe_label = area_label.lower().replace(" ", "_")
+
+    try:
+        covering, _cov_pct = identify_covering_tiles(session_files, resolved_boundary, date)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    band_files: Dict[str, list] = {}
+    for entry in covering:
+        b = entry.get("band")
+        if b:
+            band_files.setdefault(b, []).append(entry)
+
+    missing = [b for b in REQUIRED_BANDS[idx_lower] if b not in band_files]
+    if missing:
+        return {
+            "error": f"{index.upper()} requires bands {REQUIRED_BANDS[idx_lower]}. "
+                     f"Missing from your uploads: {missing}. Available: {sorted(band_files.keys())}"
+        }
+
+    try:
+        cropped_bands: Dict[str, str] = {}
+        for band in REQUIRED_BANDS[idx_lower]:
+            tile_paths = [e["path"] for e in band_files[band] if e.get("path")]
+            mosaic_path = str(work_dir / f"mosaic_{band}_{safe_date}.tif")
+            mosaic_tiles(tile_paths, mosaic_path)
+            crop_path = str(work_dir / f"crop_{band}_{safe_date}_{safe_label}.tif")
+            crop_to_area(mosaic_path, resolved_boundary, crop_path)
+            cropped_bands[band] = crop_path
+
+        index_path = str(work_dir / f"{idx_lower}_{safe_date}_{safe_label}.tif")
+        calculate_index(cropped_bands, idx_lower, index_path)
+
+        result_gdf = compute_single_date_zonal_stats(
+            raster_path=index_path,
+            polygons_sql=polygons_sql,
+            index_type=idx_lower,
+        )
+
+        if result_gdf.crs and result_gdf.crs.to_epsg() != 4326:
+            result_gdf = result_gdf.to_crs(4326)
+
+        geojson_dict = json.loads(result_gdf.to_json())
+        choropleth_property = f"{idx_lower}_mean"
+
+        values = [
+            f["properties"].get(choropleth_property)
+            for f in geojson_dict.get("features", [])
+            if f["properties"].get(choropleth_property) is not None
+        ]
+        val_min = float(min(values)) if values else -1.0
+        val_max = float(max(values)) if values else 1.0
+
+        layer_name = f"{idx_lower}_{safe_label}_{date[:4]}"
+        saved = save_generated_layer(
+            geojson_dict,
+            layer_name,
+            f"{index.upper()} for {area_label} on {date}",
+        )
+
+        enriched = dict(geojson_dict)
+        enriched["metadata"] = {
+            "index": idx_lower,
+            "area_label": area_label,
+            "date": date,
+            "choropleth_property": choropleth_property,
+            "choropleth_min": val_min,
+            "choropleth_max": val_max,
+            "feature_count": len(geojson_dict.get("features", [])),
+            "is_satellite_result": True,
+        }
+        if isinstance(saved, dict) and saved.get("saved"):
+            enriched["saved_table"] = saved.get("table")
+        return enriched
+    except ValueError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        logger.error(f"compute_spectral_index error: {e}", exc_info=True)
         return {"error": str(e)}
 
 
@@ -462,6 +598,16 @@ def get_table_columns(table_name: str) -> Union[List[Dict], Dict]:
         return {"error": str(e)}
 
 
+def _recursive_convert_decimals(obj):
+    if isinstance(obj, dict):
+        return {k: _recursive_convert_decimals(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_recursive_convert_decimals(item) for item in obj]
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    return obj
+
+
 def execute_sql(sql: str) -> Dict[str, Any]:
     """
     Execute a PostGIS SQL query and return results as a GeoJSON FeatureCollection.
@@ -500,6 +646,7 @@ def execute_sql(sql: str) -> Dict[str, Any]:
                 if key in row_dict and row_dict[key]:
                     try:
                         geom = _json.loads(row_dict.pop(key))
+                        geom = _recursive_convert_decimals(geom)
                         break
                     except Exception:
                         row_dict.pop(key, None)
@@ -514,6 +661,8 @@ def execute_sql(sql: str) -> Dict[str, Any]:
             for key, val in row_dict.items():
                 if isinstance(val, float) and not _math.isfinite(val):
                     row_dict[key] = None
+
+            row_dict = _recursive_convert_decimals(row_dict)
 
             features.append({
                 "type": "Feature",
@@ -965,6 +1114,290 @@ def compare_scenarios(baseline_table: str, scenario_table: str,
 
 
 # ---------------------------------------------------------------------------
+# Attachment-reading tools
+# ---------------------------------------------------------------------------
+
+def _resolve_attachment(ref_id: str, required_kind: Optional[str] = None) -> Dict[str, Any]:
+    """Look up an attachment by ref_id using the active session contextvar.
+    Returns the full manifest entry or {"error": ...}."""
+    try:
+        from app.utils.attachment_store import AttachmentStore, current_session_id
+    except Exception as e:
+        return {"error": f"Attachment store unavailable: {e}"}
+
+    sid = current_session_id.get()
+    if not sid:
+        return {"error": "No active session_id — attachments cannot be resolved."}
+
+    store = AttachmentStore(sid)
+    entry = store.get(ref_id)
+    if entry is None:
+        return {
+            "error": f"Attachment '{ref_id}' not found in session {sid}. "
+                     f"Known ref_ids: {[e.get('ref_id') for e in store.list_manifest()]}"
+        }
+    if required_kind and entry.get("kind") != required_kind:
+        return {
+            "error": f"Attachment '{ref_id}' is kind='{entry.get('kind')}', "
+                     f"but this tool requires kind='{required_kind}'."
+        }
+    return entry
+
+
+def read_pdf_attachment(
+    ref_id: str,
+    pages: Optional[List[int]] = None,
+    max_chars: int = 8000,
+) -> Dict[str, Any]:
+    """
+    Extract text from an attached PDF.
+
+    Args:
+        ref_id:    Attachment ref id from the attachments context block.
+        pages:     Optional 1-indexed page numbers to read (None = all).
+        max_chars: Truncate extracted text to this many characters.
+
+    Returns:
+        {ref_id, filename, n_pages, pages_read, text, truncated} or {"error": ...}
+    """
+    entry = _resolve_attachment(ref_id, required_kind="pdf")
+    if "error" in entry:
+        return entry
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(entry["path"])
+        total = len(reader.pages)
+
+        if pages:
+            page_indices = [p - 1 for p in pages if 1 <= p <= total]
+        else:
+            page_indices = list(range(total))
+
+        collected: List[str] = []
+        chars_left = max_chars
+        pages_read: List[int] = []
+        for i in page_indices:
+            try:
+                t = reader.pages[i].extract_text() or ""
+            except Exception:
+                t = ""
+            if not t:
+                continue
+            snippet = t[:chars_left]
+            collected.append(f"--- Page {i + 1} ---\n{snippet}")
+            chars_left -= len(snippet)
+            pages_read.append(i + 1)
+            if chars_left <= 0:
+                break
+
+        text = "\n\n".join(collected)
+        return {
+            "ref_id": ref_id,
+            "filename": entry.get("filename"),
+            "n_pages": total,
+            "pages_read": pages_read,
+            "text": text,
+            "truncated": chars_left <= 0,
+        }
+    except Exception as e:
+        logger.error(f"read_pdf_attachment error: {e}")
+        return {"error": str(e)}
+
+
+def read_tabular_attachment(
+    ref_id: str,
+    sheet: Optional[str] = None,
+    head_rows: int = 50,
+    as_records: bool = True,
+) -> Dict[str, Any]:
+    """
+    Read rows from an attached Excel/CSV file.
+
+    Args:
+        ref_id:     Attachment ref id.
+        sheet:      Sheet name (Excel only). If None, uses the first sheet.
+        head_rows:  Max rows to return (default 50).
+        as_records: True → list of row dicts; False → column-oriented dict.
+
+    Returns:
+        {ref_id, filename, sheet, columns, n_rows, rows, truncated} or {"error": ...}
+    """
+    entry = _resolve_attachment(ref_id, required_kind="tabular")
+    if "error" in entry:
+        return entry
+    try:
+        import pandas as pd
+        path = entry["path"]
+        ext = path.lower().rsplit(".", 1)[-1]
+
+        if ext == "csv":
+            df = pd.read_csv(path)
+            sheet_name = "data"
+        else:
+            xls = pd.ExcelFile(path)
+            sheet_name = sheet or xls.sheet_names[0]
+            if sheet_name not in xls.sheet_names:
+                return {
+                    "error": f"Sheet '{sheet}' not found. "
+                             f"Available: {xls.sheet_names}"
+                }
+            df = xls.parse(sheet_name)
+
+        n_total = int(len(df))
+        head = df.head(head_rows)
+        rows = (
+            json.loads(head.to_json(orient="records", default_handler=str))
+            if as_records
+            else json.loads(head.to_json(orient="split", default_handler=str))
+        )
+
+        return {
+            "ref_id": ref_id,
+            "filename": entry.get("filename"),
+            "sheet": sheet_name,
+            "columns": [str(c) for c in df.columns],
+            "dtypes": {str(c): str(t) for c, t in df.dtypes.items()},
+            "n_rows_total": n_total,
+            "n_rows_returned": min(head_rows, n_total),
+            "rows": rows,
+            "truncated": n_total > head_rows,
+        }
+    except Exception as e:
+        logger.error(f"read_tabular_attachment error: {e}")
+        return {"error": str(e)}
+
+
+def compute_temporal_analysis(
+    index: str = "NDVI",
+    dates: Optional[List[str]] = None,
+    geometry: Optional[Dict[str, Any]] = None,
+    boundary_sql: Optional[str] = None,
+    bbox: Optional[Dict[str, float]] = None,
+    polygons_sql: Optional[str] = None,
+    area_label: str = "area",
+) -> Dict[str, Any]:
+    """
+    Compute a spectral index across all available (or specified) satellite dates and
+    merge results into a single FeatureCollection with per-date columns plus a
+    change/trend column. Works with any index (NDVI, EVI, NDWI, …) and any number
+    of dates (2 or more). When dates is None, all dates found in the session are used.
+
+    Exactly one geometry source must be supplied (geometry, boundary_sql, or bbox).
+    Returns a FeatureCollection with {index}_mean_{date} columns per polygon plus
+    {index}_change (= last_date_value − first_date_value).
+    """
+    try:
+        from app.utils.attachment_store import current_session_id
+        from app.routes.satellite import _load_session
+    except Exception as e:
+        return {"error": f"Satellite pipeline unavailable: {e}"}
+
+    sid = current_session_id.get()
+    if not sid:
+        return {"error": "No active session — attach satellite files via the chat attach button first."}
+
+    session_files = _load_session(sid)
+    if not session_files:
+        return {"error": "No satellite files in this session. Attach Sentinel-2 files first."}
+
+    date_list = sorted(set(dates)) if dates else sorted({e["date"] for e in session_files if e.get("date")})
+    if not date_list:
+        return {"error": "No satellite dates found. Attach satellite files or specify dates explicitly."}
+    if len(date_list) < 2:
+        return {
+            "error": (
+                f"Temporal analysis requires at least 2 dates. Only found: {date_list}. "
+                "Use compute_spectral_index for a single-date query."
+            )
+        }
+
+    shared_kwargs = {
+        "index": index,
+        "geometry": geometry,
+        "boundary_sql": boundary_sql,
+        "bbox": bbox,
+        "polygons_sql": polygons_sql,
+        "area_label": area_label,
+    }
+
+    idx_lower = index.lower()
+    mean_col = f"{idx_lower}_mean"
+    date_results: Dict[str, Dict] = {}
+
+    for d in date_list:
+        result = compute_spectral_index(date=d, **shared_kwargs)
+        if isinstance(result, dict) and result.get("error"):
+            return {"error": f"Failed for date {d}: {result['error']}"}
+        if not isinstance(result, dict) or result.get("type") != "FeatureCollection":
+            return {"error": f"Unexpected result for date {d}"}
+        date_results[d] = result
+
+    first_date, last_date = date_list[0], date_list[-1]
+    first_fc = date_results[first_date]
+
+    def _fid(feature: Dict, fallback: int) -> str:
+        props = feature.get("properties") or {}
+        return str(props.get("id") or props.get("uuid") or fallback)
+
+    date_lookup: Dict[str, Dict[str, Optional[float]]] = {}
+    for d, fc in date_results.items():
+        date_lookup[d] = {
+            _fid(f, i): (f.get("properties") or {}).get(mean_col)
+            for i, f in enumerate(fc.get("features", []))
+        }
+
+    merged_features = []
+    for i, base_feat in enumerate(first_fc.get("features", [])):
+        fid = _fid(base_feat, i)
+        props = dict(base_feat.get("properties") or {})
+        props.pop(mean_col, None)
+
+        first_val = last_val = None
+        for d in date_list:
+            val = date_lookup[d].get(fid)
+            props[f"{idx_lower}_mean_{d.replace('-', '_')}"] = val
+            if d == first_date:
+                first_val = val
+            if d == last_date:
+                last_val = val
+
+        props[f"{idx_lower}_change"] = (
+            round(last_val - first_val, 4)
+            if first_val is not None and last_val is not None
+            else None
+        )
+        merged_features.append({"type": "Feature", "geometry": base_feat.get("geometry"), "properties": props})
+
+    merged_fc: Dict[str, Any] = {"type": "FeatureCollection", "features": merged_features}
+
+    layer_name = f"{idx_lower}_change_{area_label.lower().replace(' ', '_')}"
+    saved = save_generated_layer(
+        merged_fc, layer_name,
+        f"{index.upper()} temporal analysis ({first_date} → {last_date})",
+    )
+
+    change_values = [
+        f["properties"][f"{idx_lower}_change"]
+        for f in merged_features
+        if f["properties"].get(f"{idx_lower}_change") is not None
+    ]
+    enriched = dict(merged_fc)
+    enriched["metadata"] = {
+        "index": idx_lower,
+        "dates": date_list,
+        "area_label": area_label,
+        "choropleth_property": f"{idx_lower}_change",
+        "choropleth_min": float(min(change_values)) if change_values else -1.0,
+        "choropleth_max": float(max(change_values)) if change_values else 1.0,
+        "feature_count": len(merged_features),
+        "is_satellite_result": True,
+    }
+    if isinstance(saved, dict) and saved.get("saved"):
+        enriched["saved_table"] = saved.get("table")
+    return enriched
+
+
+# ---------------------------------------------------------------------------
 # Tool registry — maps tool names to callables for the orchestrator
 # ---------------------------------------------------------------------------
 
@@ -978,7 +1411,8 @@ TOOL_REGISTRY: Dict[str, Any] = {
     "spatial_filter": spatial_filter,
     "calculate_route": calculate_route,
     "walking_isochrone": walking_isochrone,
-    "analyze_satellite": analyze_satellite,
+    "compute_spectral_index": compute_spectral_index,
+    "compute_temporal_analysis": compute_temporal_analysis,
     "score_locations": score_locations,
     # --- Persistence ---
     "save_generated_layer": save_generated_layer,
@@ -996,4 +1430,7 @@ TOOL_REGISTRY: Dict[str, Any] = {
     # --- D: Scenario planning ---
     "add_hypothetical_feature": add_hypothetical_feature,
     "compare_scenarios": compare_scenarios,
+    # --- E: Chat attachments ---
+    "read_pdf_attachment": read_pdf_attachment,
+    "read_tabular_attachment": read_tabular_attachment,
 }

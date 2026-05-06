@@ -22,7 +22,7 @@ Structural map compiled from source code via AST. No LLM — deterministic, 200m
 - [Query](./query.md)
 - [Raster](./raster.md)
 - [Routing](./routing.md)
-- [Safety](./safety.md)
+
 - [Satellite](./satellite.md)
 - [Semantic](./semantic.md)
 - [Skills](./skills.md)

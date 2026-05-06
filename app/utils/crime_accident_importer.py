@@ -264,50 +264,6 @@ class CrimeAccidentImporter:
             logger.error(f"✗ Failed to import accident data: {e}")
             return False
 
-    def create_safety_views(self):
-        """Create PostGIS views for safety analysis"""
-        logger.info("Creating safety analysis views...")
-
-        try:
-            views_sql = {
-                'mitte_crime_hotspots': """
-                    DROP VIEW IF EXISTS vector.mitte_crime_hotspots CASCADE;
-                    CREATE VIEW vector.mitte_crime_hotspots AS
-                    SELECT * FROM vector.crime_statistics
-                    WHERE "district_area_name" ILIKE '%mitte%'
-                       OR "district_area_name" ILIKE '%tiergarten%'
-                       OR "district_area_name" ILIKE '%alexander%';
-                """,
-                'mitte_accident_density': """
-                    DROP VIEW IF EXISTS vector.mitte_accident_density CASCADE;
-                    CREATE VIEW vector.mitte_accident_density AS
-                    SELECT
-                        ST_Buffer(geometry, 100)::geography as buffer_zone,
-                        COUNT(*) as accident_count,
-                        AVG(EXTRACT(HOUR FROM to_timestamp(hour::text, 'HH24')))::int as avg_hour,
-                        COUNT(*) FILTER (WHERE accident_type = 'car') as car_accidents,
-                        COUNT(*) FILTER (WHERE accident_type = 'bicycle') as bicycle_accidents,
-                        COUNT(*) FILTER (WHERE accident_type = 'motorcycle') as motorcycle_accidents
-                    FROM vector.traffic_accidents
-                    WHERE ST_DWithin(geometry,
-                        (SELECT geometry FROM vector.berlin_districts WHERE name = 'Mitte'),
-                        0.001)
-                    GROUP BY ST_Buffer(geometry, 100);
-                """
-            }
-
-            with self.engine.connect() as conn:
-                for view_name, sql in views_sql.items():
-                    try:
-                        conn.execute(text(sql))
-                        conn.commit()
-                        logger.info(f"✓ Created view: {view_name}")
-                    except Exception as e:
-                        logger.warning(f"⊘ View creation note: {str(e)[:50]}")
-
-        except Exception as e:
-            logger.error(f"✗ Failed to create views: {e}")
-
     def run_full_import(self):
         """Run complete crime and accident import pipeline"""
         logger.info("=" * 70)
@@ -322,18 +278,12 @@ class CrimeAccidentImporter:
         filepath_accidents, features = self.download_unfallatlas_data()
         self.import_accidents_to_postgis(filepath_accidents)
 
-        # Step 3: Create views
-        self.create_safety_views()
-
         logger.info("=" * 70)
         logger.info("✓ CRIME & ACCIDENT DATA IMPORT COMPLETE")
         logger.info("=" * 70)
         logger.info("\nNew tables created:")
         logger.info("  - vector.crime_statistics")
         logger.info("  - vector.traffic_accidents")
-        logger.info("\nNew views created:")
-        logger.info("  - vector.mitte_crime_hotspots")
-        logger.info("  - vector.mitte_accident_density")
 
 
 if __name__ == "__main__":

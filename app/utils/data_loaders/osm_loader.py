@@ -12,6 +12,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+OVERPASS_HEADERS = {
+    "User-Agent": "AI-Geospatial/1.0 (Python/requests)",
+    "Accept": "application/json",
+}
+
+
 class OSMLoader:
     """Load OpenStreetMap data for specific regions and features"""
 
@@ -154,7 +160,7 @@ class OSMLoader:
         retry_delay = 10  # starting delay in seconds
 
         for attempt in range(max_retries):
-            response = requests.post(self.OVERPASS_URL, data={'data': query})
+            response = requests.post(self.OVERPASS_URL, data={'data': query}, headers=OVERPASS_HEADERS)
             
             if response.status_code in [429, 504]:
                 if attempt < max_retries - 1:

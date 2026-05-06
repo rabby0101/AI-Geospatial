@@ -80,20 +80,19 @@ def hexagonal_grid(bbox: Dict, cell_size_m: float) -> Dict:
     lat_c = (bbox["min_lat"] + bbox["max_lat"]) / 2
     m_per_deg_lon = 111320 * math.cos(math.radians(lat_c))
     m_per_deg_lat = 111320.0
-    dx = cell_size_m / m_per_deg_lon
-    dy = cell_size_m * math.sqrt(3) / 2 / m_per_deg_lat
+    dx = cell_size_m * math.sqrt(3) / 2 / m_per_deg_lat
+    dy = cell_size_m / m_per_deg_lon
 
     hexagons = []
     row = 0
     lat = bbox["min_lat"]
-    while lat <= bbox["max_lat"] + dy:
-        offset = dx / 2 if row % 2 else 0.0
+    while lat <= bbox["max_lat"] + dx:
+        offset = dy / 2 if row % 2 else 0.0
         lon = bbox["min_lon"] - offset
         col = 0
-        while lon <= bbox["max_lon"] + dx:
-            # Only include hexagons whose centroid falls within bbox + small margin
-            if lon <= bbox["max_lon"] + dx / 2:
-                r = dx / 2
+        while lon <= bbox["max_lon"] + dy:
+            if lon <= bbox["max_lon"] + dy / 2:
+                r = dy / math.sqrt(3)
                 angles = [math.radians(60 * k + 30) for k in range(6)]
                 coords = [(lon + r * math.cos(a), lat + r * math.sin(a)) for a in angles]
                 hexagons.append({
@@ -101,9 +100,9 @@ def hexagonal_grid(bbox: Dict, cell_size_m: float) -> Dict:
                     "geometry": mapping(Polygon(coords)),
                     "properties": {"hex_id": f"{row}_{col}", "score": 0.0},
                 })
-            lon += dx
+            lon += dy
             col += 1
-        lat += dy
+        lat += dx
         row += 1
 
     return {"type": "FeatureCollection", "features": hexagons}

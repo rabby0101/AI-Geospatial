@@ -22,7 +22,7 @@
 - **[Query](./query.md)** — 9 routes — touches: auth, db, cache
 - **[Raster](./raster.md)** — 8 routes
 - **[Routing](./routing.md)** — 3 routes — touches: auth
-- **[Safety](./safety.md)** — 11 routes — touches: db, cache
+
 - **[Satellite](./satellite.md)** — 2 routes — touches: auth, db, upload
 - **[Semantic](./semantic.md)** — 7 routes
 - **[Skills](./skills.md)** — 1 routes

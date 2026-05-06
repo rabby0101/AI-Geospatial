@@ -138,19 +138,6 @@
     rdfs:comment "Legally binding zoning plans (B-Pläne / Bebauungspläne) defining permitted land uses."@en ;
     rdfs:subClassOf :AdministrativeDataset .
 
-:agent_traces a :GeoDataset ;
-    :hasKeyColumn "created_at",
-        "query_id",
-        "tables_used" ;
-    :hasPattern "business_location",
-        "land_use",
-        "planning",
-        "site_selection",
-        "zoning" ;
-    :rowCount 26 ;
-    dct:description "Stores AI agent execution traces for spatial SQL queries — enables auditing query patterns, optimizing performance, and understanding urban data exploration workflows." ;
-    dct:title "agent_traces" .
-
 :appliesOperation a owl:ObjectProperty ;
     rdfs:label "applies operation"@en ;
     rdfs:comment "The spatial operation applied in this step."@en ;
@@ -272,28 +259,31 @@
     rdfs:domain owl:Class ;
     rdfs:range xsd:string .
 
-:osm_cafes a :GeoDataset ;
+:osm_banks a :GeoDataset ;
     :hasGeometryType "GEOMETRY" ;
     :hasKeyColumn "addr_city",
+        "addr_street",
+        "atm",
         "brand",
         "name",
-        "outdoor_seating",
-        "payment_cards",
+        "opening_hours",
+        "operator",
         "wheelchair" ;
     :hasPattern "accessibility_audit",
-        "brand_analysis",
-        "cafe_amenities",
-        "competitive_density",
-        "internet_access",
-        "outdoor_seating",
-        "payment_methods",
+        "atm_availability",
+        "bank_branches",
+        "competitive_analysis",
+        "financial_services",
+        "opening_hours",
+        "urban_amenities",
         "wheelchair_accessibility" ;
-    :relatedTo :osm_buildings,
-        :population_grid,
-        :public_transport_stops ;
-    :rowCount 2683 ;
-    dct:description "OpenStreetMap cafes in Berlin and surrounding areas with detailed attributes like accessibility, payment methods, seating, and amenities — enables location analysis, accessibility." ;
-    dct:title "osm_cafes" .
+    :relatedTo :osm_admin,
+        :osm_atms,
+        :osm_places,
+        :osm_pois ;
+    :rowCount 366 ;
+    dct:description "OpenStreetMap bank locations in Berlin/Brandenburg with attributes for accessibility, opening hours, operator, and ATM info — enables site selection, accessibility audits, and." ;
+    dct:title "osm_banks" .
 
 :osm_clinics a :HealthcareFacilityDataset ;
     :hasAnalyticalPurpose :AccessibilityAnalysis,
@@ -448,195 +438,6 @@
     rdfs:domain :GeoDataset ;
     rdfs:range :GeoAnalyticalWorkflow .
 
-:wfs_alkis_flurstuecke_flurstuecke a :GeoDataset ;
-    :hasGeometryType "MULTIPOLYGON" ;
-    :hasKeyColumn "afl",
-        "gdz",
-        "namgem",
-        "namgmk",
-        "zde" ;
-    :hasPattern "administrative_units",
-        "cadastral_parcels",
-        "land_area",
-        "property_boundaries",
-        "real_estate_valuation",
-        "urban_planning" ;
-    :relatedTo :wfs_alkis_flurstueckskizze,
-        :wfs_alkis_gebaeude,
-        :wfs_fis_bro_plr ;
-    :rowCount 403489 ;
-    dct:description "Berlin cadastral land parcels (Flurstücke) with area, location, and administrative metadata — essential for property analysis, land valuation, and urban planning." ;
-    dct:title "wfs_alkis_flurstuecke_flurstuecke" .
-
-:wfs_alkis_gebaeudeflaechen a :GeoDataset ;
-    :hasGeometryType "MULTIPOLYGON" ;
-    :hasKeyColumn "aog",
-        "bezbat",
-        "bezbaw",
-        "bezdes",
-        "bezgfk" ;
-    :hasPattern "architectural_features",
-        "building_condition",
-        "building_typology",
-        "development_capacity",
-        "floor_area_ratio",
-        "survey_accuracy",
-        "urban_density" ;
-    :relatedTo :alkis_anschrift,
-        :alkis_gebaeudeeingaenge,
-        :alkis_grundstuecke ;
-    :rowCount 782534 ;
-    dct:description "Berlin building footprints with detailed architectural and functional attributes — enables urban density analysis, building typology classification, and development potential." ;
-    dct:title "wfs_alkis_gebaeudeflaechen" .
-
-:wfs_baumbestand_anlagenbaeume a :GeoDataset ;
-    :hasGeometryType "POINT" ;
-    :hasKeyColumn "art_gruppe",
-        "bezirk",
-        "gattung_deutsch",
-        "pflanzjahr",
-        "stammumfg" ;
-    :hasPattern "canopy_coverage",
-        "climate_adaptation",
-        "district_analysis",
-        "green_infrastructure",
-        "public_parks",
-        "tree_species",
-        "urban_forestry" ;
-    :relatedTo :alkis_land_parcels,
-        :bezirksgrenzen,
-        :wfs_gruenanlagen ;
-    :rowCount 511872 ;
-    dct:description "Point locations of over 500,000 public trees in Berlin, including species, age, and size metrics. Enables urban forestry management, green space analysis, and climate adaptation." ;
-    dct:title "wfs_baumbestand_anlagenbaeume" .
-
-:wfs_beleuchtung_beleuchtung a :GeoDataset ;
-    :hasGeometryType "MULTIPOINT" ;
-    :hasKeyColumn "bezirk",
-        "geometry",
-        "leuchtentyp",
-        "leuchtstelle",
-        "status" ;
-    :hasPattern "bezirk_analysis",
-        "energy_management",
-        "infrastructure_maintenance",
-        "public_lighting",
-        "spatial_distribution",
-        "streetlights",
-        "urban_illumination" ;
-    :relatedTo :bauwerke,
-        :bezirke,
-        :energieversorgung,
-        :strassen ;
-    :rowCount 210214 ;
-    dct:description "Berlin's public lighting infrastructure (streetlights) with location, type, status, and administrative data — enables lighting network analysis, maintenance planning, and urban." ;
-    dct:title "wfs_beleuchtung_beleuchtung" .
-
-:wfs_schulen_schulen a :GeoDataset ;
-    :hasGeometryType "POINT" ;
-    :hasKeyColumn "bezirk",
-        "geometry",
-        "schulart",
-        "schultyp",
-        "traeger" ;
-    :hasPattern "berlin_districts",
-        "catchment_areas",
-        "demographic_analysis",
-        "education_access",
-        "public_services",
-        "schools",
-        "urban_planning" ;
-    :relatedTo :bezirksgrenzen,
-        :einwohnerdaten,
-        :verkehrsnetz ;
-    :rowCount 930 ;
-    dct:description "Berlin schools dataset with locations, types, and administrative details — enables education planning, accessibility analysis, and demographic studies." ;
-    dct:title "wfs_schulen_schulen" .
-
-:wfs_schulen_schulen_esb a :GeoDataset ;
-    :hasGeometryType "MULTIPOLYGON" ;
-    :hasKeyColumn "bez",
-        "bezname",
-        "esb",
-        "geometry" ;
-    :hasPattern "accessibility_analysis",
-        "catchment_areas",
-        "district_planning",
-        "education_infrastructure",
-        "public_services",
-        "schools" ;
-    :relatedTo :bezirksgrenzen,
-        :einwohnerdichte,
-        :verkehrsnetz ;
-    :rowCount 394 ;
-    dct:description "Berlin school locations (MULTIPOLYGON) with district codes and names — enables catchment area analysis, school accessibility studies, and demographic planning." ;
-    dct:title "wfs_schulen_schulen_esb" .
-
-:wfs_toiletten_toiletten a :GeoDataset ;
-    :hasGeometryType "POINT" ;
-    :hasKeyColumn "barrierefrei",
-        "betreiber",
-        "bezirk",
-        "nutzungsentgelt",
-        "wickeltisch" ;
-    :hasPattern "accessibility",
-        "municipal_contracts",
-        "public_toilets",
-        "service_coverage",
-        "spatial_distribution",
-        "urban_amenities" ;
-    :relatedTo :administrative_boundaries,
-        :pedestrian_zones,
-        :public_parks,
-        :transit_stops ;
-    :rowCount 509 ;
-    dct:description "Public toilet locations in Berlin with attributes like operator, opening hours, fees, and accessibility — enables analysis of public amenity distribution, accessibility." ;
-    dct:title "wfs_toiletten_toiletten" .
-
-:wfs_ua_luftbelastung_verkehr_2020_2025 a :GeoDataset ;
-    :hasGeometryType "MULTILINESTRING" ;
-    :hasKeyColumn "dtv_2020",
-        "geom_25833",
-        "index_2020",
-        "name",
-        "no2_2020" ;
-    :hasPattern "air_pollution",
-        "emissions_trend",
-        "environmental_health",
-        "pollution_exposure",
-        "regulatory_index",
-        "road_network",
-        "traffic_volume" ;
-    :relatedTo :wfs_bevoelkerung,
-        :wfs_gesundheitseinrichtungen,
-        :wfs_umweltzone ;
-    :rowCount 12370 ;
-    dct:description "Berlin road network segments with traffic volumes (DTV) and air pollution concentrations (NO2, PM10, PM25) for 2020 and 2025, enabling analysis of traffic-related air quality and." ;
-    dct:title "wfs_ua_luftbelastung_verkehr_2020_2025" .
-
-:wfs_ua_stromverbrauch_a_verbrauchstromblock a :GeoDataset ;
-    :hasGeometryType "MULTIPOLYGON" ;
-    :hasKeyColumn "blknr",
-        "verbrauch_mwh",
-        "verbrauch_mwh2020",
-        "verbrauch_mwh2021",
-        "verbrauch_mwh2022" ;
-    :hasPattern "data_privacy",
-        "electricity_consumption",
-        "energy_demand",
-        "infrastructure_planning",
-        "spatial_analysis",
-        "sustainability",
-        "temporal_trends",
-        "urban_blocks" ;
-    :relatedTo :building_footprints,
-        :energy_infrastructure,
-        :land_use_zones,
-        :population_grid ;
-    :rowCount 16390 ;
-    dct:description "Electricity consumption data for urban blocks (MWh/year) from 2020-2023, with privacy exclusions. Enables energy demand analysis, infrastructure planning, and sustainability." ;
-    dct:title "wfs_ua_stromverbrauch_a_verbrauchstromblock" .
-
 :AnswerMap a owl:Class ;
     rdfs:label "Answer Map"@en ;
     rdfs:comment "A map generated as the answer to a geographic question."@en ;
@@ -699,6 +500,12 @@
     dct:source "Sentinel-2 via Microsoft Planetary Computer" ;
     dct:title "Berlin NDVI 2018"@en .
 
+:hasAnalyticalPurpose a owl:ObjectProperty ;
+    rdfs:label "has analytical purpose"@en ;
+    rdfs:comment "Links a dataset to its intended analytical uses."@en ;
+    rdfs:domain :GeoDataset ;
+    rdfs:range :AnalyticalPurpose .
+
 :AdministrativeDataset a owl:Class ;
     rdfs:label "Administrative Dataset"@en ;
     rdfs:comment "Dataset containing administrative boundaries."@en ;
@@ -713,6 +520,11 @@
     rdfs:label "Coverage Analysis"@en ;
     rdfs:comment "Analysis of spatial coverage and service areas."@en ;
     rdfs:subClassOf :AnalyticalPurpose .
+
+:EmergencyServiceDataset a owl:Class ;
+    rdfs:label "Emergency Service Dataset"@en ;
+    rdfs:comment "Dataset containing emergency service facilities."@en ;
+    rdfs:subClassOf :VectorDataset .
 
 :GeoAnalyticalWorkflow a owl:Class ;
     rdfs:label "Geo-Analytical Workflow"@en ;
@@ -734,15 +546,20 @@
     rdfs:comment "A single step in a geo-analytical workflow."@en ;
     rdfs:subClassOf prov:Activity .
 
+:HealthcareFacilityDataset a owl:Class ;
+    rdfs:label "Healthcare Facility Dataset"@en ;
+    rdfs:comment "Dataset containing healthcare-related facilities."@en ;
+    rdfs:subClassOf :VectorDataset .
+
 :IntersectionOperation a owl:Class ;
     rdfs:label "Intersection Operation"@en ;
     rdfs:comment "Find overlapping areas between datasets."@en ;
     rdfs:subClassOf :SpatialCapability .
 
-:EmergencyServiceDataset a owl:Class ;
-    rdfs:label "Emergency Service Dataset"@en ;
-    rdfs:comment "Dataset containing emergency service facilities."@en ;
-    rdfs:subClassOf :VectorDataset .
+:EmergencyPlanning a owl:Class ;
+    rdfs:label "Emergency Planning"@en ;
+    rdfs:comment "Planning for emergency response and disaster management."@en ;
+    rdfs:subClassOf :AnalyticalPurpose .
 
 :EnvironmentalMonitoring a owl:Class ;
     rdfs:label "Environmental Monitoring"@en ;
@@ -759,15 +576,15 @@
     rdfs:comment "Calculate statistics for raster values within zones."@en ;
     rdfs:subClassOf :SpatialCapability .
 
+:AccessibilityAnalysis a owl:Class ;
+    rdfs:label "Accessibility Analysis"@en ;
+    rdfs:comment "Analysis of spatial accessibility to services or facilities."@en ;
+    rdfs:subClassOf :AnalyticalPurpose .
+
 :DistanceCalculation a owl:Class ;
     rdfs:label "Distance Calculation"@en ;
     rdfs:comment "Calculate distances between features."@en ;
     rdfs:subClassOf :SpatialCapability .
-
-:HealthcareFacilityDataset a owl:Class ;
-    rdfs:label "Healthcare Facility Dataset"@en ;
-    rdfs:comment "Dataset containing healthcare-related facilities."@en ;
-    rdfs:subClassOf :VectorDataset .
 
 :SpatialCapability a owl:Class ;
     rdfs:label "Spatial Capability"@en ;
@@ -776,22 +593,6 @@
 :AnalyticalPurpose a owl:Class ;
     rdfs:label "Analytical Purpose"@en ;
     rdfs:comment "The intended analytical use case for a dataset."@en .
-
-:EmergencyPlanning a owl:Class ;
-    rdfs:label "Emergency Planning"@en ;
-    rdfs:comment "Planning for emergency response and disaster management."@en ;
-    rdfs:subClassOf :AnalyticalPurpose .
-
-:hasAnalyticalPurpose a owl:ObjectProperty ;
-    rdfs:label "has analytical purpose"@en ;
-    rdfs:comment "Links a dataset to its intended analytical uses."@en ;
-    rdfs:domain :GeoDataset ;
-    rdfs:range :AnalyticalPurpose .
-
-:AccessibilityAnalysis a owl:Class ;
-    rdfs:label "Accessibility Analysis"@en ;
-    rdfs:comment "Analysis of spatial accessibility to services or facilities."@en ;
-    rdfs:subClassOf :AnalyticalPurpose .
 
 :BufferOperation a owl:Class ;
     rdfs:label "Buffer Operation"@en ;
@@ -821,46 +622,4 @@
     owl:annotatedTarget [ a owl:Restriction ;
             owl:onProperty :hasAnalyticalPurpose ;
             owl:someValuesFrom :EmergencyPlanning ] .
-
-[] a owl:Axiom ;
-    owl:annotatedProperty rdfs:subClassOf ;
-    owl:annotatedSource :HealthcareFacilityDataset ;
-    owl:annotatedTarget [ a owl:Restriction ;
-            owl:onProperty :hasAnalyticalPurpose ;
-            owl:someValuesFrom :AccessibilityAnalysis ] .
-
-[] a owl:Axiom ;
-    owl:annotatedProperty rdfs:subClassOf ;
-    owl:annotatedSource :EmergencyServiceDataset ;
-    owl:annotatedTarget [ a owl:Restriction ;
-            owl:onProperty :hasAnalyticalPurpose ;
-            owl:someValuesFrom :EmergencyPlanning ] .
-
-[] a owl:Axiom ;
-    owl:annotatedProperty rdfs:subClassOf ;
-    owl:annotatedSource :EmergencyServiceDataset ;
-    owl:annotatedTarget [ a owl:Restriction ;
-            owl:onProperty :hasAnalyticalPurpose ;
-            owl:someValuesFrom :EmergencyPlanning ] .
-
-[] a owl:Axiom ;
-    owl:annotatedProperty rdfs:subClassOf ;
-    owl:annotatedSource :HealthcareFacilityDataset ;
-    owl:annotatedTarget [ a owl:Restriction ;
-            owl:onProperty :hasAnalyticalPurpose ;
-            owl:someValuesFrom :AccessibilityAnalysis ] .
-
-[] a owl:Axiom ;
-    owl:annotatedProperty rdfs:subClassOf ;
-    owl:annotatedSource :EmergencyServiceDataset ;
-    owl:annotatedTarget [ a owl:Restriction ;
-            owl:onProperty :hasAnalyticalPurpose ;
-            owl:someValuesFrom :EmergencyPlanning ] .
-
-[] a owl:Axiom ;
-    owl:annotatedProperty rdfs:subClassOf ;
-    owl:annotatedSource :HealthcareFacilityDataset ;
-    owl:annotatedTarget [ a owl:Restriction ;
-            owl:onProperty :hasAnalyticalPurpose ;
-            owl:someValuesFrom :AccessibilityAnalysis ] .
 

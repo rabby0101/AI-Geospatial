@@ -7,7 +7,7 @@ import os
 
 from app.routes.database import router as database_router
 from app.routes.routing import router as routing_router
-from app.routes.safety import router as safety_router
+
 from app.routes.semantic import router as semantic_router
 from app.routes.gdi_berlin import router as gdi_berlin_router
 from app.routes.walking_distance import router as walking_distance_router
@@ -17,6 +17,7 @@ from app.routes.skills import router as skills_router
 from app.routes.agent import router as agent_router
 from app.routes.agent_trace import router as agent_trace_router
 from app.routes.temp_layers import router as temp_layers_router
+from app.routes.attachments import router as attachments_router
 from app.utils.database import db_manager
 from app.utils.auto_discovery import auto_discovery
 from app.utils.skills_manager import load_skills
@@ -50,16 +51,17 @@ async def startup_event():
     print("🚀 Starting Cognitive Geospatial Assistant API...")
     print("📊 Initializing database connection...")
 
-    # Clean up stale satellite session tmp dirs (older than 24h)
+    # Clean up stale per-session tmp dirs (older than 24h)
     import glob, time as _time
-    for d in glob.glob("/tmp/satellite_*"):
-        try:
-            from pathlib import Path as _Path
-            if _time.time() - _Path(d).stat().st_mtime > 86400:
-                import shutil as _shutil
-                _shutil.rmtree(d, ignore_errors=True)
-        except Exception:
-            pass
+    for pattern in ("/tmp/satellite_*", "/tmp/attachments_*"):
+        for d in glob.glob(pattern):
+            try:
+                from pathlib import Path as _Path
+                if _time.time() - _Path(d).stat().st_mtime > 86400:
+                    import shutil as _shutil
+                    _shutil.rmtree(d, ignore_errors=True)
+            except Exception:
+                pass
 
     try:
         db_manager.initialize()
@@ -116,7 +118,7 @@ async def shutdown_event():
 # Include routers
 app.include_router(database_router)    # Database metadata and schema endpoints
 app.include_router(routing_router)     # Road routing and connectivity endpoints
-app.include_router(safety_router)      # Safety analysis endpoints
+
 app.include_router(semantic_router)    # Semantic/Knowledge Graph endpoints
 app.include_router(gdi_berlin_router)  # GDI Berlin WFS import endpoints
 app.include_router(walking_distance_router)  # Walking distance analysis endpoints
@@ -126,6 +128,7 @@ app.include_router(skills_router)            # Skills system endpoints
 app.include_router(agent_router)             # Agentic ReAct query endpoint
 app.include_router(agent_trace_router)       # Agent trace retrieval endpoint
 app.include_router(temp_layers_router)       # Temp layer creation for selected features
+app.include_router(attachments_router)       # Chat bar multi-file attachments (PDF/Excel/satellite)
 
 
 # Serve static files (dashboards, assets)

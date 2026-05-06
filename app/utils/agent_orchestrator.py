@@ -54,7 +54,9 @@ Available tools:
 - spatial_filter(features: GeoJSON, filter_geometry: GeoJSON, relation: "within"|"intersects") → GeoJSON FeatureCollection
 - calculate_route(waypoints: list[{lat,lon,name}], mode: "walking"|"cycling"|"driving") → GeoJSON FeatureCollection with road-network route
 - walking_isochrone(location: {lat,lon}, minutes: int, mode: "walking"|"cycling"|"driving") → GeoJSON FeatureCollection with reachable area polygon
-- analyze_satellite(bbox: dict, indices: list[str]) → GeoJSON FeatureCollection
+- compute_spectral_index(index="NDVI", date=None, geometry=None, boundary_sql=None, bbox=None, polygons_sql=None, area_label="area") → GeoJSON FeatureCollection with {index}_mean per polygon + choropleth metadata. Computes a spectral index (NDVI/EVI/SAVI/NDWI/NDBI) over ANY area using attached satellite tiles. Supply exactly one geometry source: geometry (GeoJSON Polygon drawn on map), boundary_sql (SQL returning a geometry column — any name, any CRS, auto-handled), or bbox ({min_lon, min_lat, max_lon, max_lat}). Optional polygons_sql: SQL returning rows with an id/name column and a geometry column (any name, any CRS) for per-polygon zonal stats at any granularity — e.g. for Flurstücke in Mitte: boundary_sql="SELECT geom_25833 FROM vector.wfs_alkis_bezirke_bezirksgrenzen WHERE namgem='Mitte'" and polygons_sql="SELECT uuid AS id, geom_25833 FROM vector.wfs_alkis_flurstuecke_flurstuecke WHERE ST_Intersects(geom_25833, (SELECT geom_25833 FROM vector.wfs_alkis_bezirke_bezirksgrenzen WHERE namgem='Mitte'))". Do NOT pre-transform geometries — pass them as-is from the table.
+- read_pdf_attachment(ref_id: str, pages: list[int]=None, max_chars: int=8000) → {ref_id, filename, n_pages, pages_read, text, truncated} — read text from an attached PDF. ref_id comes from the attachments block.
+- read_tabular_attachment(ref_id: str, sheet: str=None, head_rows: int=50, as_records: bool=True) → {ref_id, filename, sheet, columns, dtypes, n_rows_total, rows, truncated} — read rows from an attached Excel/CSV file.
 - score_locations(features: GeoJSON, criteria: list[str]) → GeoJSON FeatureCollection with score property
 - generate_voronoi(table: str, id_col: str="id", clip_table: str=None) → saves Voronoi polygons to temp_layers, returns {saved, table, feature_count, geojson}
 - generate_hexgrid(bbox: {min_lon,min_lat,max_lon,max_lat}, cell_size_m: float) → GeoJSON FeatureCollection of hex cells (not saved — pass to other tools)
@@ -174,7 +176,7 @@ Layer: large_parks_neukoelln
 Rules:
 - Args MUST always contain ALL required parameters — NEVER use empty Args: {}
 - The Final Answer MUST be a valid GeoJSON FeatureCollection
-- When execute_sql, calculate_route, or walking_isochrone returns a successful FeatureCollection,
+- When execute_sql, calculate_route, walking_isochrone, compute_spectral_index, or compute_temporal_analysis returns a successful FeatureCollection,
   IMMEDIATELY produce the Final Answer using this exact format:
   Thought: Got result. Returning it.
   Final Answer:
@@ -208,15 +210,38 @@ Scenario planning workflow:
 1. add_hypothetical_feature(scenario_name="new_hospital", geometry={...point...}, properties={type:"hospital"})
 2. compare_scenarios(baseline_table="public.osm_hospitals", scenario_table="temp_layers.layer_scenario_new_hospital_...", radius_m=1000, clip_bbox=...)
 
+Satellite / multi-date change workflow:
+- "Calculate NDVI/EVI/NDWI/… change" or "compare satellite images" → compute_temporal_analysis(index="NDVI", boundary_sql=...) — handles any number of attached dates automatically, returns per-polygon change columns.
+
 Generated layer rule: when a spatial generation tool returns {saved: true, table: "temp_layers.X", geojson: ...},
 use {"use_last_result": true} as the Final Answer — the frontend renders the geojson from the result directly.
+
+Chat attachments workflow:
+If the user message contains an "Attached files" block, the user uploaded PDFs / Excel / satellite tiles.
+Each entry has a ref_id you MUST use to access the content.
+- [satellite] attachment + question about a Berlin district (e.g. "NDVI of Mitte", "greenness of Neukölln"):
+  → call ndvi_by_district(district_name="Mitte", index="NDVI")  (satellite files are already staged in the session)
+  → it returns a FeatureCollection clipped to the district with ndvi_mean per polygon — produce Final Answer with {"use_last_result": true}
+- [pdf] attachment + question about the document ("summarize", "what does it say about X"):
+  → call read_pdf_attachment(ref_id="att_xxx")  and base your Summary on the returned text
+- [tabular] attachment + question about the spreadsheet ("which column has highest average", "how many rows"):
+  → call read_tabular_attachment(ref_id="att_xxx", sheet=<name>, head_rows=50)  and compute the answer from rows
+For pure-text answers (PDF/Excel questions that don't produce a map layer), use this Final Answer shape:
+  Final Answer:
+  {"type":"FeatureCollection","features":[]}
+  Summary: <one or two sentences derived from the attachment>
+  Layer: <snake_case_name>
 """
 
 
 def _call_llm(messages: list, provider: str = "deepseek") -> str:
     """Route to the appropriate LLM provider and return raw text."""
+    print(f"[_call_llm] provider={provider}, messages_count={len(messages)}")
     if provider == "lmstudio":
-        return query_lmstudio(messages)
+        print(f"[_call_llm] calling query_lmstudio")
+        result = query_lmstudio(messages)
+        print(f"[_call_llm] query_lmstudio returned: {result[:50]}")
+        return result
 
     # Default: DeepSeek
     if not DEEPSEEK_API_KEY:
@@ -320,6 +345,29 @@ def _prepare_obs_for_llm(tool_name: str, result: Any, max_chars: int = MAX_RESUL
             ),
         }
 
+    # compute_spectral_index / compute_temporal_analysis: strip geometry from features
+    # but preserve top-level saved_table and metadata so the LLM can reference the
+    # persisted table name in a subsequent SQL join.
+    if tool_name in ("compute_spectral_index", "compute_temporal_analysis"):
+        MAX_SAMPLE = 5
+        sample_props = []
+        for f in features[:MAX_SAMPLE]:
+            props = dict(f.get("properties") or {})
+            props.pop("geom", None)
+            sample_props.append(props)
+        return {
+            "status": "success",
+            "total_features": total,
+            "sample_properties": sample_props,
+            "saved_table": result.get("saved_table"),
+            "metadata": result.get("metadata"),
+            "_note": (
+                f"Spectral index computed for {total} polygon(s). "
+                "Full result stored — use {\"use_last_result\": true} in Final Answer. "
+                "If further processing is needed, reference saved_table for SQL joins."
+            ),
+        }
+
     # walking_isochrone / calculate_route: keep geometry (needed for next SQL step)
     # but still apply the character cap
     result_str = json.dumps(result)
@@ -404,6 +452,7 @@ async def run_agent(
     drawn_geometry: Optional[Dict] = None,
     session_id: Optional[str] = None,
     selected_features: Optional[list] = None,
+    attachments: Optional[list] = None,
 ) -> AsyncGenerator[AgentStep, None]:
     """
     Async generator that runs the ReAct loop and yields AgentStep objects.
@@ -412,6 +461,14 @@ async def run_agent(
     The final yielded step has tool_name="final_answer" with the GeoJSON result.
     """
     start_time = time.time()
+
+    # Make the active session_id visible to attachment-reading tools via contextvar.
+    if session_id:
+        try:
+            from app.utils.attachment_store import current_session_id
+            current_session_id.set(session_id)
+        except Exception:
+            pass
 
     system_prompt = _build_agent_system_prompt()
     user_content = question
@@ -442,6 +499,18 @@ async def run_agent(
                 f"For time-based walking queries (e.g. 'within X minutes') follow the isochrone workflow: "
                 f"extract {'{'}lat,lon{'}'} from the temp table via execute_sql, then call walking_isochrone."
             )
+
+    # Attachment context — only injected when the session has a manifest and
+    # the frontend forwarded an attachments array (cheap sanity check).
+    if session_id and attachments:
+        try:
+            from app.utils.attachment_store import AttachmentStore
+            store = AttachmentStore(session_id)
+            block = store.get_context_block()
+            if block:
+                user_content += block
+        except Exception as e:
+            logger.warning(f"Attachment context injection failed: {e}")
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -573,6 +642,15 @@ async def run_agent(
         else:
             try:
                 tool_fn = TOOL_REGISTRY[tool_name]
+                # Substitute last_result when save_generated_layer is called with the
+                # {"use_last_result": true} sentinel — mirrors the final_answer path.
+                if (
+                    tool_name == "save_generated_layer"
+                    and isinstance(tool_args.get("geojson"), dict)
+                    and tool_args["geojson"].get("use_last_result")
+                    and last_result
+                ):
+                    tool_args = {**tool_args, "geojson": last_result}
                 observation = tool_fn(**tool_args) if isinstance(tool_args, dict) else {
                     "error": f"Args must be a JSON object, got: {type(tool_args)}"
                 }
@@ -588,7 +666,7 @@ async def run_agent(
         _obs_features = observation.get("features", []) if isinstance(observation, dict) else []
         _has_real_geometry = any(f.get("geometry") for f in _obs_features[:3])
         got_feature_collection = (
-            tool_name in ("execute_sql", "calculate_route", "walking_isochrone")
+            tool_name in ("execute_sql", "calculate_route", "walking_isochrone", "compute_spectral_index", "compute_temporal_analysis")
             and isinstance(observation, dict)
             and observation.get("type") == "FeatureCollection"
             and _has_real_geometry

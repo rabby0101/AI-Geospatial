@@ -38,6 +38,10 @@ async def _sse_generator(request: AgentRequest) -> AsyncGenerator[str, None]:
     results: dict | None = None
 
     try:
+        attachments_dump = (
+            [a.model_dump() for a in request.attachments]
+            if request.attachments else None
+        )
         async for step in run_agent(
             question=request.question,
             llm_provider=request.llm_provider or "deepseek",
@@ -46,6 +50,7 @@ async def _sse_generator(request: AgentRequest) -> AsyncGenerator[str, None]:
             drawn_geometry=request.drawn_geometry,
             session_id=request.session_id,
             selected_features=request.selected_features,
+            attachments=attachments_dump,
         ):
             payload = step.model_dump()
 

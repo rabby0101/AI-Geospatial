@@ -134,6 +134,24 @@
             --color-warning: #ffc107;
         }
 
+        /* Popup System - Dark Theme Defaults */
+        --popup-bg: rgba(30, 30, 35, 0.92);
+        --popup-border: rgba(255, 255, 255, 0.15);
+        --popup-divider: rgba(255, 255, 255, 0.1);
+        --popup-text-primary: #ffffff;
+        --popup-text-secondary: #f0f0f0;
+        --popup-text-muted: #a0a0a0;
+        --popup-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        --popup-header-bg: rgba(255, 255, 255, 0.05);
+        --popup-brand-bg: rgba(255, 255, 255, 0.03);
+        --popup-footer-bg: rgba(255, 255, 255, 0.03);
+        --popup-btn-bg: rgba(59, 130, 246, 0.2);
+        --popup-btn-color: #64B5F6;
+        --popup-btn-border: rgba(59, 130, 246, 0.4);
+        --popup-glass-bg: rgba(255, 255, 255, 0.15);
+        --popup-glass-border: rgba(255, 255, 255, 0.15);
+        --popup-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.1);
+
         /* Light Theme Overrides */
         [data-theme='light'] {
             /* Semantic Colors - Backgrounds (Light) */
@@ -150,33 +168,51 @@
 
             /* Body Gradient */
             --body-gradient: linear-gradient(135deg, #F8F9FA 0%, #EEE9DF 100%);
+
+            /* Popup System - Light Theme */
+            --popup-bg: rgba(255, 255, 255, 0.95);
+            --popup-border: rgba(0, 0, 0, 0.12);
+            --popup-divider: rgba(0, 0, 0, 0.1);
+            --popup-text-primary: #1B2632;
+            --popup-text-secondary: #2D3E50;
+            --popup-text-muted: #718096;
+            --popup-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            --popup-header-bg: rgba(0, 0, 0, 0.04);
+            --popup-brand-bg: rgba(0, 0, 0, 0.02);
+            --popup-footer-bg: rgba(0, 0, 0, 0.03);
+            --popup-btn-bg: rgba(59, 130, 246, 0.15);
+            --popup-btn-color: #3B82F6;
+            --popup-btn-border: rgba(59, 130, 246, 0.3);
+            --popup-glass-bg: rgba(255, 255, 255, 0.6);
+            --popup-glass-border: rgba(0, 0, 0, 0.15);
+            --popup-glass-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
 
         /* Explicit Light Theme Overrides for Components */
         [data-theme='light'] .layers-panel,
         [data-theme='light'] .operations-panel {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(24px) saturate(180%);
             -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border-right: 1.5px solid rgba(255, 255, 255, 0.35);
-            border-left: 1.5px solid rgba(255, 255, 255, 0.35);
+            border-right: 1.5px solid rgba(0, 0, 0, 0.08);
+            border-left: 1.5px solid rgba(0, 0, 0, 0.08);
         }
 
         [data-theme='light'] .panel-header,
         [data-theme='light'] .operations-header {
-            background: rgba(240, 240, 240, 0.8);
+            background: rgba(248, 249, 250, 0.95);
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             color: var(--text-primary);
         }
 
         [data-theme='light'] .layer-item {
-            background: rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(0, 0, 0, 0.12);
             color: var(--text-primary);
         }
 
         [data-theme='light'] .layer-item:hover {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border-color: var(--accent-primary);
         }
 
@@ -185,6 +221,9 @@
             background: rgba(255, 255, 255, 0.95);
             color: #1B2632;
             box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
         }
 
         [data-theme='light'] .panel-action-btn,
@@ -663,6 +702,31 @@
             overflow: visible;
         }
 
+        .layer-float-menu {
+            background: rgba(37, 32, 53, 0.97);
+            border: 1px solid rgba(196,195,227,0.15);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+            padding: 4px;
+            min-width: 120px;
+        }
+        .layer-float-menu ul { list-style: none; margin: 0; padding: 0; }
+        .layer-float-menu li button {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+            padding: 6px 10px;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: rgba(196,195,227,0.9);
+            cursor: pointer;
+            text-align: left;
+        }
+        .layer-float-menu li button:hover { background: rgba(196,195,227,0.1); color: var(--text-primary); }
+
         .layer-item:hover {
             border-color: rgba(var(--accent-primary-rgb), 0.4);
             box-shadow: 0 8px 24px rgba(var(--accent-primary-rgb), 0.15);
@@ -769,9 +833,9 @@
             justify-content: space-between;
             margin-top: 0.5rem;
             padding-top: 0.5rem;
-            border-top: 1px solid #f0f0f0;
+            border-top: 1px solid rgba(255,255,255,0.1);
             font-size: 0.8rem;
-            color: #666;
+            color: var(--text-muted);
         }
 
         .layer-count {
@@ -782,13 +846,13 @@
 
         .layer-time {
             font-size: 0.75rem;
-            color: #999;
+            color: var(--text-muted);
         }
 
         .empty-state {
             text-align: center;
             padding: 3rem 1.5rem;
-            color: #999999;
+            color: var(--text-muted);
         }
 
         .empty-state-icon {
@@ -799,7 +863,7 @@
 
         .empty-state-text {
             font-size: 0.9rem;
-            color: #b0b0b0;
+            color: var(--text-muted);
         }
 
         /* Map */
@@ -809,6 +873,22 @@
             position: absolute;
             top: 0;
             left: 0;
+            pointer-events: none;
+        }
+
+        /* Allow map tiles to receive pointer events */
+        .leaflet-tile-pane {
+            pointer-events: auto;
+        }
+
+        /* Ensure interactive controls can receive pointer events */
+        .leaflet-control {
+            pointer-events: auto;
+        }
+
+        /* Ensure popups can receive pointer events */
+        .leaflet-popup-pane {
+            pointer-events: auto;
         }
 
         /* Locate Me Button */
@@ -896,66 +976,17 @@
             }
         }
 
-        /* Street Light Glow Animations */
-        @keyframes lightGlow {
-            0% {
-                box-shadow: 0 0 0 rgba(255, 215, 0, 0);
-                filter: brightness(1);
-            }
-
-            50% {
-                box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
-                filter: brightness(1.4);
-            }
-
-            100% {
-                box-shadow: 0 0 10px rgba(255, 215, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.3);
-                filter: brightness(1.2);
-            }
-        }
-
-        @keyframes coverageGlow {
-            0% {
-                fill-opacity: 0.05;
-                stroke-opacity: 0.2;
-            }
-
-            50% {
-                fill-opacity: 0.20;
-                stroke-opacity: 0.6;
-            }
-
-            100% {
-                fill-opacity: 0.15;
-                stroke-opacity: 0.4;
-            }
-        }
-
         /* Light marker glow effect */
-        .street-light-marker.light-glow-marker.glow-active {
-            animation: lightGlow 2s ease-in-out;
-            animation-fill-mode: forwards;
-        }
-
-        /* Coverage area glow effect */
-        .light-coverage-area.light-glow.glow-active {
-            animation: coverageGlow 2s ease-in-out;
-            animation-fill-mode: forwards;
-        }
-
-        /* Smooth transitions for gradient zones */
-        .light-coverage-area {
-            transition: fill-opacity 0.5s ease-in-out, stroke-opacity 0.5s ease-in-out;
-        }
-
-        /* Static glow state after animation */
-        .street-light-marker {
-            transition: all 0.3s ease;
-        }
-
-        .street-light-marker:hover {
-            filter: brightness(1.5) drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
-            transform: scale(1.15);
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: var(--popup-glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.5px solid var(--popup-glass-border);
+            box-shadow: var(--popup-glass-shadow);
+            transition: transform 0.2s ease;
         }
 
         /* Directional arrow indicator styles */
@@ -988,7 +1019,7 @@
             bottom: 2rem;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
+            z-index: 9999;
             max-width: 900px;
             width: calc(100% - 40px);
             display: flex;
@@ -1501,8 +1532,8 @@
 
         .popup-button:hover {
             background: linear-gradient(135deg,
-                    rgba(241, 100, 46, 0.95),
-                    rgba(241, 100, 46, 0.88));
+                    rgba(var(--accent-primary-rgb), 0.95),
+                    rgba(var(--accent-primary-rgb), 0.88));
             box-shadow:
                 0 12px 24px rgba(var(--accent-primary-rgb), 0.4),
                 inset 0 1px 2px rgba(255, 255, 255, 0.3);
@@ -1510,14 +1541,21 @@
             border-color: rgba(var(--accent-primary-rgb), 0.85);
         }
 
+        [data-theme='light'] .popup-button {
+            color: white;
+        }
+
+        .popup-extra-entry {
+            display: none;
+        }
+
         .leaflet-popup-content-wrapper {
-            border-radius: 20px !important;
-            background: transparent !important;
-            box-shadow:
-                0 25px 50px rgba(0, 0, 0, 0.5),
-                inset 0 1px 2px rgba(255, 255, 255, 0.1) !important;
-            backdrop-filter: blur(10px) !important;
-            -webkit-backdrop-filter: blur(10px) !important;
+            border-radius: 20px;
+            background: rgba(30, 30, 35, 0.92);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .leaflet-popup-tip-container {
@@ -1537,6 +1575,170 @@
         .leaflet-popup-close-button:hover {
             background: rgba(255, 255, 255, 0.2);
             border-radius: 4px;
+        }
+
+        /* Feature Popup Container — replaces inline-styled JS strings */
+        .feature-popup {
+            background: var(--popup-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--popup-border);
+            border-radius: 16px;
+            box-shadow: var(--popup-shadow);
+            overflow: hidden;
+            width: 380px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .feature-popup-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px;
+            border-bottom: 1px solid var(--popup-divider);
+            background: var(--popup-header-bg);
+            flex-shrink: 0;
+        }
+
+        .feature-popup-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--popup-divider);
+            background: var(--popup-brand-bg);
+            flex-shrink: 0;
+        }
+
+        .feature-popup-brand-icon {
+            font-size: 14px;
+            color: var(--text-muted);
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feature-popup-brand-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--popup-text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.2px;
+        }
+
+        .feature-popup-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--popup-text-primary);
+            text-transform: capitalize;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.3px;
+        }
+
+        .feature-popup-info-grid {
+            padding: 12px 16px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px 12px;
+            max-height: 240px;
+            overflow-y: auto;
+            font-size: 12px;
+            flex-grow: 1;
+        }
+
+        .feature-popup-key {
+            color: var(--popup-text-muted);
+            font-weight: 500;
+            font-size: 13px;
+            word-break: break-word;
+        }
+
+        .feature-popup-value {
+            color: var(--popup-text-secondary);
+            text-align: right;
+            font-weight: 600;
+            font-size: 13px;
+            word-break: break-word;
+        }
+
+        .feature-popup-footer {
+            padding: 12px 16px;
+            border-top: 1px solid var(--popup-divider);
+            display: flex;
+            gap: 10px;
+            background: var(--popup-footer-bg);
+            flex-shrink: 0;
+        }
+
+        /* Skills Panel - converted to centered popup */
+        .skills-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 9000;
+            backdrop-filter: blur(2px);
+        }
+
+        .skills-popup {
+            display: none;
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 340px;
+            max-height: 80vh;
+            z-index: 9001;
+            padding: 0;
+            overflow-y: auto;
+        }
+
+        .skills-popup .feature-popup-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        .skills-popup.active,
+        .skills-overlay.active {
+            display: block;
+        }
+
+        [data-theme='light'] .skills-overlay {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .skill-card {
+            cursor: pointer;
+            border-radius: 12px;
+            border: 1.5px solid var(--popup-border);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.15s;
+            background: var(--popup-header-bg);
+        }
+
+        .skill-card:hover {
+            border-color: var(--accent-primary);
+            background: var(--popup-brand-bg);
+        }
+
+        .skill-card.active {
+            border-color: var(--accent-primary);
+            background: rgba(var(--accent-primary-rgb), 0.08);
+        }
+
+        [data-theme='light'] .leaflet-popup-content {
+            padding: 0;
         }
 
         /* Notification */
@@ -1640,7 +1842,7 @@
 
         .location-status {
             font-size: 0.75rem;
-            color: #666;
+            color: var(--text-muted);
             margin-left: 0.5rem;
         }
 
@@ -1669,7 +1871,7 @@
 
         .llm-selector-label {
             font-size: 0.8rem;
-            color: #b0b0b0;
+            color: var(--text-muted);
             white-space: nowrap;
             font-weight: 500;
             text-transform: uppercase;
@@ -1694,7 +1896,7 @@
             border-radius: 20px;
             transition: all 0.2s ease;
             background: rgba(var(--accent-secondary-rgb), 0.3);
-            color: #b0b0b0;
+            color: var(--text-muted);
             white-space: nowrap;
             border: 1px solid rgba(196, 195, 227, 0.15);
         }
@@ -1785,7 +1987,7 @@
         /* Agent Reasoning Right Panel */
         /* ── Unified 4-section operations panel ── */
         .panel-section {
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid var(--popup-divider);
         }
         .panel-section-header {
             padding: 8px 14px;
@@ -1804,12 +2006,12 @@
         .panel-section-label.lbl-tables    { color: #A3B565; }
         .panel-section-label.lbl-results   { color: #5aaae0; }
         .panel-section-toggle {
-            color: #555;
+            color: var(--text-muted);
             cursor: pointer;
             font-size: 10px;
         }
         .panel-section-meta {
-            color: #555;
+            color: var(--text-muted);
             font-size: 10px;
         }
         .panel-section-scroll {
@@ -1824,7 +2026,7 @@
             background: rgba(0,0,0,0.2);
         }
         .sql-query-label {
-            color: #555;
+            color: var(--text-muted);
             font-size: 9px;
             margin-bottom: 3px;
             font-family: sans-serif;
@@ -1869,11 +2071,11 @@
             font-weight: 700;
         }
         .panel-results-stat-label {
-            color: #666;
+            color: var(--text-muted);
             font-size: 9px;
         }
         .panel-results-desc {
-            color: #aaa;
+            color: var(--text-muted);
             font-size: 11px;
             line-height: 1.5;
         }
@@ -1969,7 +2171,7 @@
         .no-selection {
             text-align: center;
             padding: 2rem 1rem;
-            color: #b0b0b0;
+            color: var(--text-muted);
             font-size: 0.9rem;
         }
 
@@ -2042,7 +2244,7 @@
             padding: 0.5rem;
             border-radius: 6px;
             font-size: 0.75rem;
-            color: #a0a0a0;
+            color: var(--text-muted);
             font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
             overflow-x: auto;
             max-height: 80px;
@@ -2310,7 +2512,7 @@
 
         .export-option-description {
             font-size: 0.85rem;
-            color: #b0b0b0;
+            color: var(--text-muted);
             margin-bottom: 0.75rem;
         }
 
@@ -2485,7 +2687,7 @@
             background: none;
             border: none;
             border-bottom: 2px solid transparent;
-            color: #b0b0b0;
+            color: var(--text-muted);
             cursor: pointer;
             font-weight: 600;
             font-size: 0.95rem;
@@ -2661,7 +2863,7 @@
             display: flex;
             justify-content: space-between;
             font-size: 0.85rem;
-            color: #b0b0b0;
+            color: var(--text-muted);
         }
 
         .style-dialog-actions {
@@ -2994,10 +3196,10 @@
 
         /* Operations Panel (Right) */
         [data-theme='light'] .operations-panel {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(24px) saturate(180%);
             -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border-left: 1.5px solid rgba(255, 255, 255, 0.35);
+            border-left: 1.5px solid rgba(0, 0, 0, 0.08);
             box-shadow: -8px 0 32px rgba(0, 0, 0, 0.06);
         }
 
@@ -3157,21 +3359,29 @@
             color: var(--text-muted);
         }
 
-        /* Agent panel step badges */
-        .agent-step { display: flex; gap: 8px; align-items: flex-start; }
-        .agent-badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; margin-top: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .badge-thought  { background: #2a1e3e; color: #8a70d9; }
-        .badge-action   { background: #1e3a1e; color: #60c060; }
-        .badge-result   { background: #2a1e0e; color: #d08050; }
-        .badge-error    { background: #3a1e1e; color: #e07070; }
-        .agent-content  { color: #ccc; line-height: 1.5; word-break: break-word; flex: 1; }
+        /* Agent panel step badges - minimal inline style */
+        .agent-step { margin-bottom: 10px; }
+        .agent-badge {
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .agent-badge.thought { color: #8a70d9; }
+        .agent-badge.action  { color: #60c060; }
+        .agent-badge.result  { color: #d08050; }
+        .agent-badge.error   { color: #e07070; }
+        .agent-content {
+            color: var(--text-muted);
+            line-height: 1.5;
+            word-break: break-word;
+            font-size: 13px;
+            display: inline;
+        }
 
-        /* Agent panel step badges - Light theme overrides */
-        [data-theme='light'] .badge-thought  { background: #ece4f7; color: #5b3fa0; }
-        [data-theme='light'] .badge-action   { background: #e2f0e2; color: #2d7a2d; }
-        [data-theme='light'] .badge-result    { background: #f7ece2; color: #a35520; }
-        [data-theme='light'] .badge-error     { background: #f7e2e2; color: #b03030; }
-        [data-theme='light'] .agent-content  { color: var(--text-primary); }
+        [data-theme='light'] .agent-badge.thought { color: #6b4fa0; }
+        [data-theme='light'] .agent-badge.action  { color: #2d7a2d; }
+        [data-theme='light'] .agent-badge.result  { color: #a35520; }
+        [data-theme='light'] .agent-badge.error   { color: #b03030; }
 
         /* Panel Legend Container */
         [data-theme='light'] .panel-legend-container {
@@ -3256,9 +3466,17 @@
             color: var(--text-primary);
         }
 
+        [data-theme='light'] .theme-toggle-icon {
+            color: var(--text-primary);
+        }
+
         .north-arrow-icon {
             width: 22px;
             height: 22px;
+            color: var(--text-primary);
+        }
+
+        [data-theme='light'] .north-arrow-icon {
             color: var(--text-primary);
         }
         .leaflet-right .leaflet-control {
@@ -3495,8 +3713,64 @@
         .route-group-children .card {
             margin-bottom: 0 !important;
         }
+
+        /* SortableJS drag-and-drop styles */
+        .sortable-handle {
+            cursor: grab;
+        }
+        .sortable-handle:active {
+            cursor: grabbing;
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            transform: scale(0.97);
+            background: rgba(241, 100, 46, 0.08) !important;
+            border: 2px dashed rgba(241, 100, 46, 0.5) !important;
+        }
+        .sortable-chosen {
+            cursor: grabbing !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        }
+        .sortable-drag {
+            opacity: 1 !important;
+            transform: rotate(1deg) scale(1.02);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Attachment chips & feature pill hover-expand */
+        .hover-expand {
+            display: inline-flex;
+            align-items: center;
+            flex: 0 0 auto;
+            transition: max-width 0.2s ease;
+            overflow: hidden;
+            white-space: nowrap;
+            min-width: 32px;
+        }
+        .hover-expand:hover,
+        .hover-expand.expanded {
+            max-width: 300px;
+        }
+        .hover-expand > i[data-lucide] {
+            flex-shrink: 0;
+            width: 14px !important;
+            height: 14px !important;
+        }
+        .hover-expand .hover-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+            transform: translateX(-8px) scale(0.95);
+            transition: opacity 0.2s ease, width 0.25s ease, transform 0.2s ease;
+        }
+        .hover-expand:hover .hover-text,
+        .hover-expand.expanded .hover-text {
+            opacity: 1;
+            width: auto;
+            transform: translateX(0) scale(1);
+        }
     </style>
-    <link rel="stylesheet" href="/static/css/safety-styles.css">
+
 </head>
 
 <body>
@@ -3559,27 +3833,29 @@
                     <div id="timelineContent"></div>
                     <button class="timeline-clear-btn" onclick="clearAllQueries()">Clear All</button>
                 </div>
+            </div>
 
-                <!-- Chat Interface Overlay (Bottom) -->
-                <div class="chat-overlay-bottom">
-                    <!-- Main Chat Bar (Refactored) -->
-                    <div class="w-full max-w-3xl mx-auto px-4 pb-6 relative z-50">
-                        <div
-                            class="bg-base-100/20 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-4 transition-all hover:bg-base-100/30 hover:shadow-3xl focus-within:bg-base-100/40 focus-within:ring-1 focus-within:ring-white/30 focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+            <!-- Chat Interface Overlay (Bottom) - OUTSIDE map container -->
+            <div class="chat-overlay-bottom">
+                <!-- Main Chat Bar (Refactored) -->
+                <div class="w-full max-w-3xl mx-auto px-4 pb-6 relative z-50" style="pointer-events: auto;">
+                    <div
+                        class="bg-base-100/20 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-4 transition-all hover:bg-base-100/30 hover:shadow-3xl focus-within:bg-base-100/40 focus-within:ring-1 focus-within:ring-white/30 focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+                            style="pointer-events: auto;">
                             <div class="flex flex-col gap-3">
                                 <!-- Input Area -->
                                 <textarea id="searchInput"
                                     class="textarea textarea-ghost text-lg w-full focus:outline-none resize-none bg-transparent placeholder-base-content/30 min-h-[3rem]"
-                                    placeholder="How can I help you today?" rows="1"></textarea>
+                                    placeholder="How can I help you today?" rows="1" style="height: auto;"></textarea>
 
                                 <!-- Controls Row -->
                                 <div class="flex items-center justify-between pt-2 border-t border-base-content/5">
                                     <!-- Left: Utilities -->
-                                    <div class="flex items-center gap-1">
-                                        <div class="tooltip" data-tip="Upload satellite images">
+                                    <div class="flex items-center gap-1 flex-1 min-w-0">
+                                        <div class="tooltip" data-tip="Attach files (PDF, Excel/CSV, satellite imagery)">
                                             <button class="btn btn-ghost btn-circle btn-sm opacity-70 hover:opacity-100"
-                                                onclick="document.getElementById('satelliteUploadModal').showModal()">
-                                                <i data-lucide="satellite" class="w-5 h-5"></i>
+                                                onclick="document.getElementById('attachmentsModal').showModal()">
+                                                <i data-lucide="paperclip" class="w-5 h-5"></i>
                                             </button>
                                         </div>
                                         <div class="tooltip" data-tip="Skills — select a mode to reduce token usage">
@@ -3601,25 +3877,16 @@
                                         </div>
 
                                         <!-- Selected Feature Pill -->
-                                        <div class="badge badge-primary gap-2 hidden shadow-sm"
-                                            id="selectedFeaturePill">
+                                        <div class="badge badge-primary gap-1 shadow-sm hidden hover-expand cursor-pointer"
+                                            id="selectedFeaturePill" onclick="clearSelectedFeature()">
                                             <i data-lucide="target" class="w-3 h-3"></i>
-                                            <span id="pillText" class="max-w-[100px] truncate"></span>
-                                            <button class="btn btn-ghost btn-xs btn-circle text-primary-content"
-                                                onclick="clearSelectedFeature()">
-                                                <i data-lucide="x" class="w-3 h-3"></i>
-                                            </button>
+                                            <span id="pillText" class="hover-text max-w-[100px] truncate"></span>
                                         </div>
 
-                                        <!-- Satellite Session Badge -->
-                                        <div class="badge badge-secondary gap-1 hidden shadow-sm text-xs"
-                                            id="satelliteBadge">
-                                            <i data-lucide="satellite" class="w-3 h-3"></i>
-                                            <span id="satelliteBadgeText">0 files</span>
-                                            <button class="btn btn-ghost btn-xs btn-circle text-secondary-content"
-                                                onclick="clearSatelliteSession()">
-                                                <i data-lucide="x" class="w-3 h-3"></i>
-                                            </button>
+                                        <!-- Attachment chips (multi-file, any kind) -->
+                                        <div class="flex items-center gap-1 flex-wrap min-w-0"
+                                             id="attachmentsBar" style="display:none;">
+                                            <!-- chips rendered by renderAttachmentChips() -->
                                         </div>
                                     </div>
 
@@ -3630,7 +3897,7 @@
                                             <label tabindex="0"
                                                 class="btn btn-ghost btn-sm gap-2 normal-case font-normal opacity-80 hover:opacity-100">
                                                 <span class="text-xs font-medium opacity-70">Model:</span>
-                                                <span class="text-sm" id="selectedModelLabel">Gemini 3 Flash</span>
+                                                <span class="text-sm" id="selectedModelLabel">DeepSeek</span>
                                                 <i data-lucide="chevron-up" class="w-3 h-3 opacity-50"></i>
                                             </label>
                                             <ul tabindex="0"
@@ -3640,26 +3907,11 @@
                                                         <span
                                                             class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
                                                         DeepSeek</a></li>
-                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('gemini', 'Gemini 3 Flash')"
-                                                        class="flex items-center gap-2">
-                                                        <span
-                                                            class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
-                                                        Gemini 3 Flash</a></li>
-                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('ollama', 'Qwen3.5 9b (Local)')"
-                                                        class="flex items-center gap-2">
-                                                        <span
-                                                            class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>
-                                                        Qwen3.5 9b (Local)</a></li>
-                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('ollama_small', 'Qwen3.5 4b (Local)')"
-                                                        class="flex items-center gap-2">
-                                                        <span
-                                                            class="w-2 h-2 rounded-full bg-violet-400 inline-block"></span>
-                                                        Qwen3.5 4b (Local)</a></li>
-                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('lmstudio', 'Gemma 4 E4B (Local)')"
+                                                <li><a onmousedown="event.preventDefault(); selectLLMProvider('lmstudio', 'Qwen 3.6 27b (Local)')"
                                                         class="flex items-center gap-2">
                                                         <span
                                                             class="w-2 h-2 rounded-full bg-orange-400 inline-block"></span>
-                                                        Gemma 4 E4B (Local)</a></li>
+                                                        Qwen 3.6 27b (Local)</a></li>
                                             </ul>
                                         </div>
 
@@ -3811,7 +4063,7 @@
                         <span class="panel-section-label lbl-results">Results</span>
                     </div>
                     <div id="panelResultsBody" class="panel-section-body">
-                        <div style="color:#666;font-size:11px;padding:4px 0;">Waiting for agent to finish…</div>
+                        <div style="color:var(--text-muted);font-size:11px;padding:4px 0;">Waiting for agent to finish…</div>
                     </div>
                 </div>
 
@@ -3831,15 +4083,21 @@
     </div>
 
     <!-- Satellite Upload Modal -->
-    <dialog id="satelliteUploadModal" class="modal">
-        <div class="modal-box max-w-md">
+    <dialog id="attachmentsModal" class="modal">
+        <div class="modal-box max-w-lg">
             <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-                <i data-lucide="satellite" class="w-5 h-5 text-secondary"></i>
-                Upload Satellite Images
+                <i data-lucide="paperclip" class="w-5 h-5 text-primary"></i>
+                Attach files
             </h3>
 
+            <p class="text-xs opacity-60 mb-3">
+                Attach one or more files — they'll be passed to the AI along with your question.
+                Supported: <span class="font-medium">PDF</span>, <span class="font-medium">Excel/CSV</span>,
+                <span class="font-medium">Sentinel-2 imagery</span> (.tif band files or SAFE .zip).
+            </p>
+
             <div class="form-control mb-4">
-                <label class="label"><span class="label-text font-medium">Image format</span></label>
+                <label class="label"><span class="label-text font-medium">Satellite format hint</span></label>
                 <select id="satFormatSelect" class="select select-bordered select-sm w-full">
                     <option value="auto">Auto-detect</option>
                     <option value="individual_bands">Individual band GeoTIFFs (.tif)</option>
@@ -3847,39 +4105,50 @@
                 </select>
                 <label class="label">
                     <span class="label-text-alt opacity-60">
-                        For NDVI: upload B04 + B08 band files. For EVI: B02, B04, B08.
+                        Only used when the batch contains .tif or .zip files. NDVI needs B04 + B08.
                     </span>
                 </label>
             </div>
 
             <!-- Hidden file input lives inside the dialog so showModal() top-layer doesn't block programmatic .click() -->
-            <input type="file" id="satelliteFileInput" multiple accept=".tif,.tiff,.zip" style="display:none"
-                   onchange="if(this.files.length>0){_autoUploadFiles(Array.from(this.files));this.value='';}">
+            <input type="file" id="attachmentsFileInput" multiple
+                   accept=".pdf,.xlsx,.xls,.csv,.tif,.tiff,.zip"
+                   style="display:none"
+                   onchange="if(this.files.length>0){_autoUploadAttachments(Array.from(this.files));this.value='';}">
 
-            <div id="satDropZone"
-                 class="border-2 border-dashed border-base-content/20 rounded-xl p-8 text-center cursor-pointer hover:border-secondary/60 transition-colors mb-4"
-                 onclick="document.getElementById('satelliteFileInput').click()"
-                 ondragover="satDragOver(event)"
-                 ondragleave="satDragLeave(event)"
-                 ondrop="satDrop(event)">
+            <div id="attDropZone"
+                 class="border-2 border-dashed border-base-content/20 rounded-xl p-8 text-center cursor-pointer hover:border-primary/60 transition-colors mb-4"
+                 onclick="document.getElementById('attachmentsFileInput').click()"
+                 ondragover="attDragOver(event)"
+                 ondragleave="attDragLeave(event)"
+                 ondrop="attDrop(event)">
                 <i data-lucide="upload-cloud" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
-                <p class="text-sm opacity-70 font-medium" id="satDropZoneText">
-                    Click or drop files here to upload immediately
+                <p class="text-sm opacity-70 font-medium" id="attDropZoneText">
+                    Click or drop files here to upload
                 </p>
-                <p class="text-xs opacity-40 mt-1">.tif band files or SAFE .zip · multiple files OK · uploads accumulate in session</p>
+                <p class="text-xs opacity-40 mt-1">
+                    PDF · Excel/CSV · .tif / SAFE .zip · multiple files OK · uploads accumulate in session
+                </p>
             </div>
 
-            <div id="satUploadProgress" class="hidden">
+            <div id="attUploadProgress" class="hidden">
                 <div class="flex items-center gap-2 text-sm">
                     <span class="loading loading-spinner loading-xs"></span>
-                    <span id="satUploadProgressText">Uploading...</span>
+                    <span id="attUploadProgressText">Uploading...</span>
                 </div>
             </div>
 
+            <div id="attManifestList" class="mt-2 space-y-1 max-h-40 overflow-y-auto text-xs"></div>
+
             <div class="modal-action">
                 <button class="btn btn-ghost btn-sm"
-                    onclick="document.getElementById('satelliteUploadModal').close()">
-                    Cancel
+                    onclick="clearAllAttachments()"
+                    id="attClearAllBtn" style="display:none;">
+                    Remove all
+                </button>
+                <button class="btn btn-primary btn-sm"
+                    onclick="document.getElementById('attachmentsModal').close()">
+                    Done
                 </button>
             </div>
         </div>
@@ -4467,6 +4736,9 @@ LIMIT 10</textarea>
     <!-- Leaflet.Draw JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
+    <!-- SortableJS for animated layer drag-and-drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
     <script>
         // Initialize map centered on Berlin with smooth interaction settings
         const map = window.map = L.map('map', {
@@ -4747,9 +5019,18 @@ LIMIT 10</textarea>
         let layers = [];
         let layerIdCounter = 0;
 
+        // Drag-and-drop state
+        let isDragging = false;
+        let layerOrder = [];  // Display order: 'layerId' | 'group:routeGroupId'
+
+        // SortableJS instances — re-created after each updateLayersPanel() call
+        let _topLevelSortable = null;
+        const _groupSortables = new Map();
+
         // Layer persistence configuration
         const STORAGE_KEY_LAYERS = 'aigeospatial_saved_layers';
         const STORAGE_KEY_COUNTER = 'aigeospatial_layer_counter';
+        const STORAGE_KEY_LAYER_ORDER = 'aigeospatial_layer_order';
 
         // Multi-step query mode state
         let queryMode = 'single';  // 'single' or 'multi-step'
@@ -5596,7 +5877,7 @@ LIMIT 10</textarea>
                 waypoints.forEach((wp, idx) => {
                     html += `<div style="margin: 5px 0; font-size: 12px;">
                         ${wp.order}. <strong>${wp.name}</strong>
-                        ${wp.arrival_distance_m ? `<span style="float: right; color: #aaa;">+${Math.round(wp.arrival_distance_m)}m</span>` : ''}
+                        ${wp.arrival_distance_m ? `<span style="float: right; color: var(--text-muted);">+${Math.round(wp.arrival_distance_m)}m</span>` : ''}
                     </div>`;
                 });
                 html += '</div>';
@@ -5770,6 +6051,16 @@ LIMIT 10</textarea>
 
             layers.push(layerInfo);
 
+            // Add to layerOrder - new layers go at the start (top of sidebar)
+            if (metadata?.routeGroupId) {
+                const groupMarker = `group:${metadata.routeGroupId}`;
+                if (!layerOrder.includes(groupMarker)) {
+                    layerOrder.unshift(groupMarker);
+                }
+            } else {
+                layerOrder.unshift(layerInfo.id);
+            }
+
             // Create map legend if this is a density-based query
             createMapLegend(layerInfo);
 
@@ -5804,6 +6095,7 @@ LIMIT 10</textarea>
 
                 localStorage.setItem(STORAGE_KEY_LAYERS, JSON.stringify(layersToSave));
                 localStorage.setItem(STORAGE_KEY_COUNTER, layerIdCounter.toString());
+                localStorage.setItem(STORAGE_KEY_LAYER_ORDER, JSON.stringify(layerOrder));
 
                 console.log(`💾 Saved ${layersToSave.length} layers to localStorage`);
             } catch (error) {
@@ -5884,6 +6176,11 @@ LIMIT 10</textarea>
                     showNotification(`Restored ${layersData.length} layers`, 'success');
                 }
 
+                // Restore layer order and sync map z-order to match
+                loadLayerOrderFromStorage();
+                syncLayerOrderToMap();
+                updateLayersPanel();
+
             } catch (error) {
                 console.error('Failed to load layers from storage:', error);
             }
@@ -5894,12 +6191,14 @@ LIMIT 10</textarea>
             if (confirm('Clear all saved layers? This cannot be undone.')) {
                 localStorage.removeItem(STORAGE_KEY_LAYERS);
                 localStorage.removeItem(STORAGE_KEY_COUNTER);
+                localStorage.removeItem(STORAGE_KEY_LAYER_ORDER);
 
                 // Clear current layers
                 layers.forEach(layerInfo => {
                     map.removeLayer(layerInfo.layer);
                 });
                 layers = [];
+                layerOrder = [];
                 layerIdCounter = 0;
 
                 updateLayersPanel();
@@ -5909,6 +6208,41 @@ LIMIT 10</textarea>
 
         // Create popup content
         function createPopupContent(properties) {
+            // Look up enriched NDVI properties if available (for flurstücke with uuid)
+            const featureId = properties.uuid || properties.id;
+            if (featureId && typeof layers !== 'undefined') {
+                for (const layerInfo of layers) {
+                    // Check if this layer has satellite/NDVI results (by metadata or by checking features)
+                    const hasSatelliteMetadata = layerInfo.metadata?.is_satellite_result;
+                    const hasNDVIFeatures = layerInfo.geojsonData?.features?.some(f =>
+                        f.properties?.ndvi_mean !== undefined ||
+                        f.properties?.evi_mean !== undefined ||
+                        f.properties?.ndwi_mean !== undefined
+                    );
+
+                    if ((hasSatelliteMetadata || hasNDVIFeatures) && layerInfo.geojsonData?.features) {
+                        const enrichedFeature = layerInfo.geojsonData.features.find(f =>
+                            (f.properties.uuid === featureId) || (f.properties.id === featureId)
+                        );
+                        if (enrichedFeature && enrichedFeature.properties) {
+                            const ep = enrichedFeature.properties;
+                            if (ep.ndvi_mean !== undefined || ep.evi_mean !== undefined ||
+                                ep.ndwi_mean !== undefined || ep.ndbi_mean !== undefined) {
+                                // Merge enriched properties into original
+                                properties = { ...properties, ...ep };
+                                console.log('[DEBUG] Merged enriched properties for', featureId, ep);
+                            }
+                        }
+                    }
+                }
+            }
+
+            console.log('[DEBUG] createPopupContent properties:', properties);
+            console.log('[DEBUG] NDVI values present?', {
+                ndvi_mean: properties.ndvi_mean,
+                ndvi_min: properties.ndvi_min,
+                ndvi_max: properties.ndvi_max
+            });
             // Determine the feature name and type
             let featureName = properties.name || properties.title || properties.oteil ||
                 properties.amenity || properties.highway || properties.type || 'Feature Details';
@@ -5939,50 +6273,54 @@ LIMIT 10</textarea>
             else if (properties.operator) secondaryIcon = 'fa-building';
             else if (properties.oteil || properties.bezirk) secondaryIcon = 'fa-map-location-dot';
 
-            // Build popup HTML with dark frosted glass design
-            let popupContent = '<div style="background: rgba(30, 30, 35, 0.92); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); overflow: hidden; width: 380px; display: flex; flex-direction: column;">';
+            let popupContent = '<div class="feature-popup">';
 
             // Header with icon and type
-            popupContent += '<div style="display: flex; align-items: center; gap: 14px; padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); flex-shrink: 0;">';
+            popupContent += '<div class="feature-popup-header">';
             if (iconHtml) {
                 // Use multi-source icon
-                popupContent += `<div style="font-size: 20px; color: var(--accent-primary); width: 24px; text-align: center; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">${iconHtml}</div>`;
+                popupContent += `<div class="feature-popup-icon">${iconHtml}</div>`;
             } else {
                 // Fallback to Font Awesome
-                popupContent += `<i style="font-size: 24px; color: var(--accent-primary); width: 24px; text-align: center; flex-shrink: 0;" class="fas ${headerIcon}"></i>`;
+                popupContent += `<i class="fas ${headerIcon} feature-popup-icon"></i>`;
             }
-            popupContent += `<h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px;">${featureType.replace(/_/g, ' ')}</h3>`;
+            popupContent += `<h3 class="feature-popup-title">${featureType.replace(/_/g, ' ')}</h3>`;
             popupContent += '</div>';
 
             // Brand/Operator subtitle
             let brandInfo = properties.brand || properties.operator || properties.oteil || properties.bezirk || '';
             if (brandInfo) {
-                popupContent += '<div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03); flex-shrink: 0;">';
+                popupContent += '<div class="feature-popup-brand">';
                 // Use Lucide icon for secondary (with Font Awesome fallback)
                 let lucideSecondaryIcon = 'building-2';
                 if (properties.brand) lucideSecondaryIcon = 'tag';
                 else if (properties.operator) lucideSecondaryIcon = 'building-2';
                 else if (properties.oteil || properties.bezirk) lucideSecondaryIcon = 'map-pin';
-                popupContent += `<i data-lucide="${lucideSecondaryIcon}" style="font-size: 14px; color: #b0b0b0; width: 16px; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;"></i>`;
-                popupContent += `<h4 style="margin: 0; font-size: 16px; font-weight: 600; color: #e0e0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.2px;">${brandInfo}</h4>`;
+                popupContent += `<i data-lucide="${lucideSecondaryIcon}" class="feature-popup-brand-icon"></i>`;
+                popupContent += `<h4 class="feature-popup-brand-name">${brandInfo}</h4>`;
                 popupContent += '</div>';
             }
 
             // Information grid (two-column layout) - with overflow handling
-            popupContent += '<div style="padding: 12px 16px; display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; max-height: 240px; overflow-y: auto; font-size: 12px; flex-grow: 1;">';
+            popupContent += '<div class="popup-info-grid feature-popup-info-grid">';
 
-            // Priority keys to show first
+            // Priority keys to show first (lower number = higher priority)
             const keyPriority = {
-                'cash_in': 1, 'cash in': 1,
-                'check_date': 2, 'check date': 2,
-                'indoor': 3,
-                'opening_hours': 4, 'opening hours': 4,
-                'wheelchair': 5,
-                'osm_id': 6, 'osm id': 6,
-                'website': 7,
-                'phone': 8, 'contact:phone': 8,
-                'address': 9, 'addr:street': 9,
-                'email': 10, 'contact:email': 10
+                'ndvi_mean': 1, 'evi_mean': 1, 'ndwi_mean': 1, 'ndbi_mean': 1, 'savi_mean': 1,
+                'ndvi_min': 2, 'evi_min': 2, 'ndwi_min': 2, 'ndbi_min': 2, 'savi_min': 2,
+                'ndvi_max': 3, 'evi_max': 3, 'ndwi_max': 3, 'ndbi_max': 3, 'savi_max': 3,
+                'ndvi_std': 4, 'evi_std': 4, 'ndwi_std': 4, 'ndbi_std': 4, 'savi_std': 4,
+                'pixel_count': 5,
+                'cash_in': 6, 'cash in': 6,
+                'check_date': 7, 'check date': 7,
+                'indoor': 8,
+                'opening_hours': 9, 'opening hours': 9,
+                'wheelchair': 10,
+                'osm_id': 11, 'osm id': 11,
+                'website': 12,
+                'phone': 13, 'contact:phone': 13,
+                'address': 14, 'addr:street': 14,
+                'email': 15, 'contact:email': 15
             };
 
             const excludeKeys = new Set([
@@ -5991,16 +6329,16 @@ LIMIT 10</textarea>
                 'area_sq_km', 'area_ha', 'area', 'oteil', 'bezirk', 'title'
             ]);
 
-            const visibleEntries = Object.entries(properties)
+            const allEntries = Object.entries(properties)
                 .filter(([key]) => !excludeKeys.has(key) && properties[key] !== null && properties[key] !== undefined && properties[key] !== '')
                 .sort((a, b) => {
                     const aPriority = keyPriority[a[0].toLowerCase()] || 999;
                     const bPriority = keyPriority[b[0].toLowerCase()] || 999;
                     return aPriority - bPriority;
-                })
-                .slice(0, 10);  // Show max 10 attributes
+                });
 
-            visibleEntries.forEach(([key, value]) => {
+            allEntries.forEach(([key, value], index) => {
+                const isExtra = index >= 10;
                 let displayKey = key.replace(/_/g, ' ').replace(/:/g, ' ').replace('addr ', '').replace('contact ', '');
                 let displayValue = value;
 
@@ -6010,6 +6348,27 @@ LIMIT 10</textarea>
                 } else if (typeof value === 'number') {
                     // Add semantic descriptions for analysis result columns
                     const analysisDescriptions = {
+                        'ndvi_mean': { icon: '🌿', suffix: ' NDVI (mean)' },
+                        'ndvi_min': { icon: '🌿', suffix: ' NDVI (min)' },
+                        'ndvi_max': { icon: '🌿', suffix: ' NDVI (max)' },
+                        'ndvi_std': { icon: '🌿', suffix: ' NDVI (std)' },
+                        'evi_mean': { icon: '🌿', suffix: ' EVI (mean)' },
+                        'evi_min': { icon: '🌿', suffix: ' EVI (min)' },
+                        'evi_max': { icon: '🌿', suffix: ' EVI (max)' },
+                        'evi_std': { icon: '🌿', suffix: ' EVI (std)' },
+                        'ndwi_mean': { icon: '💧', suffix: ' NDWI (mean)' },
+                        'ndwi_min': { icon: '💧', suffix: ' NDWI (min)' },
+                        'ndwi_max': { icon: '💧', suffix: ' NDWI (max)' },
+                        'ndwi_std': { icon: '💧', suffix: ' NDWI (std)' },
+                        'ndbi_mean': { icon: '🏗️', suffix: ' NDBI (mean)' },
+                        'ndbi_min': { icon: '🏗️', suffix: ' NDBI (min)' },
+                        'ndbi_max': { icon: '🏗️', suffix: ' NDBI (max)' },
+                        'ndbi_std': { icon: '🏗️', suffix: ' NDBI (std)' },
+                        'savi_mean': { icon: '🌾', suffix: ' SAVI (mean)' },
+                        'savi_min': { icon: '🌾', suffix: ' SAVI (min)' },
+                        'savi_max': { icon: '🌾', suffix: ' SAVI (max)' },
+                        'savi_std': { icon: '🌾', suffix: ' SAVI (std)' },
+                        'pixel_count': { icon: '📊', suffix: ' pixels' },
                         'hospitals': { icon: '🏥', suffix: ' healthcare facilities' },
                         'pharmacies': { icon: '💊', suffix: ' pharmacies' },
                         'clinics': { icon: '🩺', suffix: ' clinics' },
@@ -6054,18 +6413,20 @@ LIMIT 10</textarea>
                 // Capitalize first letter
                 displayKey = displayKey.charAt(0).toUpperCase() + displayKey.slice(1);
 
-                popupContent += `<div style="color: #a0a0a0; font-weight: 500; font-size: 13px; word-break: break-word;">${displayKey}</div>`;
-                popupContent += `<div style="color: #f0f0f0; text-align: right; font-weight: 600; font-size: 13px; word-break: break-word;">${displayValue}</div>`;
+                const entryClass = isExtra ? 'popup-extra-entry feature-popup-key' : 'feature-popup-key';
+                const valueClass = isExtra ? 'popup-extra-entry feature-popup-value' : 'feature-popup-value';
+                popupContent += `<div class="${entryClass}">${displayKey}</div>`;
+                popupContent += `<div class="${valueClass}">${displayValue}</div>`;
             });
 
             popupContent += '</div>';
 
             // Footer with action button
-            popupContent += '<div style="padding: 12px 16px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 10px; background: rgba(255, 255, 255, 0.03); flex-shrink: 0;">';
+            popupContent += '<div class="feature-popup-footer">';
             if (properties.website) {
-                popupContent += `<a href="${properties.website}" target="_blank" style="flex: 1; padding: 11px 14px; background: rgba(59, 130, 246, 0.2); color: #64B5F6; border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 8px; text-align: center; text-decoration: none; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; font-family: inherit;">Website</a>`;
+                popupContent += `<a href="${properties.website}" target="_blank" class="popup-button">Website</a>`;
             }
-            popupContent += `<button class="popup-button" style="flex: 1; padding: 11px 14px; background: rgba(59, 130, 246, 0.2); color: #64B5F6; border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; font-family: inherit;">More Details</button>`;
+            popupContent += `<button class="popup-button popup-expand-btn" data-expanded="false">More Details</button>`;
             popupContent += '</div>';
 
             popupContent += '</div>';
@@ -6100,6 +6461,201 @@ LIMIT 10</textarea>
             }
         }
 
+        function isOrderItemLayerId(item) {
+            if (typeof item === 'number') return true;
+            return typeof item === 'string' && !item.startsWith('group:');
+        }
+        function isOrderItemGroup(item) {
+            return typeof item === 'string' && item.startsWith('group:');
+        }
+        function getGroupIdFromOrderItem(item) {
+            return typeof item === 'string' ? item.replace('group:', '') : null;
+        }
+
+        function getLayersByGroupId(groupId) {
+            return layers.filter(l => l.metadata?.routeGroupId === groupId);
+        }
+
+        function getOrderItemDisplayIndex(orderItem, orderArray) {
+            return orderArray.indexOf(orderItem);
+        }
+
+        function getOrderItemBounds(orderItem, orderArray, allLayers) {
+            if (isOrderItemLayerId(orderItem)) {
+                const idx = orderArray.indexOf(orderItem);
+                return { start: idx, end: idx };
+            }
+            const groupId = getGroupIdFromOrderItem(orderItem);
+            const groupLayers = getLayersByGroupId(groupId);
+            const groupOrderItems = orderArray.filter(item => {
+                if (isOrderItemGroup(item)) return getGroupIdFromOrderItem(item) === groupId;
+                return item === orderItem;
+            });
+            const firstIdx = orderArray.indexOf(groupOrderItems[0]);
+            const lastIdx = orderArray.indexOf(groupOrderItems[groupOrderItems.length - 1]);
+            return { start: firstIdx, end: lastIdx };
+        }
+
+        function insertOrderItemAt(orderArray, item, targetIndex) {
+            const newArr = orderArray.filter(it => it !== item);
+            const insertAt = newArr.length;
+            if (targetIndex < 0) targetIndex = 0;
+            if (targetIndex >= newArr.length) {
+                newArr.push(item);
+            } else {
+                newArr.splice(targetIndex, 0, item);
+            }
+            return newArr;
+        }
+
+        function rebuildLayerOrderFromDOM() {
+            const newOrder = [];
+            const layersList = document.getElementById('layersList');
+            for (const child of layersList.children) {
+                if (child.classList.contains('route-group')) {
+                    const groupId = child.dataset.groupId;
+                    newOrder.push(`group:${groupId}`);
+                    const childrenEl = child.querySelector('.route-group-children');
+                    if (childrenEl) {
+                        for (const card of childrenEl.children) {
+                            const layerId = card.dataset.layerId;
+                            if (layerId != null) {
+                                const original = layerOrder.find(item => String(item) === String(layerId));
+                                newOrder.push(original !== undefined ? original : layerId);
+                            }
+                        }
+                    }
+                } else if (child.classList.contains('layers-list-item')) {
+                    const layerId = child.dataset.layerId;
+                    const original = layerOrder.find(item => String(item) === String(layerId));
+                    newOrder.push(original !== undefined ? original : layerId);
+                }
+            }
+            return newOrder;
+        }
+
+        function initSortable() {
+            if (_topLevelSortable) { _topLevelSortable.destroy(); _topLevelSortable = null; }
+            _groupSortables.forEach(s => s.destroy());
+            _groupSortables.clear();
+
+            const layersList = document.getElementById('layersList');
+            if (!layersList) return;
+
+            _topLevelSortable = Sortable.create(layersList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                handle: '.sortable-handle',
+                draggable: '.layers-list-item, .route-group',
+                filter: '.btn, .toggle, .dropdown, input, a',
+                preventOnFilter: true,
+                onStart() { isDragging = true; },
+                onEnd(evt) {
+                    isDragging = false;
+                    if (evt.from !== layersList || evt.to !== layersList) return;
+                    layerOrder = rebuildLayerOrderFromDOM();
+                    syncLayerOrderToMap();
+                    saveLayerOrderToStorage();
+                }
+            });
+
+            document.querySelectorAll('.route-group-children').forEach(childrenEl => {
+                const groupEl = childrenEl.closest('.route-group');
+                if (!groupEl) return;
+                const groupId = groupEl.dataset.groupId;
+                const s = Sortable.create(childrenEl, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    dragClass: 'sortable-drag',
+                    handle: '.sortable-handle',
+                    filter: '.btn, .toggle, .dropdown, input, a',
+                    preventOnFilter: true,
+                    onStart() { isDragging = true; },
+                    onEnd() {
+                        isDragging = false;
+                        layerOrder = rebuildLayerOrderFromDOM();
+                        syncLayerOrderToMap();
+                        saveLayerOrderToStorage();
+                    }
+                });
+                _groupSortables.set(groupId, s);
+            });
+        }
+
+        function syncLayerOrderToMap() {
+            layers.forEach(l => {
+                if (l.layer && map.hasLayer(l.layer)) {
+                    map.removeLayer(l.layer);
+                }
+            });
+            // Reverse to ensure first item in layerOrder = top of map
+            const reversedOrder = [...layerOrder].reverse();
+            reversedOrder.forEach(orderItem => {
+                if (isOrderItemLayerId(orderItem)) {
+                    const layerInfo = layers.find(l => l.id === orderItem);
+                    if (layerInfo && layerInfo.visible && layerInfo.layer) {
+                        try {
+                            layerInfo.layer.addTo(map);
+                        } catch (e) {
+                            const newLayer = createStyledLayer(layerInfo.geojsonData, layerInfo.style);
+                            layerInfo.layer = newLayer;
+                            newLayer.addTo(map);
+                        }
+                    }
+                } else {
+                    const groupId = getGroupIdFromOrderItem(orderItem);
+                    const groupLayers = getLayersByGroupId(groupId);
+                    groupLayers.forEach(layerInfo => {
+                        if (layerInfo.visible && layerInfo.layer) {
+                            try {
+                                layerInfo.layer.addTo(map);
+                            } catch (e) {
+                                const newLayer = createStyledLayer(layerInfo.geojsonData, layerInfo.style);
+                                layerInfo.layer = newLayer;
+                                newLayer.addTo(map);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function saveLayerOrderToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY_LAYER_ORDER, JSON.stringify(layerOrder));
+            } catch (err) {
+                console.warn('Failed to save layer order:', err);
+            }
+        }
+
+        function loadLayerOrderFromStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY_LAYER_ORDER);
+                if (saved) {
+                    layerOrder = JSON.parse(saved);
+                    const validOrder = layerOrder.filter(item => {
+                        if (isOrderItemLayerId(item)) return layers.some(l => l.id === item);
+                        if (isOrderItemGroup(item)) {
+                            const gid = getGroupIdFromOrderItem(item);
+                            return layers.some(l => l.metadata?.routeGroupId === gid);
+                        }
+                        return false;
+                    });
+                    layerOrder = validOrder;
+                    layers.forEach(l => {
+                        if (!layerOrder.includes(l.id) && !l.metadata?.routeGroupId) {
+                            layerOrder.push(l.id);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn('Failed to load layer order:', err);
+            }
+        }
+
         // Update layers panel
         function updateLayersPanel() {
             const layersList = document.getElementById('layersList');
@@ -6111,44 +6667,54 @@ LIMIT 10</textarea>
                         <div class="empty-state-text">No layers yet<br>Search to add results as layers</div>
                     </div>
                 `;
+                // Remove any orphaned GeoJSON/FeatureGroup layers still on map
+                map.eachLayer(layer => {
+                    if (layer instanceof L.GeoJSON || layer instanceof L.FeatureGroup) {
+                        map.removeLayer(layer);
+                    }
+                });
+                if (_topLevelSortable) { _topLevelSortable.destroy(); _topLevelSortable = null; }
+                _groupSortables.forEach(s => s.destroy());
+                _groupSortables.clear();
                 return;
             }
 
             layersList.innerHTML = '';
 
-            // Group route layers by routeGroupId
-            const reversedLayers = [...layers].reverse();
-            const routeGroups = {};
-            const orderedItems = [];  // mixed: either a layer or a group placeholder
-            const processedGroupIds = new Set();
+            // Clean up any layers still on map but not in layers array
+            layers.forEach(l => {
+                if (l.layer && map.hasLayer(l.layer)) {
+                    if (!l.visible) {
+                        map.removeLayer(l.layer);
+                    }
+                }
+            });
 
-            for (const layerInfo of reversedLayers) {
-                const gid = layerInfo.metadata?.routeGroupId;
+            const routeGroups = {};
+            layers.forEach(l => {
+                const gid = l.metadata?.routeGroupId;
                 if (gid) {
                     if (!routeGroups[gid]) routeGroups[gid] = [];
-                    routeGroups[gid].push(layerInfo);
-                    if (!processedGroupIds.has(gid)) {
-                        processedGroupIds.add(gid);
-                        orderedItems.push({ type: 'group', groupId: gid });
-                    }
-                } else {
-                    orderedItems.push({ type: 'layer', layerInfo });
+                    routeGroups[gid].push(l);
                 }
-            }
+            });
 
-            for (const item of orderedItems) {
-                if (item.type === 'group') {
-                    const groupLayers = routeGroups[item.groupId];
+            for (const orderItem of layerOrder) {
+                if (isOrderItemGroup(orderItem)) {
+                    const groupId = getGroupIdFromOrderItem(orderItem);
+                    const groupLayers = routeGroups[groupId] || [];
+                    if (groupLayers.length === 0) continue;
+
                     const label = groupLayers[0]?.metadata?.routeGroupLabel || 'Route';
                     const groupEl = document.createElement('div');
                     groupEl.className = 'route-group';
-                    groupEl.dataset.groupId = item.groupId;
+                    groupEl.dataset.groupId = groupId;
 
-                    // Header
                     const header = document.createElement('div');
                     header.className = 'route-group-header';
                     header.innerHTML = `
                         <div class="group-title">
+                            <i data-lucide="grip-vertical" class="sortable-handle w-4 h-4 opacity-30 flex-shrink-0" style="cursor:grab"></i>
                             <i data-lucide="route" class="w-4 h-4 group-chevron"></i>
                             <span title="${label}">🗺️ ${label}</span>
                             <span style="font-size: 0.7rem; opacity: 0.6;">${groupLayers.length} modes</span>
@@ -6159,40 +6725,64 @@ LIMIT 10</textarea>
                             </button>
                         </div>
                     `;
-                    // Toggle collapse on header click
                     header.addEventListener('click', (e) => {
                         if (e.target.closest('.group-controls')) return;
                         groupEl.classList.toggle('collapsed');
                     });
-                    // Remove-all button
                     header.querySelector('.group-controls button').addEventListener('click', (e) => {
                         e.stopPropagation();
                         [...groupLayers].forEach(l => removeLayer(l.id));
                     });
                     groupEl.appendChild(header);
 
-                    // Children container
                     const childrenEl = document.createElement('div');
                     childrenEl.className = 'route-group-children';
 
-                    for (const layerInfo of groupLayers) {
+                    const orderedGroupLayers = [];
+                    layerOrder.forEach(item => {
+                        if (isOrderItemLayerId(item)) {
+                            const found = groupLayers.find(l => l.id === item);
+                            if (found) orderedGroupLayers.push(found);
+                        }
+                    });
+                    groupLayers.forEach(l => {
+                        if (!orderedGroupLayers.find(ol => ol.id === l.id)) {
+                            orderedGroupLayers.push(l);
+                        }
+                    });
+
+                    orderedGroupLayers.forEach(layerInfo => {
                         childrenEl.appendChild(createLayerCard(layerInfo));
-                    }
+                    });
                     groupEl.appendChild(childrenEl);
                     layersList.appendChild(groupEl);
                 } else {
-                    layersList.appendChild(createLayerCard(item.layerInfo));
+                    const layerInfo = layers.find(l => l.id === orderItem);
+                    if (!layerInfo) {
+                        const standaloneLayers = layers.filter(l => !l.metadata?.routeGroupId && !layerOrder.includes(l.id));
+                        const found = standaloneLayers.find(l => l.id === orderItem);
+                        if (found) layersList.appendChild(createLayerCard(found));
+                    } else if (!layerInfo.metadata?.routeGroupId) {
+                        layersList.appendChild(createLayerCard(layerInfo));
+                    }
                 }
             }
 
-            // Refresh Lucide icons for newly created DOM elements
+            layers.forEach(l => {
+                if (!layerOrder.includes(l.id) && !l.metadata?.routeGroupId) {
+                    layersList.appendChild(createLayerCard(l));
+                }
+            });
+
             if (typeof lucide !== 'undefined') lucide.createIcons();
+            initSortable();
         }
 
         // Create a single layer card element (extracted for reuse in groups)
         function createLayerCard(layerInfo) {
             const layerItem = document.createElement('div');
-            layerItem.className = 'card shadow-sm mb-2 hover:bg-base-200 transition-colors border-l-4';
+            layerItem.className = 'card shadow-sm mb-2 hover:bg-base-200 transition-colors border-l-4 layers-list-item';
+            layerItem.dataset.layerId = layerInfo.id;
 
             const style = layerInfo.style || {};
             const fillColor = style.fillColor || layerInfo.color || '#F1642E';
@@ -6252,19 +6842,16 @@ LIMIT 10</textarea>
             layerItem.innerHTML = `
                 <div class="card-body p-3">
                     <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-semibold text-sm truncate pr-2" title="${layerInfo.name}">${layerInfo.name}</h3>
+                        <div class="flex items-center gap-1 min-w-0">
+                            <i data-lucide="grip-vertical" class="sortable-handle w-4 h-4 opacity-30 flex-shrink-0" style="cursor:grab"></i>
+                            <h3 class="font-semibold text-sm truncate" title="${layerInfo.name}">${layerInfo.name}</h3>
+                        </div>
                         <div class="flex items-center gap-1">
                             <input type="checkbox" class="toggle toggle-xs toggle-primary" ${layerInfo.visible ? 'checked' : ''} onclick="toggleLayer(${layerInfo.id})" />
                             
-                            <div class="dropdown dropdown-end">
-                                <label tabindex="0" class="btn btn-ghost btn-xs btn-circle" onclick="event.stopPropagation()">
-                                    <i data-lucide="more-vertical" class="w-4 h-4"></i>
-                                </label>
-                                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32 border border-base-content/10">
-                                    <li><a onclick="openStyleDialog(event, ${layerInfo.id})"><i data-lucide="palette" class="w-3 h-3"></i> Style</a></li>
-                                    <li><a onclick="openExportDialog(${layerInfo.id}, event)"><i data-lucide="download" class="w-3 h-3"></i> Export</a></li>
-                                </ul>
-                            </div>
+                            <button class="btn btn-ghost btn-xs btn-circle" onclick="showLayerMenu(event, ${layerInfo.id})">
+                                <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                            </button>
                             
                             <button class="btn btn-ghost btn-xs btn-circle text-error" onclick="removeLayer(${layerInfo.id}); event.stopPropagation()">
                                 <i data-lucide="x" class="w-4 h-4"></i>
@@ -6298,6 +6885,44 @@ LIMIT 10</textarea>
         }
 
         // Get time ago string
+        // Floating fixed-position context menu for layer cards
+        // (DaisyUI dropdown was clipped by .layers-list overflow-y:auto)
+        let _activeLayerMenu = null;
+
+        function showLayerMenu(event, layerId) {
+            event.stopPropagation();
+            if (_activeLayerMenu) { _activeLayerMenu.remove(); _activeLayerMenu = null; }
+
+            const btn = event.currentTarget;
+            const rect = btn.getBoundingClientRect();
+
+            const menu = document.createElement('div');
+            menu.className = 'layer-float-menu';
+            menu.style.cssText = `position:fixed;top:${rect.bottom + 4}px;left:${rect.left}px;z-index:9999`;
+            menu.innerHTML = `
+                <ul>
+                    <li><button onclick="showLayerMenu._close();openStyleDialog(null,${layerId})">
+                        <i data-lucide="palette" class="w-3 h-3"></i> Style
+                    </button></li>
+                    <li><button onclick="showLayerMenu._close();openExportDialog(${layerId},null)">
+                        <i data-lucide="download" class="w-3 h-3"></i> Export
+                    </button></li>
+                </ul>`;
+
+            document.body.appendChild(menu);
+            _activeLayerMenu = menu;
+            if (window.lucide) lucide.createIcons();
+
+            setTimeout(() => {
+                document.addEventListener('click', showLayerMenu._close, { once: true });
+            }, 0);
+        }
+
+        showLayerMenu._close = function () {
+            if (_activeLayerMenu) { _activeLayerMenu.remove(); _activeLayerMenu = null; }
+        };
+        window.showLayerMenu = showLayerMenu;
+
         function getTimeAgo(date) {
             const seconds = Math.floor((new Date() - date) / 1000);
 
@@ -6325,7 +6950,7 @@ LIMIT 10</textarea>
                         // Add a separator if there are user-generated layers
                         const separator = document.createElement('div');
                         separator.className = 'layer-separator';
-                        separator.innerHTML = '<div style="padding: 8px 12px; color: #888; font-size: 12px; border-top: 1px solid #444; margin: 8px 0;">📚 Available for Reference:</div>';
+                        separator.innerHTML = '<div style="padding: 8px 12px; color: var(--text-muted); font-size: 12px; border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0;">📚 Available for Reference:</div>';
                         layersList.appendChild(separator);
 
                         // Show available layers as read-only references
@@ -6335,9 +6960,9 @@ LIMIT 10</textarea>
                             layerItem.title = `Reference this layer with @${tempLayer.layer_name} in your next query`;
                             layerItem.innerHTML = `
                                 <div class="layer-header">
-                                    <div class="layer-name" style="font-size: 13px; color: #aaa;">@${tempLayer.layer_name}</div>
+                                    <div class="layer-name" style="font-size: 13px; color: var(--text-primary);">@${tempLayer.layer_name}</div>
                                     <div class="layer-controls">
-                                        <span style="font-size: 11px; color: #888;">${tempLayer.geometry_type}</span>
+                                        <span style="font-size: 11px; color: var(--text-muted);">${tempLayer.geometry_type}</span>
                                     </div>
                                 </div>
                                 <div class="layer-info">
@@ -6386,11 +7011,11 @@ LIMIT 10</textarea>
                     const reasoningBody = document.getElementById('panelReasoningBody');
                     if (reasoningBody && Array.isArray(trace.steps)) {
                         trace.steps.forEach(s => {
-                            const badgeClass = { thought: 'badge-thought', action: 'badge-action', tool_result: 'badge-result', error: 'badge-error' }[s.type] || 'badge-result';
+                            const badgeClass = s.type;
                             const lbl        = { thought: 'Thought', action: 'Action', tool_result: 'Result', error: 'Error' }[s.type] || 'Step';
                             const div = document.createElement('div');
                             div.className = 'agent-step';
-                            div.innerHTML = `<span class="agent-badge ${badgeClass}">${_escHtml(lbl)}</span><span class="agent-content">${_escHtml(String(s.content || '').slice(0, 500))}</span>`;
+                            div.innerHTML = `<span class="agent-badge ${badgeClass}">${lbl}:</span> <span class="agent-content">${_escHtml(String(s.content || '').slice(0, 500))}</span>`;
                             reasoningBody.appendChild(div);
                         });
                     }
@@ -6464,125 +7089,6 @@ LIMIT 10</textarea>
                         <div class="reasoning-box">${layerInfo.reasoning}</div>
                     </div>
                 `;
-            }
-
-            // Display MCDA composite scores and breakdown
-            if (layerInfo.geojsonData && layerInfo.geojsonData.features && layerInfo.geojsonData.features.length > 0) {
-                const firstFeature = layerInfo.geojsonData.features[0];
-                const props = firstFeature.properties || {};
-
-                // Check if this has MCDA scoring (composite_score field)
-                if (props.composite_score !== undefined) {
-                    content += '<div class="operations-section">';
-                    content += '<div class="operations-section-title"><i data-lucide="target" style="width: 18px; height: 18px; margin-right: 6px; display: inline;"></i>Multi-Criteria Scoring Results</div>';
-
-                    // Find score range across all features
-                    let scores = [];
-                    layerInfo.geojsonData.features.forEach(f => {
-                        if (f.properties && f.properties.composite_score !== undefined) {
-                            scores.push(f.properties.composite_score);
-                        }
-                    });
-
-                    if (scores.length > 0) {
-                        const minScore = Math.min(...scores);
-                        const maxScore = Math.max(...scores);
-                        const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
-
-                        content += `
-                            <div style="background: rgba(80, 78, 118, 0.15); padding: 1rem; border-radius: 6px; border-left: 4px solid #504E76; margin-bottom: 1rem;">
-                                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7); margin-bottom: 0.25rem;">Score Range</div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
-                                    <div style="text-align: center;">
-                                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6);">Min</div>
-                                        <div style="font-weight: 700; color: #f5f5f5;">${minScore.toFixed(3)}</div>
-                                    </div>
-                                    <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); border-right: 1px solid rgba(255,255,255,0.1);">
-                                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6);">Avg</div>
-                                        <div style="font-weight: 700; color: #f5f5f5;">${avgScore.toFixed(3)}</div>
-                                    </div>
-                                    <div style="text-align: center;">
-                                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6);">Max</div>
-                                        <div style="font-weight: 700; color: #4CAF50;">${maxScore.toFixed(3)}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-
-                        // Show first feature's detailed breakdown as example
-                        const exampleProps = firstFeature.properties || {};
-                        if (exampleProps.score_breakdown && typeof exampleProps.score_breakdown === 'object') {
-                            content += '<div style="background: rgba(var(--accent-primary-rgb), 0.08); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">';
-                            content += '<div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #f5f5f5;">Score Breakdown (Example: ' + exampleProps.name + ')</div>';
-
-                            const breakdown = exampleProps.score_breakdown;
-                            let totalContribution = 0;
-                            for (const criterion in breakdown) {
-                                if (breakdown[criterion] && breakdown[criterion].contribution !== undefined) {
-                                    totalContribution += breakdown[criterion].contribution;
-                                }
-                            }
-
-                            for (const criterion in breakdown) {
-                                const data = breakdown[criterion];
-                                if (!data) continue;
-
-                                const normalized = data.normalized || 0;
-                                const weight = data.weight || 0;
-                                const contribution = data.contribution || 0;
-                                const percentContrib = totalContribution > 0 ? (contribution / totalContribution * 100) : 0;
-
-                                content += `
-                                    <div style="margin-bottom: 0.75rem;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-                                            <span style="font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 500;">${criterion.replace(/_/g, ' ')}</span>
-                                            <span style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">Score: ${normalized.toFixed(3)} (${percentContrib.toFixed(1)}%)</span>
-                                        </div>
-                                        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-                                            <div style="height: 100%; width: ${normalized * 100}%; background: linear-gradient(90deg, #504E76, #F1642E); transition: width 0.3s ease;"></div>
-                                        </div>
-                                    </div>
-                                `;
-                            }
-
-                            content += '</div>';
-                        }
-
-                        // Show included/excluded criteria if available
-                        if (exampleProps.included_criteria || exampleProps.excluded_criteria) {
-                            content += '<div style="font-size: 0.9rem;">';
-
-                            if (exampleProps.included_criteria && exampleProps.included_criteria.length > 0) {
-                                const criteria = Array.isArray(exampleProps.included_criteria) ? exampleProps.included_criteria : [];
-                                content += `
-                                    <div style="margin-bottom: 0.5rem;">
-                                        <div style="font-weight: 600; color: #4CAF50; margin-bottom: 0.3rem; font-size: 0.85rem;"><i data-lucide="check" style="width: 14px; height: 14px; margin-right: 4px; display: inline;"></i>Included Criteria</div>
-                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
-                                            ${criteria.map(c => `<span style="background: rgba(76, 175, 80, 0.2); border: 1px solid rgba(76, 175, 80, 0.4); padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">${c.replace(/osm_/g, '').replace(/_/g, ' ')}</span>`).join('')}
-                                        </div>
-                                    </div>
-                                `;
-                            }
-
-                            if (exampleProps.excluded_criteria && exampleProps.excluded_criteria.length > 0) {
-                                const excluded = Array.isArray(exampleProps.excluded_criteria) ? exampleProps.excluded_criteria : [];
-                                const excludedNames = excluded.map(e => typeof e === 'object' ? e.name : e);
-                                content += `
-                                    <div>
-                                        <div style="font-weight: 600; color: #E91E63; margin-bottom: 0.3rem; font-size: 0.85rem;">✗ Excluded Criteria</div>
-                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
-                                            ${excludedNames.map(c => `<span style="background: rgba(233, 30, 99, 0.2); border: 1px solid rgba(233, 30, 99, 0.4); padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">${c.replace(/osm_/g, '').replace(/_/g, ' ')}</span>`).join('')}
-                                        </div>
-                                    </div>
-                                `;
-                            }
-
-                            content += '</div>';
-                        }
-                    }
-
-                    content += '</div>';
-                }
             }
 
             // Display legend for density-based scoring (e.g., family-friendly areas, amenity density)
@@ -6846,8 +7352,18 @@ LIMIT 10</textarea>
             }
         }
 
+        // Sync Leaflet z-order to match layers array (index 0 = bottom, last = top)
+        function syncLayerZOrder() {
+            layers.forEach(layerInfo => {
+                if (layerInfo.visible && map.hasLayer(layerInfo.layer)) {
+                    layerInfo.layer.bringToFront();
+                }
+            });
+        }
+
         // Toggle layer visibility
         function toggleLayer(layerId) {
+            if (isDragging) return;
             const layerInfo = layers.find(l => l.id === layerId);
             if (!layerInfo) return;
 
@@ -6855,6 +7371,7 @@ LIMIT 10</textarea>
 
             if (layerInfo.visible) {
                 map.addLayer(layerInfo.layer);
+                syncLayerOrderToMap();
             } else {
                 map.removeLayer(layerInfo.layer);
             }
@@ -6869,6 +7386,16 @@ LIMIT 10</textarea>
 
             map.removeLayer(layerInfo.layer);
             layers = layers.filter(l => l.id !== layerId);
+            layerOrder = layerOrder.filter(item => item !== layerId);
+
+            // If this was the last layer in a route group, clean up the group entry
+            const groupId = layerInfo.metadata?.routeGroupId;
+            if (groupId) {
+                const remainingInGroup = layers.filter(l => l.metadata?.routeGroupId === groupId);
+                if (remainingInGroup.length === 0) {
+                    layerOrder = layerOrder.filter(item => item !== `group:${groupId}`);
+                }
+            }
 
             // Remove legend if this was the active layer
             clearPanelLegend();
@@ -6906,6 +7433,30 @@ LIMIT 10</textarea>
             document.querySelectorAll('.layer-dropdown-menu').forEach(menu => {
                 menu.classList.remove('active');
             });
+        });
+
+        // Expandable popup for "More Details" button
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.popup-expand-btn');
+            if (!btn) return;
+
+            const popup = btn.closest('.leaflet-popup-content');
+            if (!popup) return;
+
+            const infoGrid = popup.querySelector('.popup-info-grid');
+            const isExpanded = btn.dataset.expanded === 'true';
+
+            if (isExpanded) {
+                infoGrid.style.maxHeight = '240px';
+                popup.querySelectorAll('.popup-extra-entry').forEach(el => el.style.display = 'none');
+                btn.textContent = 'More Details';
+                btn.dataset.expanded = 'false';
+            } else {
+                infoGrid.style.maxHeight = '500px';
+                popup.querySelectorAll('.popup-extra-entry').forEach(el => el.style.display = '');
+                btn.textContent = 'Show Less';
+                btn.dataset.expanded = 'true';
+            }
         });
 
         // Open export dialog
@@ -7316,6 +7867,7 @@ LIMIT 10</textarea>
 
             // Close dialog if not live preview
             if (!livePreview) {
+                saveLayersToStorage();
                 closeStyleDialog();
                 showNotification(`Style applied to "${layerInfo.name}"`, 'success');
             }
@@ -7651,17 +8203,9 @@ LIMIT 10</textarea>
 
             // Create colored circle div with glassmorphic frosted effect
             const bgCircle = document.createElement('div');
-            bgCircle.style.position = 'absolute';
-            bgCircle.style.width = '100%';
-            bgCircle.style.height = '100%';
-            bgCircle.style.borderRadius = '50%';
-            // Glassmorphic effect: semi-transparent background with frosted blur
-            bgCircle.style.backgroundColor = `rgba(255, 255, 255, 0.15)`;
-            bgCircle.style.backdropFilter = 'blur(12px)';
-            bgCircle.style.webkitBackdropFilter = 'blur(12px)'; // Safari support
-            bgCircle.style.border = `1.5px solid ${iconColor}`;
+            bgCircle.className = 'marker-glass-circle';
+            bgCircle.style.borderColor = iconColor;
             bgCircle.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.1), 0 0 12px ${iconColor}`;
-            bgCircle.style.transition = 'transform 0.2s ease';
 
             markerContainer.appendChild(bgCircle);
 
@@ -7890,7 +8434,7 @@ LIMIT 10</textarea>
                     const marker = createMarkerWithIcon(point, feature, iconColor, this.styleConfig.selectedIcon, this.currentZoom);
 
                     if (feature.properties) {
-                        marker.bindPopup(createPopupContent(feature.properties), {
+                        marker.bindPopup(() => createPopupContent(feature.properties), {
                             maxWidth: 400,
                             maxHeight: 500,
                             autoPan: true,
@@ -7968,7 +8512,7 @@ LIMIT 10</textarea>
                     );
 
                     if (markerData.feature.properties) {
-                        marker.bindPopup(createPopupContent(markerData.feature.properties), {
+                        marker.bindPopup(() => createPopupContent(markerData.feature.properties), {
                             maxWidth: 400,
                             maxHeight: 500,
                             autoPan: true,
@@ -8180,7 +8724,7 @@ LIMIT 10</textarea>
                 onEachFeature: function (feature, layer) {
                     // Add popups for non-point features
                     if (feature.properties) {
-                        layer.bindPopup(createPopupContent(feature.properties), {
+                        layer.bindPopup(() => createPopupContent(feature.properties), {
                             maxWidth: 400,
                             maxHeight: 500,
                             autoPan: true,
@@ -8818,6 +9362,14 @@ LIMIT 10</textarea>
         }
 
         async function selectFeatureForContext(feature, layer, event) {
+            console.log('[DEBUG] selectFeatureForContext called with:', {
+                featureId: feature.id,
+                featureProperties: feature.properties,
+                hasNDVI: {
+                    ndvi_mean: feature.properties?.ndvi_mean,
+                    ndvi_min: feature.properties?.ndvi_min
+                }
+            });
             const featureName = feature.properties?.name ||
                 feature.properties?.amenity ||
                 feature.geometry.type;
@@ -8858,16 +9410,8 @@ LIMIT 10</textarea>
             const pillText = document.getElementById('pillText');
 
             if (selectedFeatures.length > 0) {
-                // Build list of selected feature names for hover tooltip
-                const selectedNames = selectedFeatures.map(f =>
-                    f.properties?.name ||
-                    f.properties?.amenity ||
-                    f.geometry.type
-                ).join(', ');
-
                 // Show counter: "N items selected"
                 pillText.textContent = `${selectedFeatures.length} item${selectedFeatures.length !== 1 ? 's' : ''} selected`;
-                pill.title = `Selected: ${selectedNames}`;  // Show list on hover
 
                 pill.style.display = 'inline-flex';
                 pill.style.animation = 'none'; // Reset animation
@@ -8876,7 +9420,6 @@ LIMIT 10</textarea>
                 }, 10);
             } else {
                 pill.style.display = 'none';
-                pill.title = '';
             }
 
             // Update Directions button state based on selection count
@@ -9171,8 +9714,8 @@ LIMIT 10</textarea>
             }
         }
 
-        // Global LLM provider selection (default: gemini)
-        window.selectedLLMProvider = 'gemini';
+        // Global LLM provider selection (default: deepseek)
+        window.selectedLLMProvider = 'deepseek';
 
         // Set active LLM provider from dropdown
         function selectLLMProvider(provider, displayName) {
@@ -9186,42 +9729,11 @@ LIMIT 10</textarea>
 
         // Get selected LLM provider
         function getSelectedLLMProvider() {
-            return window.selectedLLMProvider || 'gemini';
-        }
-
-        // Check provider health and update UI
-        async function checkProvidersHealth() {
-            // Check Ollama (Gemma3) availability
-            try {
-                const response = await fetch('http://localhost:11434/api/tags', {
-                    method: 'GET',
-                    timeout: 2000
-                });
-
-                if (response.ok) {
-                    // Ollama is available - enable Gemma3
-                    const gemma3Radio = document.getElementById('llmGemma3');
-                    const gemma3Label = document.getElementById('gemma3Label');
-                    const gemma3Dot = gemma3Label.querySelector('.llm-status-dot');
-
-                    gemma3Radio.disabled = false;
-                    gemma3Label.classList.remove('llm-unavailable');
-                    gemma3Label.title = 'Use local Gemma3 model (faster, no API key needed)';
-                    gemma3Dot.classList.remove('unavailable');
-                    gemma3Dot.classList.add('available');
-
-                    console.log('✅ Ollama/Gemma3 is available');
-                }
-            } catch (error) {
-                console.log('⚠️ Ollama/Gemma3 not available - keeping DeepSeek as default');
-                // Keep default state - Gemma3 disabled
-            }
+            return window.selectedLLMProvider || 'deepseek';
         }
 
         // Check provider health on page load
         window.addEventListener('load', () => {
-            checkProvidersHealth();
-            // Initialize Lucide icons on page load
             initializeLucideIcons();
 
             // Load saved layers from localStorage
@@ -9243,310 +9755,6 @@ LIMIT 10</textarea>
                 }
             }, 100);
         });
-
-        // Render street light coverage with glow animation
-        function renderStreetLightCoverage(coverageData, query) {
-            console.log('💡 Rendering street light coverage...');
-
-            // Extract lights and coverage areas
-            const lights = coverageData.lights;
-            const coverageAreas = coverageData.coverage_areas;
-            const metadata = coverageData.metadata;
-
-            // Create combined GeoJSON with both lights and coverage areas
-            const combinedFeatures = [];
-
-            // Add coverage area polygons first (so they render behind points)
-            if (coverageAreas && coverageAreas.features) {
-                // Sort coverage areas by gradient_zone (outermost first, innermost last)
-                // This ensures proper layering for the gradient fade effect
-                const sortedCoverageAreas = [...coverageAreas.features].sort((a, b) => {
-                    const zoneA = a.properties?.gradient_zone !== undefined ? a.properties.gradient_zone : -1;
-                    const zoneB = b.properties?.gradient_zone !== undefined ? b.properties.gradient_zone : -1;
-                    // Lower zone numbers (0=outermost) should render first (at bottom)
-                    return zoneA - zoneB;
-                });
-
-                sortedCoverageAreas.forEach(feature => {
-                    // Mark as coverage area for special styling
-                    feature.properties = feature.properties || {};
-                    feature.properties.feature_type = 'coverage_area';
-                    feature.properties.is_light_coverage = true;
-                    combinedFeatures.push(feature);
-                });
-            }
-
-            // Add light points
-            if (lights && lights.features) {
-                lights.features.forEach(feature => {
-                    // Mark as street light for special styling
-                    feature.properties = feature.properties || {};
-                    feature.properties.feature_type = 'street_light';
-                    feature.properties.is_street_light = true;
-                    combinedFeatures.push(feature);
-                });
-            }
-
-            const combinedGeoJSON = {
-                type: 'FeatureCollection',
-                features: combinedFeatures
-            };
-
-            // Generate layer name
-            const lightCount = lights && lights.features ? lights.features.length : 0;
-            const layerName = `Street Light Coverage (${lightCount} lights)`;
-
-            // Clear previous layers in single mode
-            if (queryMode === 'single') {
-                clearAllQueries();
-            }
-
-            // Add layer with special styling
-            addStreetLightCoverageLayer(layerName, combinedGeoJSON, query, metadata);
-
-            console.log(`✅ Rendered ${lightCount} lights with coverage areas`);
-        }
-
-        // Add street light coverage layer with custom styling and glow effects
-        function addStreetLightCoverageLayer(name, geojsonData, query, metadata) {
-            const numericId = ++layerIdCounter;
-
-            // Create Leaflet layer with custom styling for lights and coverage
-            const geojsonLayer = L.geoJSON(geojsonData, {
-                style: function (feature) {
-                    const props = feature.properties || {};
-
-                    // Style coverage areas
-                    if (props.feature_type === 'coverage_area' || props.is_light_coverage) {
-                        const coverageType = props.coverage_type || 'circle';
-
-                        // Use gradient opacity if available, otherwise default
-                        const fillOpacity = props.gradient_opacity !== undefined
-                            ? props.gradient_opacity
-                            : 0.15;
-
-                        // Innermost zones (highest opacity) have slightly more visible borders
-                        const borderOpacity = props.gradient_zone !== undefined
-                            ? (props.gradient_zone === 3 ? 0.5 : 0.2)  // Zone 3 = innermost
-                            : 0.4;
-
-                        const borderWeight = props.gradient_zone !== undefined
-                            ? (props.gradient_zone === 3 ? 1.5 : 0.5)  // Zone 3 = innermost
-                            : 1;
-
-                        return {
-                            fillColor: '#FFD700',  // Gold
-                            fillOpacity: fillOpacity,  // Dynamic opacity for gradient effect
-                            color: '#FF8C00',      // Dark orange border
-                            weight: borderWeight,
-                            opacity: borderOpacity,
-                            className: 'light-coverage-area light-glow'  // Add glow animation class
-                        };
-                    }
-
-                    // Default style for other features
-                    return {
-                        fillColor: '#FFB162',
-                        fillOpacity: 0.3,
-                        color: '#ffffff',
-                        weight: 2
-                    };
-                },
-                pointToLayer: function (feature, latlng) {
-                    const props = feature.properties || {};
-
-                    // Style street lights
-                    if (props.feature_type === 'street_light' || props.is_street_light) {
-                        const rotation = props.rotation || 0;
-                        const leuchtentyp = props.leuchtentyp || '';
-
-                        // Determine if directional (cantilever or attached)
-                        const isDirectional = leuchtentyp.toLowerCase().includes('ausleger') ||
-                            leuchtentyp.toLowerCase().includes('ansatz');
-
-                        // Create marker with glow effect
-                        const marker = L.circleMarker(latlng, {
-                            radius: 6,                    // Larger radius for "on" lights
-                            fillColor: '#FFD700',         // Bright gold when "on"
-                            color: '#FFA500',             // Orange border
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.9,
-                            className: 'street-light-marker light-glow-marker'  // Glow animation
-                        });
-
-                        // Add popup with light details
-                        const popupContent = `
-                            <div style="min-width: 200px;">
-                                <h4 style="margin: 0 0 8px 0; color: #FFD700;">
-                                    💡 Street Light
-                                </h4>
-                                <div style="font-size: 13px; line-height: 1.6;">
-                                    ${props.strasse ? `<div><strong>Street:</strong> ${props.strasse}</div>` : ''}
-                                    ${props.leuchtentyp ? `<div><strong>Type:</strong> ${props.leuchtentyp}</div>` : ''}
-                                    ${props.rotation !== undefined ? `<div><strong>Orientation:</strong> ${Math.round(props.rotation)}°</div>` : ''}
-                                    ${props.status ? `<div><strong>Status:</strong> ${props.status}</div>` : ''}
-                                    ${props.betriebsart ? `<div><strong>Power:</strong> ${props.betriebsart}</div>` : ''}
-                                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2);">
-                                        <strong>Coverage:</strong> ${isDirectional ? 'Directional (120°)' : 'Omnidirectional'}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-
-                        // If directional, create layer group with arrow indicator
-                        if (isDirectional && rotation !== undefined && rotation !== null) {
-                            // Bind popup to marker before adding to group
-                            marker.bindPopup(popupContent);
-
-                            // Calculate arrow endpoint (pointing in the direction of beam)
-                            // rotation: 0° = North, 90° = East, 180° = South, 270° = West
-                            const arrowLength = 0.0002; // degrees (approx 20-25m)
-
-                            // Convert rotation to radians (0° = North, clockwise)
-                            // Leaflet uses standard math: 0° = East, counter-clockwise
-                            const angleRad = (90 - rotation) * Math.PI / 180;
-
-                            const arrowEndLat = latlng.lat + (arrowLength * Math.sin(angleRad));
-                            const arrowEndLng = latlng.lng + (arrowLength * Math.cos(angleRad));
-
-                            // Create directional arrow/wedge using polyline
-                            const arrow = L.polyline(
-                                [[latlng.lat, latlng.lng], [arrowEndLat, arrowEndLng]],
-                                {
-                                    color: '#FFD700',
-                                    weight: 3,
-                                    opacity: 0.8,
-                                    className: 'directional-arrow'
-                                }
-                            );
-
-                            // Add arrowhead using a small triangle at the end
-                            const arrowheadSize = 0.00005; // Small triangle
-                            const perpAngle1 = angleRad + (2.5 * Math.PI / 3); // 150° offset
-                            const perpAngle2 = angleRad - (2.5 * Math.PI / 3); // -150° offset
-
-                            const arrowhead = L.polygon([
-                                [arrowEndLat, arrowEndLng],
-                                [
-                                    arrowEndLat + (arrowheadSize * Math.sin(perpAngle1)),
-                                    arrowEndLng + (arrowheadSize * Math.cos(perpAngle1))
-                                ],
-                                [
-                                    arrowEndLat + (arrowheadSize * Math.sin(perpAngle2)),
-                                    arrowEndLng + (arrowheadSize * Math.cos(perpAngle2))
-                                ]
-                            ], {
-                                color: '#FFD700',
-                                fillColor: '#FFD700',
-                                fillOpacity: 0.9,
-                                weight: 1,
-                                className: 'directional-arrowhead'
-                            });
-
-                            // Create a feature group (supports getBounds) containing all elements
-                            const layerGroup = L.featureGroup([marker, arrow, arrowhead]);
-
-                            return layerGroup;
-                        }
-
-                        // For non-directional lights, just bind popup and return marker
-                        marker.bindPopup(popupContent);
-                        return marker;
-                    }
-
-                    // Default point styling
-                    return L.circleMarker(latlng, {
-                        radius: 4,
-                        fillColor: '#FFB162',
-                        color: '#ffffff',
-                        weight: 1,
-                        fillOpacity: 0.7
-                    });
-                },
-                onEachFeature: function (feature, layer) {
-                    // Add tooltips for coverage areas
-                    if (feature.properties.feature_type === 'coverage_area') {
-                        const props = feature.properties;
-                        const coverageType = props.coverage_type === 'elliptical_sector' ? 'Elliptical Directional' :
-                            props.coverage_type === 'sector' ? 'Directional' : 'Circular';
-                        const radius = props.radius_m || 20;
-
-                        // Show gradient zone info if available
-                        let tooltipText = `${coverageType} coverage: ${Math.round(radius)}m`;
-                        if (props.gradient_zone !== undefined) {
-                            const zoneNames = ['Outer edge', 'Mid-outer', 'Mid-inner', 'Core'];
-                            const zoneName = zoneNames[props.gradient_zone] || 'Zone';
-                            const intensity = Math.round(props.gradient_opacity * 100);
-                            tooltipText += ` (${zoneName}: ${intensity}% intensity)`;
-                        }
-
-                        layer.bindTooltip(tooltipText);
-                    }
-                }
-            }).addTo(map);
-
-            // Fit map to layer bounds
-            try {
-                const bounds = geojsonLayer.getBounds();
-                if (bounds && bounds.isValid && bounds.isValid()) {
-                    map.fitBounds(bounds, { padding: [50, 50] });
-                }
-            } catch (error) {
-                console.warn('Could not fit bounds automatically:', error);
-                // Fallback: calculate bounds from GeoJSON data
-                try {
-                    const allCoords = [];
-                    geojsonData.features.forEach(feature => {
-                        if (feature.geometry.type === 'Point') {
-                            allCoords.push(feature.geometry.coordinates);
-                        } else if (feature.geometry.type === 'Polygon') {
-                            feature.geometry.coordinates[0].forEach(coord => allCoords.push(coord));
-                        }
-                    });
-
-                    if (allCoords.length > 0) {
-                        const lats = allCoords.map(c => c[1]);
-                        const lngs = allCoords.map(c => c[0]);
-                        const bounds = [
-                            [Math.min(...lats), Math.min(...lngs)],
-                            [Math.max(...lats), Math.max(...lngs)]
-                        ];
-                        map.fitBounds(bounds, { padding: [50, 50] });
-                    }
-                } catch (fallbackError) {
-                    console.warn('Fallback bounds calculation also failed:', fallbackError);
-                }
-            }
-
-            // Store layer info
-            const layerInfo = {
-                id: numericId,
-                name: name,
-                query: query,
-                layer: geojsonLayer,
-                visible: true,
-                featureCount: geojsonData.features.length,
-                timestamp: new Date(),
-                color: '#FFD700',  // Gold for lights
-                geojsonData: geojsonData,
-                metadata: metadata,
-                layerType: 'street_light_coverage'  // Special type
-            };
-
-            layers.push(layerInfo);
-
-            // Update UI
-            updateLayersPanel();
-
-            // Trigger glow animation
-            setTimeout(() => {
-                const glowElements = document.querySelectorAll('.light-glow, .light-glow-marker');
-                glowElements.forEach(el => {
-                    el.classList.add('glow-active');
-                });
-            }, 100);
-        }
 
         // ── Unified panel helpers ──────────────────────────────────────────────
 
@@ -9589,7 +9797,7 @@ LIMIT 10</textarea>
             if (reasoningBody) { reasoningBody.innerHTML = ''; reasoningBody.style.display = ''; }
             if (sqlBody)       sqlBody.innerHTML       = '';
             if (tablesBody)    tablesBody.innerHTML    = '';
-            if (resultsBody)   resultsBody.innerHTML   = '<div style="color:#666;font-size:11px;padding:4px 0;">Waiting for agent to finish…</div>';
+            if (resultsBody)   resultsBody.innerHTML   = '<div style="color:var(--text-muted);font-size:11px;padding:4px 0;">Waiting for agent to finish…</div>';
             if (sqlCount)      sqlCount.textContent    = '0 queries';
             if (toggle)        toggle.textContent      = '[ hide ]';
             window._panelSqlCount  = 0;
@@ -9669,9 +9877,9 @@ LIMIT 10</textarea>
                 <div class="card-body p-3">
                     <div class="flex items-center gap-2">
                         <span class="loading loading-spinner loading-xs" style="color:#8a70d9;flex-shrink:0;"></span>
-                        <h3 class="font-semibold text-sm truncate" style="color:#ccc;" title="${question.replace(/"/g, '&quot;')}">${shortQ.replace(/</g, '&lt;')}</h3>
+                        <h3 class="font-semibold text-sm truncate" style="color:var(--text-secondary);" title="${question.replace(/"/g, '&quot;')}">${shortQ.replace(/</g, '&lt;')}</h3>
                     </div>
-                    <div style="font-size:0.7rem;color:#666;margin-top:4px;">Agent thinking…</div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;">Agent thinking…</div>
                 </div>
             `;
             layersList.insertBefore(card, layersList.firstChild);
@@ -9685,11 +9893,10 @@ LIMIT 10</textarea>
         function _appendAgentStep(type, content) {
             const container = document.getElementById('panelReasoningBody');
             if (!container) return;
-            const badgeClass = { thought: 'badge-thought', action: 'badge-action', tool_result: 'badge-result', error: 'badge-error' }[type] || 'badge-result';
             const label      = { thought: 'Thought', action: 'Action', tool_result: 'Result', error: 'Error' }[type] || 'Step';
             const div = document.createElement('div');
             div.className = 'agent-step';
-            div.innerHTML = `<span class="agent-badge ${badgeClass}">${_escHtml(label)}</span><span class="agent-content">${_escHtml(String(content).slice(0, 500))}</span>`;
+            div.innerHTML = `<span class="agent-badge ${type}">${label}:</span> <span class="agent-content">${_escHtml(String(content).slice(0, 500))}</span>`;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
@@ -9709,6 +9916,17 @@ LIMIT 10</textarea>
             if (window.userLocation)                             payload.user_location     = window.userLocation;
             if (window.sessionId)                                payload.session_id        = window.sessionId;
             if (selectedFeatures && selectedFeatures.length > 0) payload.selected_features = selectedFeatures;
+            if (Array.isArray(window.attachments) && window.attachments.length > 0) {
+                payload.attachments = window.attachments
+                    .filter(a => a && a.ref_id)
+                    .map(a => ({
+                        ref_id: a.ref_id,
+                        kind:   a.kind,
+                        filename: a.filename,
+                        size:   a.size,
+                        summary: a.summary,
+                    }));
+            }
 
             let capturedQueryId = null;
             let capturedLayerId = null;
@@ -9793,6 +10011,7 @@ LIMIT 10</textarea>
                             if (fa.geojson && typeof addLayer === 'function') {
                                 addLayer(fa.layer_name, fa.geojson, question, [], fa.summary, [], {}, fa.execution_time);
                                 capturedLayerId = layers.length > 0 ? layers[layers.length - 1].id : null;
+                                resetInputArea();
                             } else {
                                 console.warn('[AGENT] addLayer not called — fa.geojson:', !!fa.geojson, 'addLayer type:', typeof addLayer);
                             }
@@ -9831,53 +10050,13 @@ LIMIT 10</textarea>
             if (searchBtn) searchBtn.disabled = true;
             setLoading(true, 'Agent thinking...');
 
-            // Satellite session active — route to dedicated satellite endpoint
-            if (window.satelliteSession) {
-                console.log('🛰️ Satellite session active — routing to /api/satellite/analyze');
-                try {
-                    const llmProvider = getSelectedLLMProvider();
-                    const satResp = await fetch(`${API_URL}/satellite/analyze`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            question: query,
-                            session_id: window.satelliteSession,
-                            llm_provider: llmProvider,
-                        }),
-                    });
-                    const satData = await satResp.json();
-                    console.log('🛰️ Satellite response:', satData);
-                    if (satData.success && satData.data?.features) {
-                        const meta = satData.metadata || {};
-                        if (queryMode === 'single') clearAllQueries();
-                        addLayer(
-                            satData.layer_name, satData.data, query, [],
-                            satData.reasoning, satData.datasets_used || [], meta,
-                            satData.execution_time || 0
-                        );
-                        const fCount = meta.feature_count || satData.data.features.length;
-                        showNotification(
-                            `${satData.layer_name}: ${fCount} area${fCount !== 1 ? 's' : ''} analysed`,
-                            'success'
-                        );
-                    } else {
-                        showNotification(satData.detail || satData.error || 'Satellite analysis failed', 'error');
-                    }
-                } catch (err) {
-                    showNotification(`Satellite error: ${err.message}`, 'error');
-                }
-                setLoading(false);
-                if (searchBtn) searchBtn.disabled = false;
-                return;
-            }
-
             await submitAgentQuery(query, window.selectedLLMProvider || 'deepseek');
         }
 
         // Dynamic font sizing and textarea behavior
         const searchInput = document.getElementById('searchInput');
         const maxFontSize = 1.9; // rem
-        const minFontSize = 1.2; // rem
+        const minFontSize = 1.0; // rem
         let currentFontSize = maxFontSize;
 
         function adjustInputSize() {
@@ -9927,11 +10106,16 @@ LIMIT 10</textarea>
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 executeSearch();
-                // Reset font size after search
-                currentFontSize = maxFontSize;
-                searchInput.style.fontSize = maxFontSize + 'rem';
             }
         });
+
+        function resetInputArea() {
+            currentFontSize = maxFontSize;
+            searchInput.style.fontSize = maxFontSize + 'rem';
+            searchInput.style.height = 'auto';
+            searchInput.value = '';
+            adjustInputSize();
+        }
 
         // Locate user function
         function locateUser() {
@@ -10174,12 +10358,13 @@ LIMIT 10</textarea>
 
             try {
                 // Fetch available datasets
-                const response = await fetch(`${API_URL}/datasets`);
+                const response = await fetch(`${API_URL}/database/tables`);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch datasets: ${response.status}`);
                 }
 
-                const datasets = await response.json();
+                const result = await response.json();
+                const datasets = result.tables || result;
 
                 if (!datasets || datasets.length === 0) {
                     content.innerHTML = `
@@ -10631,8 +10816,6 @@ ORDER BY ?title`
         window.openStyleDialog = openStyleDialog;
         window.openExportDialog = openExportDialog;
         window.openGdiBerlinModal = openGdiBerlinModal;
-        window.openDatasetBrowserModal = openDatasetBrowserModal;
-        window.openKnowledgeGraphModal = openKnowledgeGraphModal;
 
         // Theme Switcher Logic
         function toggleTheme() {
@@ -10698,41 +10881,63 @@ ORDER BY ?title`
         });
 
         // ===================================================================
-        // SATELLITE IMAGE ANALYSIS PIPELINE
+        // CHAT ATTACHMENTS — unified multi-file upload (PDF / Excel / satellite)
         // ===================================================================
 
-        window.satelliteSession = null;
-        window._pendingSatelliteFiles = [];
+        // Source of truth for what is currently attached to the chat.
+        // Each entry: {ref_id, kind, filename, size, summary}
+        if (!Array.isArray(window.attachments)) window.attachments = [];
 
-        // Drag-and-drop handlers for the satellite drop zone (called inline from HTML)
-        function satDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('border-secondary'); }
-        function satDragLeave(e) { e.currentTarget.classList.remove('border-secondary'); }
-        function satDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('border-secondary');
-            const files = Array.from(e.dataTransfer.files);
-            if (files.length > 0) _autoUploadFiles(files);
+        function _ensureAttachmentsArray() {
+            if (!Array.isArray(window.attachments)) window.attachments = [];
+            return window.attachments;
         }
 
-        async function _autoUploadFiles(files) {
+        // Kept on window only — top-level `const` aliases were removed because they
+        // sit in the TDZ if any earlier statement in this <script> throws, and that
+        // surfaced as "cannot access ATT_KIND_ICONS before initialization" the next
+        // time renderAttachmentChips() ran.
+        window.ATT_KIND_ICONS = {
+            pdf:       'file-text',
+            tabular:   'file-spreadsheet',
+            satellite: 'satellite',
+            image:     'image',
+        };
+        window.ATT_KIND_COLORS = {
+            pdf:       'badge-info',
+            tabular:   'badge-success',
+            satellite: 'badge-secondary',
+            image:     'badge-accent',
+        };
+
+        function _ensureSessionId() {
+            if (!window.sessionId) window.sessionId = `session_${Date.now()}`;
+            return window.sessionId;
+        }
+
+        // Drag-and-drop handlers (called inline from HTML)
+        function attDragOver(e)  { e.preventDefault(); e.currentTarget.classList.add('border-primary'); }
+        function attDragLeave(e) { e.currentTarget.classList.remove('border-primary'); }
+        function attDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('border-primary');
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) _autoUploadAttachments(files);
+        }
+
+        async function _autoUploadAttachments(files) {
             if (!files || files.length === 0) return;
             const formatHint = document.getElementById('satFormatSelect')?.value || 'auto';
-            document.getElementById('satelliteUploadModal')?.close();
-            // Reset file input so the same file can be re-selected if needed
-            const fi = document.getElementById('satelliteFileInput');
+            const fi = document.getElementById('attachmentsFileInput');
             if (fi) fi.value = '';
-            await uploadSatelliteFiles(files, formatHint);
+            await uploadAttachments(files, formatHint);
         }
 
-        // Keep confirmSatelliteUpload as no-op (button is now hidden but onclick still referenced in HTML)
-        function confirmSatelliteUpload() {}
+        async function uploadAttachments(files, formatHint) {
+            const sessionId = _ensureSessionId();
 
-        async function uploadSatelliteFiles(files, formatHint) {
-            const sessionId = window.sessionId || `session_${Date.now()}`;
-            window.sessionId = sessionId;
-
-            const progressEl  = document.getElementById('satUploadProgress');
-            const progressTxt = document.getElementById('satUploadProgressText');
+            const progressEl  = document.getElementById('attUploadProgress');
+            const progressTxt = document.getElementById('attUploadProgressText');
             if (progressEl)  progressEl.classList.remove('hidden');
             if (progressTxt) progressTxt.textContent = `Uploading ${files.length} file(s)...`;
 
@@ -10742,43 +10947,43 @@ ORDER BY ?title`
             formData.append('format_hint', formatHint || 'auto');
 
             try {
-                const resp = await fetch(`${API_URL}/satellite/upload`, {
+                const resp = await fetch(`${API_URL}/attachments/upload`, {
                     method: 'POST',
                     body: formData,
                 });
-
                 const data = await resp.json();
-
                 if (progressEl) progressEl.classList.add('hidden');
 
-                // Always show errors first so user knows what happened
-                if (data.errors && data.errors.length > 0) {
-                    console.warn('Satellite upload warnings:', data.errors);
-                    data.errors.forEach(e => showNotification(`⚠ ${e}`, 'warning'));
+                if (!resp.ok || !data.success) {
+                    showNotification(data.detail || 'Attachment upload failed', 'error');
+                    return null;
                 }
 
-                if (data.success && data.total_files > 0) {
-                    window.satelliteSession = sessionId;
-
-                    // Update badge
-                    const badge   = document.getElementById('satelliteBadge');
-                    const badgeTxt = document.getElementById('satelliteBadgeText');
-                    if (badge)    badge.classList.remove('hidden');
-                    if (badgeTxt) badgeTxt.textContent =
-                        `${data.total_files} file${data.total_files !== 1 ? 's' : ''} · ${data.dates_found.length} date${data.dates_found.length !== 1 ? 's' : ''}`;
-
-                    const bandList = data.bands_found.length > 0 ? data.bands_found.join(', ') : 'none detected';
-                    showNotification(
-                        `Satellite: ${data.dates_found.length} date(s), ${data.total_files} band file(s). Bands: ${bandList}`,
-                        'success'
-                    );
-                    if (window.lucide) lucide.createIcons();
-                } else if (data.success && data.total_files === 0) {
-                    showNotification('No band files were found inside the uploaded archive. Check console for details.', 'error');
-                    console.error('Full upload response:', data);
-                } else {
-                    showNotification(data.detail || 'Satellite upload failed', 'error');
+                // Merge new successful attachments into the in-memory list.
+                const errors = [];
+                let okCount = 0;
+                const list = _ensureAttachmentsArray();
+                for (const att of (data.attachments || [])) {
+                    if (!att) continue;
+                    if (att.error) {
+                        errors.push(`${att.filename || 'file'}: ${att.error}`);
+                        continue;
+                    }
+                    if (!att.ref_id) continue;
+                    // Deduplicate by ref_id
+                    if (!list.some(a => a && a.ref_id === att.ref_id)) {
+                        list.push(att);
+                    }
+                    okCount++;
                 }
+
+                errors.forEach(e => showNotification(`⚠ ${e}`, 'warning'));
+                if (okCount > 0) {
+                    showNotification(`Attached ${okCount} file(s)`, 'success');
+                }
+
+                renderAttachmentChips();
+                _renderAttManifestList();
                 return data;
             } catch (err) {
                 if (progressEl) progressEl.classList.add('hidden');
@@ -10787,60 +10992,137 @@ ORDER BY ?title`
             }
         }
 
-        function clearSatelliteSession() {
-            const sid = window.satelliteSession;
-            if (sid) {
-                fetch(`${API_URL}/satellite/session/${sid}`, { method: 'DELETE' }).catch(() => {});
+        function renderAttachmentChips() {
+            const bar = document.getElementById('attachmentsBar');
+            if (!bar) return;
+            bar.innerHTML = '';
+            if (!window.attachments || window.attachments.length === 0) {
+                bar.style.display = 'none';
+                return;
             }
-            window.satelliteSession = null;
-            const badge = document.getElementById('satelliteBadge');
-            if (badge) badge.classList.add('hidden');
-            showNotification('Satellite session cleared', 'info');
+            bar.style.display = 'flex';
+            const iconMap  = window.ATT_KIND_ICONS  || {};
+            const colorMap = window.ATT_KIND_COLORS || {};
+            for (const att of window.attachments) {
+                const icon = iconMap[att.kind] || 'file';
+                const color = colorMap[att.kind] || 'badge-ghost';
+                const name  = (att.filename || '').length > 22
+                    ? att.filename.slice(0, 20) + '…'
+                    : (att.filename || 'file');
+                const chip = document.createElement('div');
+                chip.className = `badge ${color} gap-1 shadow-sm text-xs hover-expand cursor-pointer`;
+                chip.onclick = () => removeAttachment(att.ref_id);
+                chip.innerHTML = `
+                    <i data-lucide="${icon}" class="w-3 h-3"></i>
+                    <span class="hover-text">${name}</span>
+                `;
+                bar.appendChild(chip);
+            }
+            if (window.lucide) lucide.createIcons();
         }
+
+        function _renderAttManifestList() {
+            const el = document.getElementById('attManifestList');
+            const clearBtn = document.getElementById('attClearAllBtn');
+            if (!el) return;
+            el.innerHTML = '';
+            if (!window.attachments || window.attachments.length === 0) {
+                if (clearBtn) clearBtn.style.display = 'none';
+                return;
+            }
+            if (clearBtn) clearBtn.style.display = '';
+            for (const att of window.attachments) {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between px-2 py-1 rounded bg-base-200/50';
+                row.innerHTML = `
+                    <div class="truncate">
+                        <span class="font-medium">${att.filename || '(unnamed)'}</span>
+                        <span class="opacity-60"> · ${att.summary || att.kind}</span>
+                    </div>
+                    <button class="btn btn-ghost btn-xs btn-circle"
+                        onclick="removeAttachment('${att.ref_id}')">
+                        <i data-lucide="x" class="w-3 h-3"></i>
+                    </button>
+                `;
+                el.appendChild(row);
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async function removeAttachment(refId) {
+            const sid = window.sessionId;
+            if (sid) {
+                try {
+                    await fetch(`${API_URL}/attachments/${sid}/${refId}`, { method: 'DELETE' });
+                } catch (_) { /* best effort */ }
+            }
+            window.attachments = (window.attachments || []).filter(a => a.ref_id !== refId);
+            renderAttachmentChips();
+            _renderAttManifestList();
+        }
+
+        async function clearAllAttachments() {
+            const sid = window.sessionId;
+            if (sid) {
+                try {
+                    await fetch(`${API_URL}/attachments/${sid}`, { method: 'DELETE' });
+                } catch (_) { /* best effort */ }
+            }
+            window.attachments = [];
+            renderAttachmentChips();
+            _renderAttManifestList();
+            showNotification('All attachments removed', 'info');
+        }
+
+        // Backwards-compatible alias (any code still calling the old name).
+        function clearSatelliteSession() { clearAllAttachments(); }
+
+        // Expose attachment API on window so inline handlers + DevTools can reach it
+        // (function declarations are global in classic scripts, but being explicit
+        // makes this safe across script boundaries and easier to debug).
+        window.attDragOver           = attDragOver;
+        window.attDragLeave          = attDragLeave;
+        window.attDrop               = attDrop;
+        window._autoUploadAttachments = _autoUploadAttachments;
+        window.uploadAttachments     = uploadAttachments;
+        window.renderAttachmentChips = renderAttachmentChips;
+        window.removeAttachment      = removeAttachment;
+        window.clearAllAttachments   = clearAllAttachments;
+        window.clearSatelliteSession = clearSatelliteSession;
 
     </script>
 
 
     <script src="/static/js/turf-utils.js"></script>
-    <script src="/static/js/safety-layers.js"></script>
+
 
     <!-- ── Skills Panel ────────────────────────────────────────────────── -->
-    <div id="skillsOverlay"
-        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9000; backdrop-filter:blur(2px);"
-        onclick="closeSkillsPanel()"></div>
+    <div id="skillsOverlay" class="skills-overlay" onclick="closeSkillsPanel()"></div>
 
-    <div id="skillsPanel"
-        style="display:none; position:fixed; right:0; top:0; bottom:0; width:340px; z-index:9001;
-               background:rgba(26,24,37,0.97); backdrop-filter:blur(24px);
-               border-left:1px solid rgba(255,255,255,0.1); padding:1.5rem;
-               overflow-y:auto; transition:transform 0.25s ease;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+    <div id="skillsPanel" class="skills-popup feature-popup">
+        <div class="feature-popup-header">
             <div>
-                <h2 style="font-size:1.1rem; font-weight:700; color:#f5f5f5; margin:0;">Skills</h2>
-                <p style="font-size:0.75rem; color:#9ca3af; margin:0.25rem 0 0;">Select a mode to focus the AI and reduce token usage</p>
+                <h3 class="feature-popup-title">Skills</h3>
+                <p style="font-size:0.75rem; color:var(--popup-text-muted); margin:0.25rem 0 0;">Select a mode to focus the AI</p>
             </div>
-            <button onclick="closeSkillsPanel()"
-                style="background:none; border:none; cursor:pointer; color:#9ca3af; padding:0.25rem;">
+            <button onclick="closeSkillsPanel()" style="background:none; border:none; cursor:pointer; color:var(--popup-text-muted); padding:0.25rem;">
                 <i data-lucide="x" style="width:20px;height:20px;"></i>
             </button>
         </div>
 
         <!-- None / General option -->
-        <div class="skill-card" id="skill-card-none" onclick="selectSkill(null)"
-            style="cursor:pointer; border-radius:12px; border:1.5px solid rgba(255,255,255,0.1);
-                   padding:1rem; margin-bottom:0.75rem; transition:all 0.15s;
-                   background:rgba(255,255,255,0.03);">
+        <div class="skill-card" id="skill-card-none" onclick="selectSkill(null)">
             <div style="display:flex; align-items:center; gap:0.75rem;">
                 <span style="font-size:1.5rem;">🌐</span>
                 <div>
-                    <div style="font-weight:600; color:#f5f5f5; font-size:0.9rem;">General</div>
-                    <div style="font-size:0.75rem; color:#9ca3af; margin-top:0.2rem;">Full pipeline — all tables, all capabilities</div>
+                    <div style="font-weight:600; color:var(--popup-text-primary); font-size:0.9rem;">General</div>
+                    <div style="font-size:0.75rem; color:var(--popup-text-muted); margin-top:0.2rem;">Full pipeline</div>
                 </div>
             </div>
         </div>
 
         <!-- Dynamic skill cards injected here -->
-        <div id="skillCardsList"></div>
+        <div id="skillCardsList" style="padding: 8px 16px;"></div>
     </div>
 
     <script>
@@ -10865,22 +11147,16 @@ ORDER BY ?title`
             const activeId = localStorage.getItem('active_skill');
             _skills.forEach(skill => {
                 const card = document.createElement('div');
-                card.className = 'skill-card';
                 card.id = `skill-card-${skill.id}`;
                 card.onclick = () => selectSkill(skill);
                 const isActive = skill.id === activeId;
-                card.style.cssText = `
-                    cursor:pointer; border-radius:12px; margin-bottom:0.75rem;
-                    border:1.5px solid ${isActive ? '#FFB162' : 'rgba(255,255,255,0.1)'};
-                    padding:1rem; transition:all 0.15s;
-                    background:${isActive ? 'rgba(255,177,98,0.08)' : 'rgba(255,255,255,0.03)'};
-                `;
+                card.className = 'skill-card' + (isActive ? ' active' : '');
                 card.innerHTML = `
                     <div style="display:flex; align-items:center; gap:0.75rem;">
                         <span style="font-size:1.5rem;">${skill.icon || '🔧'}</span>
                         <div>
-                            <div style="font-weight:600; color:#f5f5f5; font-size:0.9rem;">${skill.name}</div>
-                            <div style="font-size:0.75rem; color:#9ca3af; margin-top:0.2rem;">${skill.description}</div>
+                            <div style="font-weight:600; color:var(--popup-text-primary); font-size:0.9rem;">${skill.name}</div>
+                            <div style="font-size:0.75rem; color:var(--popup-text-muted); margin-top:0.2rem;">${skill.description}</div>
                         </div>
                         ${isActive ? '<i data-lucide="check-circle" style="width:16px;height:16px;color:#FFB162;margin-left:auto;"></i>' : ''}
                     </div>
@@ -10893,12 +11169,9 @@ ORDER BY ?title`
 
         function highlightActiveCard() {
             const activeId = localStorage.getItem('active_skill');
-            // Reset none card
             const noneCard = document.getElementById('skill-card-none');
             if (noneCard) {
-                const isActive = !activeId;
-                noneCard.style.borderColor = isActive ? '#FFB162' : 'rgba(255,255,255,0.1)';
-                noneCard.style.background = isActive ? 'rgba(255,177,98,0.08)' : 'rgba(255,255,255,0.03)';
+                noneCard.className = 'skill-card' + (!activeId ? ' active' : '');
             }
         }
 
@@ -10935,13 +11208,13 @@ ORDER BY ?title`
 
         function openSkillsPanel() {
             loadSkillsFromAPI();
-            document.getElementById('skillsPanel').style.display = 'block';
-            document.getElementById('skillsOverlay').style.display = 'block';
+            document.getElementById('skillsPanel').classList.add('active');
+            document.getElementById('skillsOverlay').classList.add('active');
         }
 
         function closeSkillsPanel() {
-            document.getElementById('skillsPanel').style.display = 'none';
-            document.getElementById('skillsOverlay').style.display = 'none';
+            document.getElementById('skillsPanel').classList.remove('active');
+            document.getElementById('skillsOverlay').classList.remove('active');
         }
 
         function getActiveSkillId() {

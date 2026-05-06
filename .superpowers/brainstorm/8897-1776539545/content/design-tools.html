@@ -1,0 +1,83 @@
+<h2>Design — Section 2: New Tools</h2>
+<p class="subtitle">12 new tools across your 4 selected directions — select any you'd remove or change</p>
+
+<div class="section">
+  <h3 style="color:#2e7d32">A · New Geometries from Existing Data</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:0.82rem">
+    <div style="background:#f1f8e9;border-radius:8px;padding:0.75rem">
+      <strong>generate_voronoi(table, id_col)</strong><br>
+      <span style="color:#555">Voronoi polygons around input points. Each polygon = the area closest to that point.</span><br>
+      <em style="color:#2e7d32">"Generate hospital coverage zones for Berlin"</em>
+    </div>
+    <div style="background:#f1f8e9;border-radius:8px;padding:0.75rem">
+      <strong>generate_hexgrid(bbox, cell_size_m)</strong><br>
+      <span style="color:#555">Hexagonal grid covering any bounding box. Useful base layer for density and scoring.</span><br>
+      <em style="color:#2e7d32">"Create a 500m hex grid over Mitte"</em>
+    </div>
+    <div style="background:#f1f8e9;border-radius:8px;padding:0.75rem">
+      <strong>generate_convex_hull(table)</strong><br>
+      <span style="color:#555">Minimum bounding polygon around a set of features.</span><br>
+      <em style="color:#2e7d32">"What area do all the schools cover?"</em>
+    </div>
+    <div style="background:#f1f8e9;border-radius:8px;padding:0.75rem">
+      <strong>generate_corridor(route_geom, width_m)</strong><br>
+      <span style="color:#555">Buffered corridor along a road or route — for planning pedestrian zones, bike lanes, etc.</span><br>
+      <em style="color:#2e7d32">"Generate a 200m corridor along Unter den Linden"</em>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="color:#1565c0">B · Suitability & Site Selection</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:0.82rem">
+    <div style="background:#e3f2fd;border-radius:8px;padding:0.75rem">
+      <strong>site_suitability(criteria)</strong><br>
+      <span style="color:#555">Multi-criteria scoring on a hex grid. Each criterion: table + distance weight + direction (near/far).</span><br>
+      <em style="color:#1565c0">"Find best 5 locations for a new clinic, near transport, far from existing clinics"</em>
+    </div>
+    <div style="background:#e3f2fd;border-radius:8px;padding:0.75rem">
+      <strong>coverage_gaps(service_table, radius_m)</strong><br>
+      <span style="color:#555">Finds areas NOT within radius of any service. Returns underserved polygons.</span><br>
+      <em style="color:#1565c0">"Show areas more than 1km from any pharmacy"</em>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="color:#6a1b9a">C · Derived Analytical Surfaces</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:0.82rem">
+    <div style="background:#f3e5f5;border-radius:8px;padding:0.75rem">
+      <strong>kernel_density(table, bandwidth_m, grid_size_m)</strong><br>
+      <span style="color:#555">Point density surface as a scored grid. Reveals clusters and sparse zones.</span><br>
+      <em style="color:#6a1b9a">"Show density of restaurants across Berlin"</em>
+    </div>
+    <div style="background:#f3e5f5;border-radius:8px;padding:0.75rem">
+      <strong>equity_gap_analysis(service_table, district_table)</strong><br>
+      <span style="color:#555">Compares service counts per district, flags statistically underserved ones. Built for NGO equity reporting.</span><br>
+      <em style="color:#6a1b9a">"Which districts have the worst school-to-population ratio?"</em>
+    </div>
+    <div style="background:#f3e5f5;border-radius:8px;padding:0.75rem">
+      <strong>accessibility_surface(target_table, mode, max_min)</strong><br>
+      <span style="color:#555">Grid of travel times to nearest target feature using Valhalla isochrones.</span><br>
+      <em style="color:#6a1b9a">"Show walking time to nearest hospital for every part of Berlin"</em>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="color:#bf360c">D · Scenario Planning & What-If</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:0.82rem">
+    <div style="background:#fbe9e7;border-radius:8px;padding:0.75rem">
+      <strong>add_hypothetical(layer_name, geometry, properties)</strong><br>
+      <span style="color:#555">Adds a hypothetical point/polygon to a named scenario layer in PostGIS.</span><br>
+      <em style="color:#bf360c">"Add a hypothetical hospital at Tempelhof"</em>
+    </div>
+    <div style="background:#fbe9e7;border-radius:8px;padding:0.75rem">
+      <strong>compare_scenarios(baseline_layer, scenario_layer)</strong><br>
+      <span style="color:#555">Runs coverage_gaps on both layers and returns a diff — what improved, what didn't.</span><br>
+      <em style="color:#bf360c">"How does adding that hospital change coverage gaps?"</em>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle">All generated layers are saved to <code>temp_layers</code> schema with a semantic name so the agent can reference them in follow-up queries.</p>

@@ -240,24 +240,41 @@ def extract_bands_from_safe(zip_path: str, session_dir: str, band_entries: List[
 
 def _load_area_geometry(boundary_sql: str) -> gpd.GeoDataFrame:
     """
-    Execute boundary_sql and return a GeoDataFrame with a single geometry
-    representing the area of interest (used for clipping and tile intersection).
+    Execute boundary_sql and return a GeoDataFrame for the area of interest.
 
-    boundary_sql must SELECT a 'geometry' column in EPSG:4326.
-    It is the caller's (LLM's) responsibility to produce valid SQL.
-
-    Raises:
-        ValueError if the query returns no rows.
+    Tries common geometry column names in priority order.
+    Corrects CRS for known UTM columns (geom_25833).
     """
-    try:
-        gdf = db_manager.execute_spatial_query(boundary_sql)
-        if gdf is not None and len(gdf) > 0:
+    _GEOM_COLS = [
+        ("geometry", None),
+        ("geom", None),
+        ("geom_25833", "EPSG:25833"),
+        ("the_geom", None),
+        ("shape", None),
+    ]
+    last_err: Optional[Exception] = None
+    for col, override_crs in _GEOM_COLS:
+        try:
+            gdf = db_manager.execute_spatial_query(boundary_sql, geom_col=col)
+            if gdf is None or len(gdf) == 0 or gdf.geometry.isna().all():
+                continue
+            if override_crs:
+                gdf = gdf.set_crs(override_crs, allow_override=True)
+            elif gdf.crs and gdf.crs.to_epsg() == 4326:
+                # execute_spatial_query always assigns EPSG:4326; if coordinates are
+                # outside valid lat/lon range the geometry is actually in a projected
+                # CRS (e.g. EPSG:25833 from ST_Transform). Correct automatically.
+                b = gdf.total_bounds  # (minx, miny, maxx, maxy)
+                if b[0] > 180 or b[1] > 90 or b[2] > 180 or b[3] > 90:
+                    gdf = gdf.set_crs("EPSG:25833", allow_override=True)
+            if gdf.crs and gdf.crs.to_epsg() != 4326:
+                gdf = gdf.to_crs("EPSG:4326")
             return gdf
-    except Exception as e:
-        raise ValueError(f"boundary_sql failed: {e}\nSQL: {boundary_sql}")
-
+        except Exception as e:
+            last_err = e
     raise ValueError(
-        f"boundary_sql returned no rows.\nSQL: {boundary_sql}"
+        f"boundary_sql failed: Could not find usable geometry column.\n"
+        f"SQL: {boundary_sql}\nLast error: {last_err}"
     )
 
 
@@ -609,21 +626,40 @@ def calculate_index(
 def _load_polygons_for_area(polygons_sql: str) -> gpd.GeoDataFrame:
     """
     Execute polygons_sql and return a GeoDataFrame of zone polygons for
-    zonal statistics. The SQL must produce rows with 'name' and 'geometry'
-    columns (geometry in EPSG:4326).
+    zonal statistics.
 
-    Raises:
-        ValueError if the query returns no rows.
+    Tries common geometry column names in priority order.
+    Corrects CRS for known UTM columns (geom_25833).
     """
-    try:
-        gdf = db_manager.execute_spatial_query(polygons_sql)
-        if gdf is not None and len(gdf) > 0:
+    _GEOM_COLS = [
+        ("geometry", None),
+        ("geom", None),
+        ("geom_25833", "EPSG:25833"),
+        ("the_geom", None),
+        ("shape", None),
+    ]
+    last_err: Optional[Exception] = None
+    for col, override_crs in _GEOM_COLS:
+        try:
+            gdf = db_manager.execute_spatial_query(polygons_sql, geom_col=col)
+            if gdf is None or len(gdf) == 0 or gdf.geometry.isna().all():
+                continue
+            if override_crs:
+                gdf = gdf.set_crs(override_crs, allow_override=True)
+            elif gdf.crs and gdf.crs.to_epsg() == 4326:
+                # Same defensive check as _load_area_geometry: execute_spatial_query
+                # always assigns EPSG:4326, but geometry may actually be projected.
+                b = gdf.total_bounds
+                if b[0] > 180 or b[1] > 90 or b[2] > 180 or b[3] > 90:
+                    gdf = gdf.set_crs("EPSG:25833", allow_override=True)
+            if gdf.crs and gdf.crs.to_epsg() != 4326:
+                gdf = gdf.to_crs("EPSG:4326")
             return gdf
-    except Exception as e:
-        raise ValueError(f"polygons_sql failed: {e}\nSQL: {polygons_sql}")
-
+        except Exception as e:
+            last_err = e
     raise ValueError(
-        f"polygons_sql returned no rows.\nSQL: {polygons_sql}"
+        f"polygons_sql failed: Could not find usable geometry column.\n"
+        f"SQL: {polygons_sql}\nLast error: {last_err}"
     )
 
 

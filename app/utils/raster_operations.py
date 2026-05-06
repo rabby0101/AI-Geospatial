@@ -48,8 +48,12 @@ class RasterOperations:
             NDVI array or path to saved raster
         """
         # Load arrays if paths provided
+        red_nodata = None
+        nir_nodata = None
+
         if isinstance(red_band, (str, Path)):
             with rasterio.open(red_band) as src:
+                red_nodata = src.nodata
                 red = src.read(1).astype(float)
                 profile = src.profile.copy()
         else:
@@ -58,24 +62,33 @@ class RasterOperations:
 
         if isinstance(nir_band, (str, Path)):
             with rasterio.open(nir_band) as src:
+                nir_nodata = src.nodata
                 nir = src.read(1).astype(float)
                 if profile is None:
                     profile = src.profile.copy()
         else:
             nir = nir_band.astype(float)
 
-        # Compute NDVI
-        ndvi = np.where(
-            (nir + red) == 0,
-            0,
-            (nir - red) / (nir + red)
-        )
+        # Mask nodata pixels before computing so they don't corrupt the result
+        if red_nodata is not None:
+            red[red == red_nodata] = np.nan
+        if nir_nodata is not None:
+            nir[nir == nir_nodata] = np.nan
+
+        # Compute NDVI with NaN-safe arithmetic
+        with np.errstate(invalid='ignore', divide='ignore'):
+            ndvi = np.where(
+                np.isnan(red) | np.isnan(nir) | ((nir + red) == 0),
+                np.nan,
+                (nir - red) / (nir + red),
+            )
 
         # Clip to valid NDVI range [-1, 1]
         ndvi = np.clip(ndvi, -1, 1)
 
-        # Save if output path provided
+        # Save if output path provided — store NaN as -9999 in the file
         if output_path and profile:
+            ndvi_out = np.where(np.isnan(ndvi), -9999.0, ndvi).astype(np.float32)
             profile.update(
                 driver='GTiff',
                 dtype=rasterio.float32,
@@ -85,7 +98,7 @@ class RasterOperations:
             )
 
             with rasterio.open(output_path, 'w', **profile) as dst:
-                dst.write(ndvi.astype(rasterio.float32), 1)
+                dst.write(ndvi_out, 1)
 
             logger.info(f"Saved NDVI to {output_path}")
             return output_path
@@ -285,7 +298,10 @@ class RasterOperations:
         categorical: bool = False
     ) -> Dict[str, np.ndarray]:
         """
-        Compute zonal statistics: aggregate raster values per polygon
+        Compute zonal statistics: aggregate raster values per polygon.
+
+        Uses rasterstats for file-based rasters (single raster open for all polygons).
+        Falls back to rasterio per-polygon masking for in-memory arrays.
 
         Args:
             raster: Input raster (path or array)
@@ -296,86 +312,95 @@ class RasterOperations:
         Returns:
             Dictionary of statistic arrays, same length as polygons
         """
-        # Load raster
         if isinstance(raster, (str, Path)):
-            with rasterio.open(raster) as src:
-                raster_array = src.read(1)
-                transform = src.transform
-                raster_crs = src.crs
+            return self._zonal_stats_file(raster, polygons, stats, categorical)
         else:
-            raster_array = raster
-            transform = None
-            raster_crs = None
+            return self._zonal_stats_array(raster, polygons, stats, categorical)
 
-        # Reproject polygons if needed (use EPSG int comparison — pyproj vs rasterio CRS
-        # objects may not compare equal with != even when they represent the same projection)
+    def _zonal_stats_file(
+        self,
+        raster_path: Union[str, Path],
+        polygons: gpd.GeoDataFrame,
+        stats: List[str],
+        categorical: bool,
+    ) -> Dict[str, np.ndarray]:
+        """Fast path: use rasterstats for file-based rasters (single raster open)."""
+        from rasterstats import zonal_stats as _rasterstats_zonal
+
+        with rasterio.open(raster_path) as src:
+            raster_crs = src.crs
+            nodata = src.nodata if src.nodata is not None else -9999
+
         if raster_crs and polygons.crs:
-            raster_epsg = raster_crs.to_epsg()
-            polygon_epsg = polygons.crs.to_epsg()
-            if raster_epsg != polygon_epsg:
+            if raster_crs.to_epsg() != polygons.crs.to_epsg():
                 polygons = polygons.to_crs(raster_crs)
 
-        results = {stat: [] for stat in stats}
+        rs_stats = [s for s in stats if s != 'sum']
+        raw = _rasterstats_zonal(
+            polygons.geometry,
+            str(raster_path),
+            stats=rs_stats,
+            nodata=nodata,
+            all_touched=False,
+            categorical=categorical,
+        )
+
+        results: Dict[str, np.ndarray] = {}
+        for s in stats:
+            if s == 'sum':
+                # rasterstats doesn't include sum by default; derive from mean * count
+                means = np.array([r.get('mean') for r in raw], dtype=float)
+                counts = np.array([r.get('count', 0) for r in raw], dtype=float)
+                results['sum'] = np.where(np.isnan(means), np.nan, means * counts)
+            elif s == 'count':
+                results['count'] = np.array([r.get('count', 0) for r in raw], dtype=float)
+            else:
+                results[s] = np.array([r.get(s) for r in raw], dtype=float)
+
+        if categorical:
+            results['categories'] = [r.get('__fid__', {}) for r in raw]
+
+        logger.info(f"Computed zonal statistics for {len(polygons)} polygons")
+        return results
+
+    def _zonal_stats_array(
+        self,
+        raster_array: np.ndarray,
+        polygons: gpd.GeoDataFrame,
+        stats: List[str],
+        categorical: bool,
+    ) -> Dict[str, np.ndarray]:
+        """Fallback path for in-memory numpy arrays (no file available)."""
+        results: Dict[str, list] = {stat: [] for stat in stats}
         if categorical:
             results['categories'] = []
 
-        # Process each polygon
         for idx, row in polygons.iterrows():
             try:
-                # Mask raster by polygon
-                geom = [row.geometry.__geo_interface__]
-
-                if isinstance(raster, (str, Path)):
-                    with rasterio.open(raster) as src:
-                        masked_array, _ = mask(src, geom, crop=True, nodata=-9999)
-                        values = masked_array[0]
-                else:
-                    # For array input, use rasterize approach
-                    # This is simplified - in production use proper masking
-                    values = raster_array
-
-                # Remove nodata values
+                values = raster_array.flatten()
                 values = values[values != -9999]
                 values = values[~np.isnan(values)]
 
                 if len(values) == 0:
-                    # No valid pixels
                     for stat in stats:
                         results[stat].append(np.nan)
                     continue
 
-                # Compute statistics
-                if 'mean' in stats:
-                    results['mean'].append(np.mean(values))
-                if 'min' in stats:
-                    results['min'].append(np.min(values))
-                if 'max' in stats:
-                    results['max'].append(np.max(values))
-                if 'std' in stats:
-                    results['std'].append(np.std(values))
-                if 'sum' in stats:
-                    results['sum'].append(np.sum(values))
-                if 'count' in stats:
-                    results['count'].append(len(values))
-
-                # Categorical mode
+                if 'mean'  in stats: results['mean'].append(np.mean(values))
+                if 'min'   in stats: results['min'].append(np.min(values))
+                if 'max'   in stats: results['max'].append(np.max(values))
+                if 'std'   in stats: results['std'].append(np.std(values))
+                if 'sum'   in stats: results['sum'].append(np.sum(values))
+                if 'count' in stats: results['count'].append(len(values))
                 if categorical:
                     unique, counts = np.unique(values, return_counts=True)
-                    category_dict = dict(zip(unique.astype(int), counts.astype(int)))
-                    results['categories'].append(category_dict)
-
+                    results['categories'].append(dict(zip(unique.astype(int), counts.astype(int))))
             except Exception as e:
                 logger.error(f"Error processing polygon {idx}: {e}")
                 for stat in stats:
                     results[stat].append(np.nan)
 
-        # Convert to numpy arrays
-        for key in results:
-            if key != 'categories':
-                results[key] = np.array(results[key])
-
-        logger.info(f"Computed zonal statistics for {len(polygons)} polygons")
-        return results
+        return {k: (np.array(v) if k != 'categories' else v) for k, v in results.items()}
 
     # ==================== Raster-Vector Integration ====================
 

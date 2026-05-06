@@ -1,18 +1,2756 @@
 {
-  "admin_boundaries": {
-    "row_count": 16,
-    "geometry_type": "MULTIPOLYGON",
+  "agent_traces": {
+    "row_count": 63,
+    "geometry_type": "Unknown",
     "columns": [
       {
-        "name": "country_code",
+        "name": "query_id",
         "type": "text"
       },
       {
-        "name": "admin_level",
-        "type": "bigint"
+        "name": "steps",
+        "type": "jsonb"
+      },
+      {
+        "name": "sql_queries",
+        "type": "jsonb"
+      },
+      {
+        "name": "tables_used",
+        "type": "jsonb"
+      },
+      {
+        "name": "results",
+        "type": "jsonb"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone"
+      }
+    ]
+  },
+  "osm_cafes": {
+    "row_count": 2683,
+    "geometry_type": "GEOMETRY",
+    "columns": [
+      {
+        "name": "addr_city",
+        "type": "text"
+      },
+      {
+        "name": "addr_country",
+        "type": "text"
+      },
+      {
+        "name": "addr_housenumber",
+        "type": "text"
+      },
+      {
+        "name": "addr_postcode",
+        "type": "text"
+      },
+      {
+        "name": "addr_street",
+        "type": "text"
+      },
+      {
+        "name": "addr_suburb",
+        "type": "text"
+      },
+      {
+        "name": "amenity",
+        "type": "text"
+      },
+      {
+        "name": "check_date",
+        "type": "text"
+      },
+      {
+        "name": "check_date_opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "contact_phone",
+        "type": "text"
+      },
+      {
+        "name": "internet_access",
+        "type": "text"
+      },
+      {
+        "name": "level",
+        "type": "text"
       },
       {
         "name": "name",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_signed",
+        "type": "text"
+      },
+      {
+        "name": "outdoor_seating",
+        "type": "text"
+      },
+      {
+        "name": "payment_cards",
+        "type": "text"
+      },
+      {
+        "name": "payment_cash",
+        "type": "text"
+      },
+      {
+        "name": "payment_credit_cards",
+        "type": "text"
+      },
+      {
+        "name": "payment_debit_cards",
+        "type": "text"
+      },
+      {
+        "name": "toilets_wheelchair",
+        "type": "text"
+      },
+      {
+        "name": "website",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair",
+        "type": "text"
+      },
+      {
+        "name": "air_conditioning",
+        "type": "text"
+      },
+      {
+        "name": "diet_vegetarian",
+        "type": "text"
+      },
+      {
+        "name": "indoor_seating",
+        "type": "text"
+      },
+      {
+        "name": "microroasting",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "phone",
+        "type": "text"
+      },
+      {
+        "name": "smoking",
+        "type": "text"
+      },
+      {
+        "name": "brand",
+        "type": "text"
+      },
+      {
+        "name": "brand_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "brand_wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "check_date_smoking",
+        "type": "text"
+      },
+      {
+        "name": "cuisine",
+        "type": "text"
+      },
+      {
+        "name": "official_name",
+        "type": "text"
+      },
+      {
+        "name": "source",
+        "type": "text"
+      },
+      {
+        "name": "takeaway",
+        "type": "text"
+      },
+      {
+        "name": "diet_vegan",
+        "type": "text"
+      },
+      {
+        "name": "internet_access_fee",
+        "type": "text"
+      },
+      {
+        "name": "was_post_partner",
+        "type": "text"
+      },
+      {
+        "name": "bakehouse",
+        "type": "text"
+      },
+      {
+        "name": "contact_facebook",
+        "type": "text"
+      },
+      {
+        "name": "contact_instagram",
+        "type": "text"
+      },
+      {
+        "name": "contact_website",
+        "type": "text"
+      },
+      {
+        "name": "shop",
+        "type": "text"
+      },
+      {
+        "name": "source_addr",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_description",
+        "type": "text"
+      },
+      {
+        "name": "payment_mastercard",
+        "type": "text"
+      },
+      {
+        "name": "payment_visa",
+        "type": "text"
+      },
+      {
+        "name": "internet_access_ssid",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_source",
+        "type": "text"
+      },
+      {
+        "name": "toilets",
+        "type": "text"
+      },
+      {
+        "name": "email",
+        "type": "text"
+      },
+      {
+        "name": "bar",
+        "type": "text"
+      },
+      {
+        "name": "lgbtq",
+        "type": "text"
+      },
+      {
+        "name": "fax",
+        "type": "text"
+      },
+      {
+        "name": "food",
+        "type": "text"
+      },
+      {
+        "name": "addr_floor",
+        "type": "text"
+      },
+      {
+        "name": "payment_american_express",
+        "type": "text"
+      },
+      {
+        "name": "payment_contactless",
+        "type": "text"
+      },
+      {
+        "name": "payment_girocard",
+        "type": "text"
+      },
+      {
+        "name": "toilets_access",
+        "type": "text"
+      },
+      {
+        "name": "contact_email",
+        "type": "text"
+      },
+      {
+        "name": "created_by",
+        "type": "text"
+      },
+      {
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "name": "wifi",
+        "type": "text"
+      },
+      {
+        "name": "diet_organic",
+        "type": "text"
+      },
+      {
+        "name": "ice_cream_counter",
+        "type": "text"
+      },
+      {
+        "name": "changing_table",
+        "type": "text"
+      },
+      {
+        "name": "biergarten",
+        "type": "text"
+      },
+      {
+        "name": "operator",
+        "type": "text"
+      },
+      {
+        "name": "instagram",
+        "type": "text"
+      },
+      {
+        "name": "contact_fax",
+        "type": "text"
+      },
+      {
+        "name": "drink_wine",
+        "type": "text"
+      },
+      {
+        "name": "contact_mobile",
+        "type": "text"
+      },
+      {
+        "name": "operator_type",
+        "type": "text"
+      },
+      {
+        "name": "name_ja",
+        "type": "text"
+      },
+      {
+        "name": "cafe",
+        "type": "text"
+      },
+      {
+        "name": "check_date_diet_vegetarian",
+        "type": "text"
+      },
+      {
+        "name": "state",
+        "type": "text"
+      },
+      {
+        "name": "alt_name",
+        "type": "text"
+      },
+      {
+        "name": "atm",
+        "type": "text"
+      },
+      {
+        "name": "drive_through",
+        "type": "text"
+      },
+      {
+        "name": "delivery",
+        "type": "text"
+      },
+      {
+        "name": "addr_housename",
+        "type": "text"
+      },
+      {
+        "name": "payment_maestro",
+        "type": "text"
+      },
+      {
+        "name": "reusable_packaging_offer",
+        "type": "text"
+      },
+      {
+        "name": "phone_mobile",
+        "type": "text"
+      },
+      {
+        "name": "contact_foursquare",
+        "type": "text"
+      },
+      {
+        "name": "contact_twitter",
+        "type": "text"
+      },
+      {
+        "name": "door",
+        "type": "text"
+      },
+      {
+        "name": "entrance",
+        "type": "text"
+      },
+      {
+        "name": "office",
+        "type": "text"
+      },
+      {
+        "name": "start_date",
+        "type": "text"
+      },
+      {
+        "name": "wikidata",
+        "type": "text"
+      },
+      {
+        "name": "payment_visa_contactless",
+        "type": "text"
+      },
+      {
+        "name": "reservation",
+        "type": "text"
+      },
+      {
+        "name": "website_menu",
+        "type": "text"
+      },
+      {
+        "name": "surveillance",
+        "type": "text"
+      },
+      {
+        "name": "payment_apple_pay",
+        "type": "text"
+      },
+      {
+        "name": "payment_google_pay",
+        "type": "text"
+      },
+      {
+        "name": "old_name",
+        "type": "text"
+      },
+      {
+        "name": "toilets_charge",
+        "type": "text"
+      },
+      {
+        "name": "toilets_fee",
+        "type": "text"
+      },
+      {
+        "name": "disused_name",
+        "type": "text"
+      },
+      {
+        "name": "note",
+        "type": "text"
+      },
+      {
+        "name": "opening_date",
+        "type": "text"
+      },
+      {
+        "name": "dispensing",
+        "type": "text"
+      },
+      {
+        "name": "access",
+        "type": "text"
+      },
+      {
+        "name": "drink_club_mate",
+        "type": "text"
+      },
+      {
+        "name": "brand_website",
+        "type": "text"
+      },
+      {
+        "name": "highchair",
+        "type": "text"
+      },
+      {
+        "name": "toilets_menstrual_products",
+        "type": "text"
+      },
+      {
+        "name": "lunch",
+        "type": "text"
+      },
+      {
+        "name": "lunch_warm",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_covid19",
+        "type": "text"
+      },
+      {
+        "name": "payment_account_cards",
+        "type": "text"
+      },
+      {
+        "name": "brewery",
+        "type": "text"
+      },
+      {
+        "name": "name_fr",
+        "type": "text"
+      },
+      {
+        "name": "kids_area_indoor",
+        "type": "text"
+      },
+      {
+        "name": "addr_inclusion",
+        "type": "text"
+      },
+      {
+        "name": "restaurant",
+        "type": "text"
+      },
+      {
+        "name": "baby_feeding",
+        "type": "text"
+      },
+      {
+        "name": "bulk_purchase",
+        "type": "text"
+      },
+      {
+        "name": "check_date_diet_gluten_free",
+        "type": "text"
+      },
+      {
+        "name": "check_date_diet_halal",
+        "type": "text"
+      },
+      {
+        "name": "check_date_diet_kosher",
+        "type": "text"
+      },
+      {
+        "name": "check_date_diet_vegan",
+        "type": "text"
+      },
+      {
+        "name": "diet_gluten_free",
+        "type": "text"
+      },
+      {
+        "name": "diet_halal",
+        "type": "text"
+      },
+      {
+        "name": "diet_kosher",
+        "type": "text"
+      },
+      {
+        "name": "image",
+        "type": "text"
+      },
+      {
+        "name": "organic",
+        "type": "text"
+      },
+      {
+        "name": "wikimedia_commons",
+        "type": "text"
+      },
+      {
+        "name": "drink_haji",
+        "type": "text"
+      },
+      {
+        "name": "mapillary",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_private",
+        "type": "text"
+      },
+      {
+        "name": "outdoor_seating_tables",
+        "type": "text"
+      },
+      {
+        "name": "breakfast",
+        "type": "text"
+      },
+      {
+        "name": "internet_access_password",
+        "type": "text"
+      },
+      {
+        "name": "loc_name",
+        "type": "text"
+      },
+      {
+        "name": "short_name",
+        "type": "text"
+      },
+      {
+        "name": "self_service",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_kitchen",
+        "type": "text"
+      },
+      {
+        "name": "survey_date",
+        "type": "text"
+      },
+      {
+        "name": "owner",
+        "type": "text"
+      },
+      {
+        "name": "twitter",
+        "type": "text"
+      },
+      {
+        "name": "theme",
+        "type": "text"
+      },
+      {
+        "name": "kids_area",
+        "type": "text"
+      },
+      {
+        "name": "lunch_menu",
+        "type": "text"
+      },
+      {
+        "name": "payment_girocard_contactless",
+        "type": "text"
+      },
+      {
+        "name": "payment_v_pay",
+        "type": "text"
+      },
+      {
+        "name": "lgbtq_gay",
+        "type": "text"
+      },
+      {
+        "name": "breakfast_brunch",
+        "type": "text"
+      },
+      {
+        "name": "payment_qr_code",
+        "type": "text"
+      },
+      {
+        "name": "old_contact_website",
+        "type": "text"
+      },
+      {
+        "name": "panoramax",
+        "type": "text"
+      },
+      {
+        "name": "panoramax_0",
+        "type": "text"
+      },
+      {
+        "name": "man_made",
+        "type": "text"
+      },
+      {
+        "name": "surveillance_zone",
+        "type": "text"
+      },
+      {
+        "name": "drink_espresso",
+        "type": "text"
+      },
+      {
+        "name": "drink_filter_coffee",
+        "type": "text"
+      },
+      {
+        "name": "branch",
+        "type": "text"
+      },
+      {
+        "name": "ice_cream",
+        "type": "text"
+      },
+      {
+        "name": "drink_coffee",
+        "type": "text"
+      },
+      {
+        "name": "drink_soft_drink",
+        "type": "text"
+      },
+      {
+        "name": "drink_tea",
+        "type": "text"
+      },
+      {
+        "name": "food_cake",
+        "type": "text"
+      },
+      {
+        "name": "food_sandwich",
+        "type": "text"
+      },
+      {
+        "name": "outdoor_seating_comfort",
+        "type": "text"
+      },
+      {
+        "name": "payment_app",
+        "type": "text"
+      },
+      {
+        "name": "payment_coins",
+        "type": "text"
+      },
+      {
+        "name": "payment_notes",
+        "type": "text"
+      },
+      {
+        "name": "disused_office",
+        "type": "text"
+      },
+      {
+        "name": "craft",
+        "type": "text"
+      },
+      {
+        "name": "toilets_disposal",
+        "type": "text"
+      },
+      {
+        "name": "toilets_handwashing",
+        "type": "text"
+      },
+      {
+        "name": "toilets_paper_supplied",
+        "type": "text"
+      },
+      {
+        "name": "toilets_position",
+        "type": "text"
+      },
+      {
+        "name": "handrail_left",
+        "type": "text"
+      },
+      {
+        "name": "handrail_right",
+        "type": "text"
+      },
+      {
+        "name": "step_count",
+        "type": "text"
+      },
+      {
+        "name": "location",
+        "type": "text"
+      },
+      {
+        "name": "contact_youtube",
+        "type": "text"
+      },
+      {
+        "name": "cash_withdrawal",
+        "type": "text"
+      },
+      {
+        "name": "contact_pinterest",
+        "type": "text"
+      },
+      {
+        "name": "contact_xing",
+        "type": "text"
+      },
+      {
+        "name": "changing_table_count",
+        "type": "text"
+      },
+      {
+        "name": "diet_raw",
+        "type": "text"
+      },
+      {
+        "name": "payment_cashless",
+        "type": "text"
+      },
+      {
+        "name": "ref_vatin",
+        "type": "text"
+      },
+      {
+        "name": "shisha",
+        "type": "text"
+      },
+      {
+        "name": "name_en",
+        "type": "text"
+      },
+      {
+        "name": "was_contact_email",
+        "type": "text"
+      },
+      {
+        "name": "was_contact_phone",
+        "type": "text"
+      },
+      {
+        "name": "was_contact_website",
+        "type": "text"
+      },
+      {
+        "name": "was_operator",
+        "type": "text"
+      },
+      {
+        "name": "facebook",
+        "type": "text"
+      },
+      {
+        "name": "tripadvisor",
+        "type": "text"
+      },
+      {
+        "name": "name_de",
+        "type": "text"
+      },
+      {
+        "name": "capacity",
+        "type": "text"
+      },
+      {
+        "name": "culture",
+        "type": "text"
+      },
+      {
+        "name": "mobile",
+        "type": "text"
+      },
+      {
+        "name": "contact_tiktok",
+        "type": "text"
+      },
+      {
+        "name": "drink_beer_belgian",
+        "type": "text"
+      },
+      {
+        "name": "fixme",
+        "type": "text"
+      },
+      {
+        "name": "wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "contact_yelp",
+        "type": "text"
+      },
+      {
+        "name": "min_age",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_drive_through",
+        "type": "text"
+      },
+      {
+        "name": "payment_alipay",
+        "type": "text"
+      },
+      {
+        "name": "payment_bancomat",
+        "type": "text"
+      },
+      {
+        "name": "payment_blik",
+        "type": "text"
+      },
+      {
+        "name": "payment_cheque",
+        "type": "text"
+      },
+      {
+        "name": "payment_clipper",
+        "type": "text"
+      },
+      {
+        "name": "payment_cryptocurrencies",
+        "type": "text"
+      },
+      {
+        "name": "payment_diners_club",
+        "type": "text"
+      },
+      {
+        "name": "payment_discover_card",
+        "type": "text"
+      },
+      {
+        "name": "payment_dkv",
+        "type": "text"
+      },
+      {
+        "name": "payment_electronic_purses",
+        "type": "text"
+      },
+      {
+        "name": "payment_ep_easycard",
+        "type": "text"
+      },
+      {
+        "name": "payment_ep_geldkarte",
+        "type": "text"
+      },
+      {
+        "name": "payment_ep_ipass",
+        "type": "text"
+      },
+      {
+        "name": "payment_jcb",
+        "type": "text"
+      },
+      {
+        "name": "payment_mastercard_contactless",
+        "type": "text"
+      },
+      {
+        "name": "payment_paypal",
+        "type": "text"
+      },
+      {
+        "name": "payment_prepaid_ticket",
+        "type": "text"
+      },
+      {
+        "name": "payment_telephone_cards",
+        "type": "text"
+      },
+      {
+        "name": "payment_unionpay",
+        "type": "text"
+      },
+      {
+        "name": "payment_uta",
+        "type": "text"
+      },
+      {
+        "name": "payment_visa_debit",
+        "type": "text"
+      },
+      {
+        "name": "payment_visa_electron",
+        "type": "text"
+      },
+      {
+        "name": "payment_wechat",
+        "type": "text"
+      },
+      {
+        "name": "tourism",
+        "type": "text"
+      },
+      {
+        "name": "source_opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "heating",
+        "type": "text"
+      },
+      {
+        "name": "heating_input",
+        "type": "text"
+      },
+      {
+        "name": "dog",
+        "type": "text"
+      },
+      {
+        "name": "payment_cards_min_payment",
+        "type": "text"
+      },
+      {
+        "name": "reusable_packaging_offer_brand",
+        "type": "text"
+      },
+      {
+        "name": "comment",
+        "type": "text"
+      },
+      {
+        "name": "diet_pescetarian",
+        "type": "text"
+      },
+      {
+        "name": "addr_place",
+        "type": "text"
+      },
+      {
+        "name": "changing_table_fee",
+        "type": "text"
+      },
+      {
+        "name": "name_zh",
+        "type": "text"
+      },
+      {
+        "name": "payment_mensa_card",
+        "type": "text"
+      },
+      {
+        "name": "maxstay",
+        "type": "text"
+      },
+      {
+        "name": "contact_qype",
+        "type": "text"
+      },
+      {
+        "name": "note_de",
+        "type": "text"
+      },
+      {
+        "name": "identity",
+        "type": "text"
+      },
+      {
+        "name": "mode_of_organisation_self_managed",
+        "type": "text"
+      },
+      {
+        "name": "provides",
+        "type": "text"
+      },
+      {
+        "name": "smoking_outside",
+        "type": "text"
+      },
+      {
+        "name": "drinking_water",
+        "type": "text"
+      },
+      {
+        "name": "stroller",
+        "type": "text"
+      },
+      {
+        "name": "coffee_brand",
+        "type": "text"
+      },
+      {
+        "name": "catering",
+        "type": "text"
+      },
+      {
+        "name": "female",
+        "type": "text"
+      },
+      {
+        "name": "male",
+        "type": "text"
+      },
+      {
+        "name": "max_age",
+        "type": "text"
+      },
+      {
+        "name": "date",
+        "type": "text"
+      },
+      {
+        "name": "access_covid19",
+        "type": "text"
+      },
+      {
+        "name": "check_date_toilets_wheelchair",
+        "type": "text"
+      },
+      {
+        "name": "name_signed",
+        "type": "text"
+      },
+      {
+        "name": "diet_lacto_vegetarian",
+        "type": "text"
+      },
+      {
+        "name": "diet_ovo_vegetarian",
+        "type": "text"
+      },
+      {
+        "name": "drink_leet_mate",
+        "type": "text"
+      },
+      {
+        "name": "fridge",
+        "type": "text"
+      },
+      {
+        "name": "microwave",
+        "type": "text"
+      },
+      {
+        "name": "note_opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "was_old_name",
+        "type": "text"
+      },
+      {
+        "name": "pastry",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_description_de",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_description_en",
+        "type": "text"
+      },
+      {
+        "name": "diet_healthy",
+        "type": "text"
+      },
+      {
+        "name": "old_addr_housenumber",
+        "type": "text"
+      },
+      {
+        "name": "old_addr_street",
+        "type": "text"
+      },
+      {
+        "name": "toilets_unisex",
+        "type": "text"
+      },
+      {
+        "name": "gambling",
+        "type": "text"
+      },
+      {
+        "name": "post_office_brand",
+        "type": "text"
+      },
+      {
+        "name": "post_office_type",
+        "type": "text"
+      },
+      {
+        "name": "seating",
+        "type": "text"
+      },
+      {
+        "name": "reusable_packaging_accept",
+        "type": "text"
+      },
+      {
+        "name": "drink_soy_milk",
+        "type": "text"
+      },
+      {
+        "name": "proposed_amenity",
+        "type": "text"
+      },
+      {
+        "name": "lgbtq_men",
+        "type": "text"
+      },
+      {
+        "name": "operator_email",
+        "type": "text"
+      },
+      {
+        "name": "room",
+        "type": "text"
+      },
+      {
+        "name": "last_checked",
+        "type": "text"
+      },
+      {
+        "name": "ref",
+        "type": "text"
+      },
+      {
+        "name": "club",
+        "type": "text"
+      },
+      {
+        "name": "was_name",
+        "type": "text"
+      },
+      {
+        "name": "female_signed",
+        "type": "text"
+      },
+      {
+        "name": "male_signed",
+        "type": "text"
+      },
+      {
+        "name": "payment_amex",
+        "type": "text"
+      },
+      {
+        "name": "payment_ec_cards",
+        "type": "text"
+      },
+      {
+        "name": "delivery_covid19",
+        "type": "text"
+      },
+      {
+        "name": "takeaway_covid19",
+        "type": "text"
+      },
+      {
+        "name": "short_name_ja",
+        "type": "text"
+      },
+      {
+        "name": "socket_domestic",
+        "type": "text"
+      },
+      {
+        "name": "strapline",
+        "type": "text"
+      },
+      {
+        "name": "reservation_website",
+        "type": "text"
+      },
+      {
+        "name": "was_check_date_opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "was_cuisine",
+        "type": "text"
+      },
+      {
+        "name": "was_description",
+        "type": "text"
+      },
+      {
+        "name": "was_diet_vegetarian",
+        "type": "text"
+      },
+      {
+        "name": "was_internet_access",
+        "type": "text"
+      },
+      {
+        "name": "was_opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "was_opening_hours_signed",
+        "type": "text"
+      },
+      {
+        "name": "was_website",
+        "type": "text"
+      },
+      {
+        "name": "toys_board_games",
+        "type": "text"
+      },
+      {
+        "name": "disused_leisure",
+        "type": "text"
+      },
+      {
+        "name": "operator_wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "post_office",
+        "type": "text"
+      },
+      {
+        "name": "post_office_service_provider",
+        "type": "text"
+      },
+      {
+        "name": "post_office_service_provider_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "ref_deutschepost",
+        "type": "text"
+      },
+      {
+        "name": "bakery",
+        "type": "text"
+      },
+      {
+        "name": "lgbtq_signed",
+        "type": "text"
+      },
+      {
+        "name": "payment_card",
+        "type": "text"
+      },
+      {
+        "name": "name_etymology_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "internet_access_operator",
+        "type": "text"
+      },
+      {
+        "name": "name_2016_2019",
+        "type": "text"
+      },
+      {
+        "name": "origin",
+        "type": "text"
+      },
+      {
+        "name": "description_de",
+        "type": "text"
+      },
+      {
+        "name": "indoor",
+        "type": "text"
+      },
+      {
+        "name": "seats",
+        "type": "text"
+      },
+      {
+        "name": "internet_access_note",
+        "type": "text"
+      },
+      {
+        "name": "nightclub",
+        "type": "text"
+      },
+      {
+        "name": "pub",
+        "type": "text"
+      },
+      {
+        "name": "was_shop",
+        "type": "text"
+      },
+      {
+        "name": "payment_others",
+        "type": "text"
+      },
+      {
+        "name": "indoor_seating_capacity",
+        "type": "text"
+      },
+      {
+        "name": "name_he",
+        "type": "text"
+      },
+      {
+        "name": "smoothness",
+        "type": "text"
+      },
+      {
+        "name": "surface",
+        "type": "text"
+      },
+      {
+        "name": "payment_debit_cards_min_payment",
+        "type": "text"
+      },
+      {
+        "name": "addr_door",
+        "type": "text"
+      },
+      {
+        "name": "snack",
+        "type": "text"
+      },
+      {
+        "name": "clothes",
+        "type": "text"
+      },
+      {
+        "name": "name_ru",
+        "type": "text"
+      },
+      {
+        "name": "payment_mensacard",
+        "type": "text"
+      },
+      {
+        "name": "gluten_free",
+        "type": "text"
+      },
+      {
+        "name": "diet_lactose_free",
+        "type": "text"
+      },
+      {
+        "name": "operator_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "last_check",
+        "type": "text"
+      },
+      {
+        "name": "end_date",
+        "type": "text"
+      },
+      {
+        "name": "changing_table_location",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_step_height",
+        "type": "text"
+      },
+      {
+        "name": "service_electricity",
+        "type": "text"
+      },
+      {
+        "name": "drink_beer",
+        "type": "text"
+      },
+      {
+        "name": "drink_fritz_kola",
+        "type": "text"
+      },
+      {
+        "name": "drink_lemonade",
+        "type": "text"
+      },
+      {
+        "name": "construction_amenity",
+        "type": "text"
+      },
+      {
+        "name": "power_supply",
+        "type": "text"
+      },
+      {
+        "name": "noname",
+        "type": "text"
+      },
+      {
+        "name": "contact_whatsapp",
+        "type": "text"
+      },
+      {
+        "name": "check_date_currency_xbt",
+        "type": "text"
+      },
+      {
+        "name": "currency_xbt",
+        "type": "text"
+      },
+      {
+        "name": "payment_lightning",
+        "type": "text"
+      },
+      {
+        "name": "payment_lightning_contactless",
+        "type": "text"
+      },
+      {
+        "name": "payment_onchain",
+        "type": "text"
+      },
+      {
+        "name": "airside",
+        "type": "text"
+      },
+      {
+        "name": "delivery_partner",
+        "type": "text"
+      },
+      {
+        "name": "description_en",
+        "type": "text"
+      },
+      {
+        "name": "level_ref",
+        "type": "text"
+      },
+      {
+        "name": "capacity_indoor",
+        "type": "text"
+      },
+      {
+        "name": "capacity_outdoor",
+        "type": "text"
+      },
+      {
+        "name": "cats",
+        "type": "text"
+      },
+      {
+        "name": "drink_fritz_limo",
+        "type": "text"
+      },
+      {
+        "name": "drink_iced_tea",
+        "type": "text"
+      },
+      {
+        "name": "drink_lemonade_bottled",
+        "type": "text"
+      },
+      {
+        "name": "drink_lemonade_homemade",
+        "type": "text"
+      },
+      {
+        "name": "drink_non_alcoholic_beer",
+        "type": "text"
+      },
+      {
+        "name": "drink_paulaner_spezi",
+        "type": "text"
+      },
+      {
+        "name": "drink_soda",
+        "type": "text"
+      },
+      {
+        "name": "drink_water",
+        "type": "text"
+      },
+      {
+        "name": "food_bagel",
+        "type": "text"
+      },
+      {
+        "name": "food_cupcake",
+        "type": "text"
+      },
+      {
+        "name": "internet_access_password_location",
+        "type": "text"
+      },
+      {
+        "name": "toilets_num_chambers",
+        "type": "text"
+      },
+      {
+        "name": "toilets_number",
+        "type": "text"
+      },
+      {
+        "name": "website_orders",
+        "type": "text"
+      },
+      {
+        "name": "outdoor_seating_capacity",
+        "type": "text"
+      },
+      {
+        "name": "building",
+        "type": "text"
+      },
+      {
+        "name": "charge",
+        "type": "text"
+      },
+      {
+        "name": "fee",
+        "type": "text"
+      },
+      {
+        "name": "seasonal",
+        "type": "text"
+      },
+      {
+        "name": "diet_meat",
+        "type": "text"
+      },
+      {
+        "name": "street_vendor",
+        "type": "text"
+      },
+      {
+        "name": "surveillance_type",
+        "type": "text"
+      },
+      {
+        "name": "workfriendly",
+        "type": "text"
+      },
+      {
+        "name": "building_levels",
+        "type": "text"
+      },
+      {
+        "name": "roof_colour",
+        "type": "text"
+      },
+      {
+        "name": "roof_shape",
+        "type": "text"
+      },
+      {
+        "name": "nohousenumber",
+        "type": "text"
+      },
+      {
+        "name": "roof_levels",
+        "type": "text"
+      },
+      {
+        "name": "roof_material",
+        "type": "text"
+      },
+      {
+        "name": "building_colour",
+        "type": "text"
+      },
+      {
+        "name": "building_material",
+        "type": "text"
+      },
+      {
+        "name": "layer",
+        "type": "text"
+      },
+      {
+        "name": "height",
+        "type": "text"
+      },
+      {
+        "name": "roof_height",
+        "type": "text"
+      },
+      {
+        "name": "old_name__2020",
+        "type": "text"
+      },
+      {
+        "name": "old_name_2020_2023",
+        "type": "text"
+      },
+      {
+        "name": "disused_amenity",
+        "type": "text"
+      },
+      {
+        "name": "kids_area_fee",
+        "type": "text"
+      },
+      {
+        "name": "kids_area_outdoor",
+        "type": "text"
+      },
+      {
+        "name": "kids_area_supervised",
+        "type": "text"
+      },
+      {
+        "name": "architect",
+        "type": "text"
+      },
+      {
+        "name": "heritage",
+        "type": "text"
+      },
+      {
+        "name": "heritage_operator",
+        "type": "text"
+      },
+      {
+        "name": "heritage_ref",
+        "type": "text"
+      },
+      {
+        "name": "heritage_website",
+        "type": "text"
+      },
+      {
+        "name": "protection_status",
+        "type": "text"
+      },
+      {
+        "name": "addr_flats",
+        "type": "text"
+      },
+      {
+        "name": "operator_legal",
+        "type": "text"
+      },
+      {
+        "name": "building_part",
+        "type": "text"
+      },
+      {
+        "name": "amenity_1",
+        "type": "text"
+      },
+      {
+        "name": "entertainment",
+        "type": "text"
+      },
+      {
+        "name": "event",
+        "type": "text"
+      },
+      {
+        "name": "events_venue",
+        "type": "text"
+      },
+      {
+        "name": "genre",
+        "type": "text"
+      },
+      {
+        "name": "language_en",
+        "type": "text"
+      },
+      {
+        "name": "type",
+        "type": "text"
+      },
+      {
+        "name": "building_levels_underground",
+        "type": "text"
+      },
+      {
+        "name": "social_facility",
+        "type": "text"
+      },
+      {
+        "name": "social_facility_for",
+        "type": "text"
+      },
+      {
+        "name": "hearing_loop",
+        "type": "text"
+      },
+      {
+        "name": "tactile_paving",
+        "type": "text"
+      },
+      {
+        "name": "tactile_writing_braille",
+        "type": "text"
+      },
+      {
+        "name": "url",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_url",
+        "type": "text"
+      },
+      {
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "old_url",
+        "type": "text"
+      },
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "geometry",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "osm_id",
+        "type": "bigint"
+      },
+      {
+        "name": "source_url",
+        "type": "text"
+      }
+    ]
+  },
+  "osm_hospitals": {
+    "row_count": 59,
+    "geometry_type": "GEOMETRY",
+    "columns": [
+      {
+        "name": "roof_shape",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "addr_city",
+        "type": "text"
+      },
+      {
+        "name": "addr_housenumber",
+        "type": "text"
+      },
+      {
+        "name": "addr_postcode",
+        "type": "text"
+      },
+      {
+        "name": "addr_street",
+        "type": "text"
+      },
+      {
+        "name": "amenity",
+        "type": "text"
+      },
+      {
+        "name": "emergency",
+        "type": "text"
+      },
+      {
+        "name": "healthcare",
+        "type": "text"
+      },
+      {
+        "name": "healthcare_speciality",
+        "type": "text"
+      },
+      {
+        "name": "level",
+        "type": "text"
+      },
+      {
+        "name": "name",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair",
+        "type": "text"
+      },
+      {
+        "name": "alt_name",
+        "type": "text"
+      },
+      {
+        "name": "alt_name_de",
+        "type": "text"
+      },
+      {
+        "name": "phone",
+        "type": "text"
+      },
+      {
+        "name": "contact_facebook",
+        "type": "text"
+      },
+      {
+        "name": "contact_instagram",
+        "type": "text"
+      },
+      {
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "name": "contact_youtube",
+        "type": "text"
+      },
+      {
+        "name": "name_en",
+        "type": "text"
+      },
+      {
+        "name": "name_etymology_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "toilets_wheelchair",
+        "type": "text"
+      },
+      {
+        "name": "website",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_description",
+        "type": "text"
+      },
+      {
+        "name": "wikidata",
+        "type": "text"
+      },
+      {
+        "name": "wikimedia_commons",
+        "type": "text"
+      },
+      {
+        "name": "wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "brand",
+        "type": "text"
+      },
+      {
+        "name": "brand_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "operator",
+        "type": "text"
+      },
+      {
+        "name": "operator_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "short_name",
+        "type": "text"
+      },
+      {
+        "name": "addr_country",
+        "type": "text"
+      },
+      {
+        "name": "addr_suburb",
+        "type": "text"
+      },
+      {
+        "name": "contact_phone",
+        "type": "text"
+      },
+      {
+        "name": "contact_website",
+        "type": "text"
+      },
+      {
+        "name": "operator_type",
+        "type": "text"
+      },
+      {
+        "name": "operator_wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "name_de",
+        "type": "text"
+      },
+      {
+        "name": "name_nl",
+        "type": "text"
+      },
+      {
+        "name": "note",
+        "type": "text"
+      },
+      {
+        "name": "check_date",
+        "type": "text"
+      },
+      {
+        "name": "image",
+        "type": "text"
+      },
+      {
+        "name": "landuse",
+        "type": "text"
+      },
+      {
+        "name": "denomination",
+        "type": "text"
+      },
+      {
+        "name": "religion",
+        "type": "text"
+      },
+      {
+        "name": "building",
+        "type": "text"
+      },
+      {
+        "name": "building_levels",
+        "type": "text"
+      },
+      {
+        "name": "official_name",
+        "type": "text"
+      },
+      {
+        "name": "loc_name",
+        "type": "text"
+      },
+      {
+        "name": "email",
+        "type": "text"
+      },
+      {
+        "name": "start_date",
+        "type": "text"
+      },
+      {
+        "name": "brand_wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "fax",
+        "type": "text"
+      },
+      {
+        "name": "health_facility_type",
+        "type": "text"
+      },
+      {
+        "name": "medical_system_western",
+        "type": "text"
+      },
+      {
+        "name": "source",
+        "type": "text"
+      },
+      {
+        "name": "barrier",
+        "type": "text"
+      },
+      {
+        "name": "heritage",
+        "type": "text"
+      },
+      {
+        "name": "heritage_operator",
+        "type": "text"
+      },
+      {
+        "name": "lda_criteria",
+        "type": "text"
+      },
+      {
+        "name": "old_name",
+        "type": "text"
+      },
+      {
+        "name": "ref_lda",
+        "type": "text"
+      },
+      {
+        "name": "contact_email",
+        "type": "text"
+      },
+      {
+        "name": "contact_fax",
+        "type": "text"
+      },
+      {
+        "name": "ref_vatin",
+        "type": "text"
+      },
+      {
+        "name": "internet_access",
+        "type": "text"
+      },
+      {
+        "name": "internet_access_fee",
+        "type": "text"
+      },
+      {
+        "name": "roof_levels",
+        "type": "text"
+      },
+      {
+        "name": "addr_housename",
+        "type": "text"
+      },
+      {
+        "name": "health_specialty_ophthalmology",
+        "type": "text"
+      },
+      {
+        "name": "health_specialty_optometry",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_emergency",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_office",
+        "type": "text"
+      },
+      {
+        "name": "capacity_beds",
+        "type": "text"
+      },
+      {
+        "name": "staff_count_doctors",
+        "type": "text"
+      },
+      {
+        "name": "staff_count_nurses",
+        "type": "text"
+      },
+      {
+        "name": "beds",
+        "type": "text"
+      },
+      {
+        "name": "reg_name",
+        "type": "text"
+      },
+      {
+        "name": "contact_phone_emergency",
+        "type": "text"
+      },
+      {
+        "name": "beds_icu",
+        "type": "text"
+      },
+      {
+        "name": "health_specialty_geriatrics",
+        "type": "text"
+      },
+      {
+        "name": "health_specialty_internal_medicine",
+        "type": "text"
+      },
+      {
+        "name": "internet_access_password",
+        "type": "text"
+      },
+      {
+        "name": "internet_access_ssid",
+        "type": "text"
+      },
+      {
+        "name": "member_of",
+        "type": "text"
+      },
+      {
+        "name": "health_specialty_occupational_therapy",
+        "type": "text"
+      },
+      {
+        "name": "health_specialty_phoniatrics",
+        "type": "text"
+      },
+      {
+        "name": "health_specialty_physiotherapy",
+        "type": "text"
+      },
+      {
+        "name": "geometry",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "osm_id",
+        "type": "bigint"
+      },
+      {
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
+      }
+    ]
+  },
+  "osm_parks": {
+    "row_count": 2788,
+    "geometry_type": "GEOMETRY",
+    "columns": [
+      {
+        "name": "leaf_type",
+        "type": "text"
+      },
+      {
+        "name": "natural",
+        "type": "text"
+      },
+      {
+        "name": "bicycle",
+        "type": "text"
+      },
+      {
+        "name": "charge",
+        "type": "text"
+      },
+      {
+        "name": "payment_cash",
+        "type": "text"
+      },
+      {
+        "name": "operator_type",
+        "type": "text"
+      },
+      {
+        "name": "ref_de_be_str",
+        "type": "text"
+      },
+      {
+        "name": "access",
+        "type": "text"
+      },
+      {
+        "name": "note",
+        "type": "text"
+      },
+      {
+        "name": "historic_garden_type",
+        "type": "text"
+      },
+      {
+        "name": "historic_leisure",
+        "type": "text"
+      },
+      {
+        "name": "place",
+        "type": "text"
+      },
+      {
+        "name": "reg_name",
+        "type": "text"
+      },
+      {
+        "name": "name_fa",
+        "type": "text"
+      },
+      {
+        "name": "smoking",
+        "type": "text"
+      },
+      {
+        "name": "opening_date",
+        "type": "text"
+      },
+      {
+        "name": "surface",
+        "type": "text"
+      },
+      {
+        "name": "short_protection_title",
+        "type": "text"
+      },
+      {
+        "name": "payment_coins",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_description",
+        "type": "text"
+      },
+      {
+        "name": "bldam_criteria",
+        "type": "text"
+      },
+      {
+        "name": "official_name",
+        "type": "text"
+      },
+      {
+        "name": "fee",
+        "type": "text"
+      },
+      {
+        "name": "protection_title",
+        "type": "text"
+      },
+      {
+        "name": "communication_amateur_radio_pota",
+        "type": "text"
+      },
+      {
+        "name": "leisure",
+        "type": "text"
+      },
+      {
+        "name": "name",
+        "type": "text"
+      },
+      {
+        "name": "name_ko",
+        "type": "text"
+      },
+      {
+        "name": "name_ru",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "type",
+        "type": "text"
+      },
+      {
+        "name": "wikidata",
+        "type": "text"
+      },
+      {
+        "name": "wikimedia_commons",
+        "type": "text"
+      },
+      {
+        "name": "wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "seamark_notice_category",
+        "type": "text"
+      },
+      {
+        "name": "seamark_notice_function",
+        "type": "text"
+      },
+      {
+        "name": "addr_city",
+        "type": "text"
+      },
+      {
+        "name": "addr_postcode",
+        "type": "text"
+      },
+      {
+        "name": "addr_street",
+        "type": "text"
+      },
+      {
+        "name": "contact_website",
+        "type": "text"
+      },
+      {
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "name": "image",
+        "type": "text"
+      },
+      {
+        "name": "landuse",
+        "type": "text"
+      },
+      {
+        "name": "old_name_etymology_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "old_name_etymology_wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "website",
+        "type": "text"
+      },
+      {
+        "name": "check_date",
+        "type": "text"
+      },
+      {
+        "name": "name_etymology_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "name_etymology_wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "alt_name",
+        "type": "text"
+      },
+      {
+        "name": "architect",
+        "type": "text"
+      },
+      {
+        "name": "architect_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "architect_wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "heritage",
+        "type": "text"
+      },
+      {
+        "name": "heritage_operator",
+        "type": "text"
+      },
+      {
+        "name": "heritage_website",
+        "type": "text"
+      },
+      {
+        "name": "lda_criteria",
+        "type": "text"
+      },
+      {
+        "name": "lda_inscription_date",
+        "type": "text"
+      },
+      {
+        "name": "name_he",
+        "type": "text"
+      },
+      {
+        "name": "reconstruction_date",
+        "type": "text"
+      },
+      {
+        "name": "ref_lda",
+        "type": "text"
+      },
+      {
+        "name": "start_date",
+        "type": "text"
+      },
+      {
+        "name": "name_be",
+        "type": "text"
+      },
+      {
+        "name": "addr_country",
+        "type": "text"
+      },
+      {
+        "name": "addr_housenumber",
+        "type": "text"
+      },
+      {
+        "name": "source",
+        "type": "text"
+      },
+      {
+        "name": "old_name",
+        "type": "text"
+      },
+      {
+        "name": "short_name",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair",
+        "type": "text"
+      },
+      {
+        "name": "barrier",
+        "type": "text"
+      },
+      {
+        "name": "boundary",
+        "type": "text"
+      },
+      {
+        "name": "protect_class",
+        "type": "text"
+      },
+      {
+        "name": "operator",
+        "type": "text"
+      },
+      {
+        "name": "dog",
+        "type": "text"
+      },
+      {
+        "name": "loc_name",
+        "type": "text"
+      },
+      {
+        "name": "name_ja",
+        "type": "text"
+      },
+      {
+        "name": "postal_code",
+        "type": "text"
+      },
+      {
+        "name": "name_en",
+        "type": "text"
+      },
+      {
+        "name": "name_pl",
+        "type": "text"
+      },
+      {
+        "name": "leaf_cycle",
+        "type": "text"
+      },
+      {
+        "name": "addr_suburb",
+        "type": "text"
+      },
+      {
+        "name": "historic",
+        "type": "text"
+      },
+      {
+        "name": "proposed_name",
+        "type": "text"
+      },
+      {
+        "name": "proposed_name_etymology_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "proposed_name_start_date",
+        "type": "text"
+      },
+      {
+        "name": "alt_name_de",
+        "type": "text"
+      },
+      {
+        "name": "toilets_wheelchair",
+        "type": "text"
+      },
+      {
+        "name": "ref_bldam",
+        "type": "text"
+      },
+      {
+        "name": "artist_name",
+        "type": "text"
+      },
+      {
+        "name": "check_date_opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "orchard",
+        "type": "text"
+      },
+      {
+        "name": "ref_schlossgutshofbritz",
+        "type": "text"
+      },
+      {
+        "name": "esperanto",
+        "type": "text"
+      },
+      {
+        "name": "name_etymology",
+        "type": "text"
+      },
+      {
+        "name": "lit",
+        "type": "text"
+      },
+      {
+        "name": "smoothness",
+        "type": "text"
+      },
+      {
+        "name": "height",
+        "type": "text"
+      },
+      {
+        "name": "cemetery_end_date",
+        "type": "text"
+      },
+      {
+        "name": "email",
+        "type": "text"
+      },
+      {
+        "name": "abandoned_landuse",
+        "type": "text"
+      },
+      {
+        "name": "denomination",
+        "type": "text"
+      },
+      {
+        "name": "religion",
+        "type": "text"
+      },
+      {
+        "name": "cutting",
+        "type": "text"
+      },
+      {
+        "name": "level",
+        "type": "text"
+      },
+      {
+        "name": "name_2017_03_12",
+        "type": "text"
+      },
+      {
+        "name": "operator_short",
+        "type": "text"
+      },
+      {
+        "name": "operator_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "operator_wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "ref_whc",
+        "type": "text"
+      },
+      {
+        "name": "whc_criteria",
+        "type": "text"
+      },
+      {
+        "name": "whc_inscription_date",
+        "type": "text"
+      },
+      {
+        "name": "garden_type",
+        "type": "text"
+      },
+      {
+        "name": "tourism",
+        "type": "text"
+      },
+      {
+        "name": "fixme",
+        "type": "text"
+      },
+      {
+        "name": "was_landuse",
+        "type": "text"
+      },
+      {
+        "name": "ref",
+        "type": "text"
+      },
+      {
+        "name": "noname",
+        "type": "text"
+      },
+      {
+        "name": "foot",
+        "type": "text"
+      },
+      {
+        "name": "area",
+        "type": "text"
+      },
+      {
+        "name": "layer",
+        "type": "text"
+      },
+      {
+        "name": "building",
+        "type": "text"
+      },
+      {
+        "name": "building_levels",
+        "type": "text"
+      },
+      {
+        "name": "roof_material",
+        "type": "text"
+      },
+      {
+        "name": "roof_shape",
+        "type": "text"
+      },
+      {
+        "name": "sport",
+        "type": "text"
+      },
+      {
+        "name": "website_de",
+        "type": "text"
+      },
+      {
+        "name": "website_en",
+        "type": "text"
+      },
+      {
+        "name": "nudism",
+        "type": "text"
+      },
+      {
+        "name": "mapillary",
+        "type": "text"
+      },
+      {
+        "name": "year_of_construction",
+        "type": "text"
+      },
+      {
+        "name": "abandoned_amenity",
+        "type": "text"
+      },
+      {
+        "name": "start_date_name",
+        "type": "text"
+      },
+      {
+        "name": "name_de",
+        "type": "text"
+      },
+      {
+        "name": "note_contact_website",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_covid19",
+        "type": "text"
+      },
+      {
+        "name": "landcover",
+        "type": "text"
+      },
+      {
+        "name": "old_name__2024_11_29",
+        "type": "text"
+      },
+      {
+        "name": "whatsapp",
+        "type": "text"
+      },
+      {
+        "name": "contact_tripadvisor",
+        "type": "text"
+      },
+      {
+        "name": "contact_email",
+        "type": "text"
+      },
+      {
+        "name": "highway",
+        "type": "text"
+      },
+      {
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "osm_id",
+        "type": "bigint"
+      },
+      {
+        "name": "id",
         "type": "text"
       },
       {
@@ -21,80 +2759,832 @@
       }
     ]
   },
-  "berlin_districts": {
-    "row_count": 96,
+  "osm_pharmacies": {
+    "row_count": 761,
     "geometry_type": "GEOMETRY",
     "columns": [
       {
-        "name": "id",
-        "type": "integer"
+        "name": "addr_country",
+        "type": "text"
+      },
+      {
+        "name": "drinking_water_refill",
+        "type": "text"
+      },
+      {
+        "name": "contact_facebook",
+        "type": "text"
+      },
+      {
+        "name": "branch",
+        "type": "text"
+      },
+      {
+        "name": "contact_instagram",
+        "type": "text"
+      },
+      {
+        "name": "payment_american_express",
+        "type": "text"
+      },
+      {
+        "name": "language_fr",
+        "type": "text"
+      },
+      {
+        "name": "step_count",
+        "type": "text"
+      },
+      {
+        "name": "width",
+        "type": "text"
+      },
+      {
+        "name": "addr_flats",
+        "type": "text"
+      },
+      {
+        "name": "network",
+        "type": "text"
+      },
+      {
+        "name": "layer",
+        "type": "text"
+      },
+      {
+        "name": "service_bicycle_pump",
+        "type": "text"
+      },
+      {
+        "name": "service_bicycle_retail",
+        "type": "text"
+      },
+      {
+        "name": "service_bicycle_second_hand",
+        "type": "text"
+      },
+      {
+        "name": "lgbtq",
+        "type": "text"
+      },
+      {
+        "name": "lgbtq_signed",
+        "type": "text"
+      },
+      {
+        "name": "mapillary",
+        "type": "text"
+      },
+      {
+        "name": "addr_inclusion",
+        "type": "text"
+      },
+      {
+        "name": "disused_amenity",
+        "type": "text"
+      },
+      {
+        "name": "payment_visa_debit",
+        "type": "text"
+      },
+      {
+        "name": "indoor",
+        "type": "text"
+      },
+      {
+        "name": "level_ref",
+        "type": "text"
+      },
+      {
+        "name": "location",
+        "type": "text"
+      },
+      {
+        "name": "building",
+        "type": "text"
+      },
+      {
+        "name": "building_colour",
+        "type": "text"
+      },
+      {
+        "name": "building_roof",
+        "type": "text"
+      },
+      {
+        "name": "roof_shape",
+        "type": "text"
+      },
+      {
+        "name": "room",
+        "type": "text"
+      },
+      {
+        "name": "not_brand_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "brand_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "addr_city",
+        "type": "text"
+      },
+      {
+        "name": "addr_housenumber",
+        "type": "text"
+      },
+      {
+        "name": "addr_postcode",
+        "type": "text"
+      },
+      {
+        "name": "addr_street",
+        "type": "text"
+      },
+      {
+        "name": "addr_suburb",
+        "type": "text"
+      },
+      {
+        "name": "amenity",
+        "type": "text"
+      },
+      {
+        "name": "check_date_opening_hours",
+        "type": "text"
+      },
+      {
+        "name": "dispensing",
+        "type": "text"
+      },
+      {
+        "name": "healthcare",
+        "type": "text"
       },
       {
         "name": "name",
-        "type": "character varying"
+        "type": "text"
       },
       {
-        "name": "bezirk",
-        "type": "character varying"
+        "name": "opening_hours",
+        "type": "text"
       },
       {
-        "name": "oteil",
-        "type": "character varying"
+        "name": "phone",
+        "type": "text"
       },
       {
-        "name": "area_ha",
+        "name": "toilets_wheelchair",
+        "type": "text"
+      },
+      {
+        "name": "website",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair",
+        "type": "text"
+      },
+      {
+        "name": "check_date",
+        "type": "text"
+      },
+      {
+        "name": "man_made",
+        "type": "text"
+      },
+      {
+        "name": "payment_mastercard",
+        "type": "text"
+      },
+      {
+        "name": "payment_visa",
+        "type": "text"
+      },
+      {
+        "name": "surveillance",
+        "type": "text"
+      },
+      {
+        "name": "contact_website",
+        "type": "text"
+      },
+      {
+        "name": "level",
+        "type": "text"
+      },
+      {
+        "name": "email",
+        "type": "text"
+      },
+      {
+        "name": "fax",
+        "type": "text"
+      },
+      {
+        "name": "note",
+        "type": "text"
+      },
+      {
+        "name": "contact_phone",
+        "type": "text"
+      },
+      {
+        "name": "operator",
+        "type": "text"
+      },
+      {
+        "name": "addr_city_fa",
+        "type": "text"
+      },
+      {
+        "name": "drive_through",
+        "type": "text"
+      },
+      {
+        "name": "contact_email",
+        "type": "text"
+      },
+      {
+        "name": "owner",
+        "type": "text"
+      },
+      {
+        "name": "contact_fax",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_description",
+        "type": "text"
+      },
+      {
+        "name": "source",
+        "type": "text"
+      },
+      {
+        "name": "start_date",
+        "type": "text"
+      },
+      {
+        "name": "health_facility_type",
+        "type": "text"
+      },
+      {
+        "name": "medical_system_western",
+        "type": "text"
+      },
+      {
+        "name": "payment_cash",
+        "type": "text"
+      },
+      {
+        "name": "payment_credit_cards",
+        "type": "text"
+      },
+      {
+        "name": "payment_debit_cards",
+        "type": "text"
+      },
+      {
+        "name": "name_old",
+        "type": "text"
+      },
+      {
+        "name": "building_levels",
+        "type": "text"
+      },
+      {
+        "name": "old_name",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_source",
+        "type": "text"
+      },
+      {
+        "name": "access",
+        "type": "text"
+      },
+      {
+        "name": "entrance",
+        "type": "text"
+      },
+      {
+        "name": "operator_type",
+        "type": "text"
+      },
+      {
+        "name": "ref_vatin",
+        "type": "text"
+      },
+      {
+        "name": "payment_maestro",
+        "type": "text"
+      },
+      {
+        "name": "automatic_door",
+        "type": "text"
+      },
+      {
+        "name": "changing_table",
+        "type": "text"
+      },
+      {
+        "name": "changing_table_location",
+        "type": "text"
+      },
+      {
+        "name": "door",
+        "type": "text"
+      },
+      {
+        "name": "access_covid19",
+        "type": "text"
+      },
+      {
+        "name": "delivery_covid19",
+        "type": "text"
+      },
+      {
+        "name": "brand",
+        "type": "text"
+      },
+      {
+        "name": "name_en",
+        "type": "text"
+      },
+      {
+        "name": "addr_floor",
+        "type": "text"
+      },
+      {
+        "name": "last_checked",
+        "type": "text"
+      },
+      {
+        "name": "medical_supply",
+        "type": "text"
+      },
+      {
+        "name": "addr_place",
+        "type": "text"
+      },
+      {
+        "name": "dog",
+        "type": "text"
+      },
+      {
+        "name": "opening_hours_signed",
+        "type": "text"
+      },
+      {
+        "name": "takeaway_covid19",
+        "type": "text"
+      },
+      {
+        "name": "payment_girocard",
+        "type": "text"
+      },
+      {
+        "name": "addr_housename",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_description_de",
+        "type": "text"
+      },
+      {
+        "name": "wheelchair_description_en",
+        "type": "text"
+      },
+      {
+        "name": "language_en",
+        "type": "text"
+      },
+      {
+        "name": "language_es",
+        "type": "text"
+      },
+      {
+        "name": "language_tr",
+        "type": "text"
+      },
+      {
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "name": "payment_contactless",
+        "type": "text"
+      },
+      {
+        "name": "contact_whatsapp",
+        "type": "text"
+      },
+      {
+        "name": "air_conditioning",
+        "type": "text"
+      },
+      {
+        "name": "wikidata",
+        "type": "text"
+      },
+      {
+        "name": "wikipedia",
+        "type": "text"
+      },
+      {
+        "name": "fixme",
+        "type": "text"
+      },
+      {
+        "name": "alt_name",
+        "type": "text"
+      },
+      {
+        "name": "internet_access",
+        "type": "text"
+      },
+      {
+        "name": "delivery",
+        "type": "text"
+      },
+      {
+        "name": "subject_wikidata",
+        "type": "text"
+      },
+      {
+        "name": "wikimedia_commons",
+        "type": "text"
+      },
+      {
+        "name": "payment_cards",
+        "type": "text"
+      },
+      {
+        "name": "instagram",
+        "type": "text"
+      },
+      {
+        "name": "name_de",
+        "type": "text"
+      },
+      {
+        "name": "geometry",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "osm_id",
+        "type": "bigint"
+      },
+      {
+        "name": "opening_hours_url",
+        "type": "text"
+      },
+      {
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
+      }
+    ]
+  },
+  "wfs_alkis_flurstuecke_flurstuecke": {
+    "row_count": 403489,
+    "geometry_type": "MULTIPOLYGON",
+    "columns": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "uuid",
+        "type": "text"
+      },
+      {
+        "name": "bezeich",
+        "type": "text"
+      },
+      {
+        "name": "afl",
+        "type": "double precision"
+      },
+      {
+        "name": "fsko",
+        "type": "text"
+      },
+      {
+        "name": "zae",
+        "type": "text"
+      },
+      {
+        "name": "nen",
+        "type": "text"
+      },
+      {
+        "name": "gmk",
+        "type": "text"
+      },
+      {
+        "name": "namgmk",
+        "type": "text"
+      },
+      {
+        "name": "fln",
+        "type": "text"
+      },
+      {
+        "name": "gdz",
+        "type": "text"
+      },
+      {
+        "name": "namgem",
+        "type": "text"
+      },
+      {
+        "name": "zde",
+        "type": "text"
+      },
+      {
+        "name": "dst",
+        "type": "text"
+      },
+      {
+        "name": "beg",
+        "type": "text"
+      },
+      {
+        "name": "geometry",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
+      }
+    ]
+  },
+  "wfs_alkis_gebaeudeflaechen": {
+    "row_count": 782534,
+    "geometry_type": "MULTIPOLYGON",
+    "columns": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "uuid",
+        "type": "text"
+      },
+      {
+        "name": "gfk",
+        "type": "double precision"
+      },
+      {
+        "name": "bezgfk",
+        "type": "text"
+      },
+      {
+        "name": "ofl",
+        "type": "double precision"
+      },
+      {
+        "name": "bezofl",
+        "type": "text"
+      },
+      {
+        "name": "aog",
+        "type": "double precision"
+      },
+      {
+        "name": "aug",
+        "type": "double precision"
+      },
+      {
+        "name": "hoh",
+        "type": "text"
+      },
+      {
+        "name": "bat",
+        "type": "double precision"
+      },
+      {
+        "name": "bezbat",
+        "type": "text"
+      },
+      {
+        "name": "nam",
+        "type": "text"
+      },
+      {
+        "name": "baw",
+        "type": "double precision"
+      },
+      {
+        "name": "bezbaw",
+        "type": "text"
+      },
+      {
+        "name": "zus",
+        "type": "double precision"
+      },
+      {
+        "name": "bezzus",
+        "type": "text"
+      },
+      {
+        "name": "gkn",
+        "type": "text"
+      },
+      {
+        "name": "des",
+        "type": "text"
+      },
+      {
+        "name": "bezdes",
+        "type": "text"
+      },
+      {
+        "name": "lag",
+        "type": "text"
+      },
+      {
+        "name": "namlag",
+        "type": "text"
+      },
+      {
+        "name": "hnr",
+        "type": "text"
+      },
+      {
+        "name": "pnr",
+        "type": "text"
+      },
+      {
+        "name": "lnr",
+        "type": "text"
+      },
+      {
+        "name": "bezeich",
+        "type": "text"
+      },
+      {
+        "name": "shape_area",
         "type": "double precision"
       },
       {
         "name": "geometry",
         "type": "USER-DEFINED"
+      },
+      {
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
       }
     ]
   },
-  "landmarks": {
-    "row_count": 12853,
-    "geometry_type": "GEOMETRY",
+  "wfs_baumbestand_anlagenbaeume": {
+    "row_count": 511872,
+    "geometry_type": "POINT",
     "columns": [
       {
         "name": "id",
-        "type": "integer"
+        "type": "text"
       },
       {
-        "name": "name",
-        "type": "character varying"
+        "name": "gisid",
+        "type": "text"
       },
       {
-        "name": "type",
-        "type": "character varying"
+        "name": "pitid",
+        "type": "text"
       },
       {
-        "name": "parent_bezirk",
-        "type": "character varying"
+        "name": "standortnr",
+        "type": "text"
+      },
+      {
+        "name": "kennzeich",
+        "type": "text"
+      },
+      {
+        "name": "namenr",
+        "type": "text"
+      },
+      {
+        "name": "art_dtsch",
+        "type": "text"
+      },
+      {
+        "name": "art_bot",
+        "type": "text"
+      },
+      {
+        "name": "gattung_deutsch",
+        "type": "text"
+      },
+      {
+        "name": "gattung",
+        "type": "text"
+      },
+      {
+        "name": "art_gruppe",
+        "type": "text"
+      },
+      {
+        "name": "pflanzjahr",
+        "type": "text"
+      },
+      {
+        "name": "standalter",
+        "type": "double precision"
+      },
+      {
+        "name": "kronedurch",
+        "type": "double precision"
+      },
+      {
+        "name": "stammumfg",
+        "type": "double precision"
+      },
+      {
+        "name": "baumhoehe",
+        "type": "double precision"
+      },
+      {
+        "name": "eigentuemer",
+        "type": "text"
+      },
+      {
+        "name": "bezirk",
+        "type": "text"
       },
       {
         "name": "geometry",
         "type": "USER-DEFINED"
       },
       {
-        "name": "osm_id",
-        "type": "character varying"
-      },
-      {
-        "name": "source_table",
-        "type": "character varying"
-      },
-      {
-        "name": "created_at",
-        "type": "timestamp without time zone"
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
       }
     ]
   },
-  "osm_districts": {
-    "row_count": 547,
-    "geometry_type": "GEOMETRY",
+  "wfs_beleuchtung_beleuchtung": {
+    "row_count": 210214,
+    "geometry_type": "MULTIPOINT",
     "columns": [
       {
-        "name": "osm_id",
+        "name": "id",
+        "type": "bigint"
+      },
+      {
+        "name": "leuchtstelle",
+        "type": "text"
+      },
+      {
+        "name": "kurznummer",
+        "type": "bigint"
+      },
+      {
+        "name": "betriebsart",
+        "type": "text"
+      },
+      {
+        "name": "status",
+        "type": "text"
+      },
+      {
+        "name": "bezirk",
+        "type": "text"
+      },
+      {
+        "name": "ortsteil",
+        "type": "text"
+      },
+      {
+        "name": "strasse",
+        "type": "text"
+      },
+      {
+        "name": "east",
+        "type": "double precision"
+      },
+      {
+        "name": "north",
+        "type": "double precision"
+      },
+      {
+        "name": "rotation",
+        "type": "double precision"
+      },
+      {
+        "name": "leuchtentyp",
+        "type": "text"
+      },
+      {
+        "name": "symbolnr",
         "type": "bigint"
       },
       {
@@ -102,122 +3592,318 @@
         "type": "USER-DEFINED"
       },
       {
-        "name": "name",
-        "type": "character varying"
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
       }
     ]
   },
-  "vector.osm_landuse": {
-    "columns": {
-      "gml_id": {
-        "type": "object",
-        "description": "Gml Id"
-      },
-      "identifier": {
-        "type": "object",
-        "description": "Identifier"
-      },
-      "localid": {
-        "type": "object",
-        "description": "Localid"
-      },
-      "namespace": {
-        "type": "object",
-        "description": "Namespace"
-      },
-      "beginlifespanversion": {
-        "type": "object",
-        "description": "Beginlifespanversion"
-      },
-      "hilucspresence": {
-        "type": "object",
-        "description": "Hilucspresence"
-      },
-      "specificlanduse": {
-        "type": "object",
-        "description": "Specificlanduse"
-      },
-      "specificpresence": {
-        "type": "object",
-        "description": "Specificpresence"
-      },
-      "observationdate": {
-        "type": "object",
-        "description": "Observationdate"
-      }
-    },
-    "geometry_type": "Polygon",
-    "crs": "EPSG:4326",
-    "feature_count": 107375,
-    "last_updated": "2025-11-08T18:31:15.579812"
-  },
-  "osm_buildings": {
-    "row_count": 760088,
-    "geometry_type": "MULTIPOLYGON",
+  "wfs_schulen_schulen": {
+    "row_count": 930,
+    "geometry_type": "POINT",
     "columns": [
       {
-        "name": "ogc_fid",
-        "type": "integer"
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "bsn",
+        "type": "text"
+      },
+      {
+        "name": "schulname",
+        "type": "text"
+      },
+      {
+        "name": "schulart",
+        "type": "text"
+      },
+      {
+        "name": "traeger",
+        "type": "text"
+      },
+      {
+        "name": "schultyp",
+        "type": "text"
+      },
+      {
+        "name": "bezirk",
+        "type": "text"
+      },
+      {
+        "name": "ortsteil",
+        "type": "text"
+      },
+      {
+        "name": "plz",
+        "type": "text"
+      },
+      {
+        "name": "strasse",
+        "type": "text"
+      },
+      {
+        "name": "hausnr",
+        "type": "text"
+      },
+      {
+        "name": "telefon",
+        "type": "text"
+      },
+      {
+        "name": "fax",
+        "type": "text"
+      },
+      {
+        "name": "email",
+        "type": "text"
+      },
+      {
+        "name": "internet",
+        "type": "text"
+      },
+      {
+        "name": "schuljahr",
+        "type": "text"
       },
       {
         "name": "geometry",
         "type": "USER-DEFINED"
       },
       {
-        "name": "gfk",
-        "type": "numeric",
-        "description": "Building use code (numeric GFK = Geb\u00e4udeformgruppe)"
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
+      }
+    ]
+  },
+  "wfs_schulen_schulen_esb": {
+    "row_count": 394,
+    "geometry_type": "MULTIPOLYGON",
+    "columns": [
+      {
+        "name": "id",
+        "type": "text"
       },
       {
-        "name": "bezgfk",
-        "type": "character varying",
-        "description": "Building use/function type in German (Wohnhaus, Wohngeb\u00e4ude, Schule, B\u00fcrogeb\u00e4ude, etc.)"
-      },
-      {
-        "name": "nam",
-        "type": "character varying"
-      },
-      {
-        "name": "bat",
-        "type": "numeric"
-      },
-      {
-        "name": "bezbat",
-        "type": "character varying",
-        "description": "Building structure component type in German (Arkade, Hochhaus, etc.)"
-      },
-      {
-        "name": "hoh",
-        "type": "character varying"
-      },
-      {
-        "name": "aog",
-        "type": "numeric"
-      },
-      {
-        "name": "aug",
-        "type": "numeric"
-      },
-      {
-        "name": "baw",
-        "type": "numeric"
+        "name": "esb",
+        "type": "text"
       },
       {
         "name": "bez",
-        "type": "character varying"
+        "type": "text"
       },
       {
-        "name": "gkn",
-        "type": "character varying"
+        "name": "bezname",
+        "type": "text"
       },
       {
-        "name": "des",
-        "type": "character varying"
+        "name": "geometry",
+        "type": "USER-DEFINED"
       },
       {
-        "name": "use",
-        "type": "ARRAY",
-        "description": "Array of landuse categories (TEXT[]): RESIDENTIAL, COMMERCIAL, INDUSTRIAL, EDUCATION, HEALTHCARE, RELIGIOUS, CULTURAL, SPORTS, HOSPITALITY, TRANSPORTATION, UTILITIES, AGRICULTURE, FUNERARY, PUBLIC_SAFETY, ADMINISTRATION, PARKING, OTHER"
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
+      }
+    ]
+  },
+  "wfs_toiletten_toiletten": {
+    "row_count": 509,
+    "geometry_type": "POINT",
+    "columns": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "fid",
+        "type": "bigint"
+      },
+      {
+        "name": "bezirk",
+        "type": "text"
+      },
+      {
+        "name": "standort",
+        "type": "text"
+      },
+      {
+        "name": "vertrag",
+        "type": "text"
+      },
+      {
+        "name": "betreiber",
+        "type": "text"
+      },
+      {
+        "name": "modelltyp",
+        "type": "text"
+      },
+      {
+        "name": "symbol",
+        "type": "text"
+      },
+      {
+        "name": "oeffnungszeiten",
+        "type": "text"
+      },
+      {
+        "name": "nutzungsentgelt",
+        "type": "double precision"
+      },
+      {
+        "name": "zahlungsart",
+        "type": "text"
+      },
+      {
+        "name": "barrierefrei",
+        "type": "text"
+      },
+      {
+        "name": "barrierearm",
+        "type": "text"
+      },
+      {
+        "name": "wickeltisch",
+        "type": "text"
+      },
+      {
+        "name": "geometry",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
+      }
+    ]
+  },
+  "wfs_ua_luftbelastung_verkehr_2020_2025": {
+    "row_count": 12370,
+    "geometry_type": "MULTILINESTRING",
+    "columns": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "id1",
+        "type": "text"
+      },
+      {
+        "name": "laenge",
+        "type": "double precision"
+      },
+      {
+        "name": "name",
+        "type": "text"
+      },
+      {
+        "name": "dtv_2020",
+        "type": "bigint"
+      },
+      {
+        "name": "dtv_2025",
+        "type": "bigint"
+      },
+      {
+        "name": "no2_2020",
+        "type": "double precision"
+      },
+      {
+        "name": "pm10_2020",
+        "type": "double precision"
+      },
+      {
+        "name": "pm25_2020",
+        "type": "double precision"
+      },
+      {
+        "name": "no2_2025",
+        "type": "double precision"
+      },
+      {
+        "name": "pm10_2025",
+        "type": "double precision"
+      },
+      {
+        "name": "pm25_2025",
+        "type": "double precision"
+      },
+      {
+        "name": "n_betrof",
+        "type": "bigint"
+      },
+      {
+        "name": "index_2020",
+        "type": "double precision"
+      },
+      {
+        "name": "index_no2",
+        "type": "double precision"
+      },
+      {
+        "name": "index_pm10",
+        "type": "double precision"
+      },
+      {
+        "name": "geometry",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
+      }
+    ]
+  },
+  "wfs_ua_stromverbrauch_a_verbrauchstromblock": {
+    "row_count": 16390,
+    "geometry_type": "MULTIPOLYGON",
+    "columns": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "blknr",
+        "type": "text"
+      },
+      {
+        "name": "verbrauch_mwh",
+        "type": "double precision"
+      },
+      {
+        "name": "ausgeschlossen",
+        "type": "text"
+      },
+      {
+        "name": "verbrauch_mwh2022",
+        "type": "double precision"
+      },
+      {
+        "name": "ausgeschlossen2022",
+        "type": "text"
+      },
+      {
+        "name": "verbrauch_mwh2021",
+        "type": "double precision"
+      },
+      {
+        "name": "ausgeschlossen2021",
+        "type": "text"
+      },
+      {
+        "name": "verbrauch_mwh2020",
+        "type": "double precision"
+      },
+      {
+        "name": "ausgeschlossen2020",
+        "type": "text"
+      },
+      {
+        "name": "geometry",
+        "type": "USER-DEFINED"
+      },
+      {
+        "name": "geom_25833",
+        "type": "USER-DEFINED"
       }
     ]
   }

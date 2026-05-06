@@ -1,0 +1,207 @@
+<h2>Option B — Full Detail View (End State)</h2>
+<p class="subtitle">How the right panel looks after the agent finishes answering a question. All 4 sections populated.</p>
+
+<div class="section" style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+
+  <!-- Panel mockup -->
+  <div style="flex:0 0 320px;">
+    <div style="background:#1a1825;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);font-size:12px;max-height:780px;overflow-y:auto;">
+
+      <!-- Panel Header -->
+      <div style="background:#222033;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;">
+        <span style="color:#ccc;font-weight:600;font-size:13px;font-family:sans-serif;">Operations</span>
+        <span style="color:#666;font-size:11px;font-family:sans-serif;">parks near downtown</span>
+      </div>
+
+      <!-- Section 1: Agent Reasoning (fixed height, scrollable) -->
+      <div style="border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div style="padding:8px 14px;display:flex;justify-content:space-between;align-items:center;background:rgba(138,112,217,0.08);">
+          <span style="color:#8a70d9;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:sans-serif;">Agent Reasoning</span>
+          <span style="color:#555;font-size:10px;font-family:sans-serif;">[ hide ]</span>
+        </div>
+        <div style="height:130px;overflow-y:auto;padding:10px 14px;background:rgba(0,0,0,0.2);">
+          <div style="margin-bottom:8px;display:flex;gap:6px;align-items:flex-start;">
+            <span style="background:#2a1e3e;color:#8a70d9;font-size:9px;padding:2px 6px;border-radius:3px;white-space:nowrap;font-weight:700;font-family:sans-serif;">THOUGHT</span>
+            <span style="color:#aaa;line-height:1.4;font-family:sans-serif;font-size:11px;">User wants parks near downtown. I'll query OSM amenity data filtered by type=park within 2km.</span>
+          </div>
+          <div style="margin-bottom:8px;display:flex;gap:6px;align-items:flex-start;">
+            <span style="background:#1e3a1e;color:#60c060;font-size:9px;padding:2px 6px;border-radius:3px;white-space:nowrap;font-weight:700;font-family:sans-serif;">ACTION</span>
+            <span style="color:#aaa;line-height:1.4;font-family:sans-serif;font-size:11px;">execute_sql — querying osm_features for parks within radius</span>
+          </div>
+          <div style="margin-bottom:8px;display:flex;gap:6px;align-items:flex-start;">
+            <span style="background:#2a1e0e;color:#d08050;font-size:9px;padding:2px 6px;border-radius:3px;white-space:nowrap;font-weight:700;font-family:sans-serif;">RESULT</span>
+            <span style="color:#aaa;line-height:1.4;font-family:sans-serif;font-size:11px;">42 parks found. Joining with flood risk zones from DEM data.</span>
+          </div>
+          <div style="margin-bottom:8px;display:flex;gap:6px;align-items:flex-start;">
+            <span style="background:#2a1e3e;color:#8a70d9;font-size:9px;padding:2px 6px;border-radius:3px;white-space:nowrap;font-weight:700;font-family:sans-serif;">THOUGHT</span>
+            <span style="color:#aaa;line-height:1.4;font-family:sans-serif;font-size:11px;">Will score by size and flood safety. Composite score across 2 criteria.</span>
+          </div>
+          <div style="margin-bottom:8px;display:flex;gap:6px;align-items:flex-start;">
+            <span style="background:#1e3a1e;color:#60c060;font-size:9px;padding:2px 6px;border-radius:3px;white-space:nowrap;font-weight:700;font-family:sans-serif;">ACTION</span>
+            <span style="color:#aaa;line-height:1.4;font-family:sans-serif;font-size:11px;">execute_sql — scoring parks by composite criteria</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:flex-start;">
+            <span style="background:#2a1e0e;color:#d08050;font-size:9px;padding:2px 6px;border-radius:3px;white-space:nowrap;font-weight:700;font-family:sans-serif;">RESULT</span>
+            <span style="color:#aaa;line-height:1.4;font-family:sans-serif;font-size:11px;">Final layer ready with 42 scored features.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: SQL Queries (fixed height, scrollable) -->
+      <div style="border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div style="padding:8px 14px;display:flex;justify-content:space-between;align-items:center;background:rgba(96,192,96,0.06);">
+          <span style="color:#60c060;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:sans-serif;">SQL Queries</span>
+          <span style="color:#555;font-size:10px;font-family:sans-serif;">2 queries</span>
+        </div>
+        <div style="height:110px;overflow-y:auto;padding:10px 14px;background:rgba(0,0,0,0.2);">
+          <div style="margin-bottom:10px;">
+            <div style="color:#555;font-size:9px;margin-bottom:3px;font-family:sans-serif;">Query 1</div>
+            <pre style="background:#111;color:#a3d977;font-size:9px;padding:6px 8px;border-radius:4px;margin:0;overflow-x:auto;border-left:2px solid #60c060;white-space:pre-wrap;">SELECT geom, name, tags
+FROM osm_features
+WHERE type = 'park'
+  AND ST_DWithin(geom, ref, 2000)</pre>
+          </div>
+          <div>
+            <div style="color:#555;font-size:9px;margin-bottom:3px;font-family:sans-serif;">Query 2</div>
+            <pre style="background:#111;color:#a3d977;font-size:9px;padding:6px 8px;border-radius:4px;margin:0;overflow-x:auto;border-left:2px solid #60c060;white-space:pre-wrap;">SELECT p.*, d.flood_risk,
+  (size_score * 0.6 + safety_score * 0.4)
+  AS composite_score
+FROM parks p
+JOIN dem_data d
+  ON ST_Intersects(p.geom, d.geom)</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Tables Used -->
+      <div style="border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div style="padding:8px 14px;background:rgba(163,181,101,0.06);">
+          <span style="color:#A3B565;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:sans-serif;">Tables Used</span>
+        </div>
+        <div style="padding:8px 14px;background:rgba(0,0,0,0.2);display:flex;flex-wrap:wrap;gap:6px;">
+          <span style="background:#1e2a10;color:#A3B565;font-size:10px;padding:3px 8px;border-radius:4px;font-family:sans-serif;border:1px solid rgba(163,181,101,0.2);">osm_features</span>
+          <span style="background:#1e2a10;color:#A3B565;font-size:10px;padding:3px 8px;border-radius:4px;font-family:sans-serif;border:1px solid rgba(163,181,101,0.2);">dem_data</span>
+          <span style="background:#1e2a10;color:#A3B565;font-size:10px;padding:3px 8px;border-radius:4px;font-family:sans-serif;border:1px solid rgba(163,181,101,0.2);">flood_zones</span>
+        </div>
+      </div>
+
+      <!-- Section 4: Results (FULL DETAIL — Option B) -->
+      <div>
+        <div style="padding:8px 14px;background:rgba(80,160,220,0.06);">
+          <span style="color:#5aaae0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:sans-serif;">Results</span>
+        </div>
+        <div style="background:rgba(0,0,0,0.2);padding:10px 14px;">
+
+          <!-- Reasoning box -->
+          <div style="border-left:3px solid #8a70d9;padding:8px 10px;background:rgba(138,112,217,0.08);border-radius:0 4px 4px 0;margin-bottom:12px;">
+            <div style="color:#8a70d9;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;font-family:sans-serif;">AI Summary</div>
+            <div style="color:#bbb;font-size:11px;line-height:1.5;font-family:sans-serif;">Found 42 parks within 2km of downtown. Scored by size (60%) and flood safety (40%). Top results are large parks with low flood risk.</div>
+          </div>
+
+          <!-- Composite score -->
+          <div style="margin-bottom:12px;">
+            <div style="color:#aaa;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;font-family:sans-serif;">Composite Score</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+              <div style="flex:1;background:#111;border-radius:4px;padding:5px 7px;text-align:center;">
+                <div style="color:#60c060;font-size:13px;font-weight:700;">0.31</div>
+                <div style="color:#555;font-size:9px;font-family:sans-serif;">min</div>
+              </div>
+              <div style="flex:1;background:#111;border-radius:4px;padding:5px 7px;text-align:center;">
+                <div style="color:#5aaae0;font-size:13px;font-weight:700;">0.68</div>
+                <div style="color:#555;font-size:9px;font-family:sans-serif;">avg</div>
+              </div>
+              <div style="flex:1;background:#111;border-radius:4px;padding:5px 7px;text-align:center;">
+                <div style="color:#d08050;font-size:13px;font-weight:700;">0.94</div>
+                <div style="color:#555;font-size:9px;font-family:sans-serif;">max</div>
+              </div>
+            </div>
+            <!-- Score bars -->
+            <div style="margin-bottom:5px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                <span style="color:#aaa;font-size:10px;font-family:sans-serif;">park_size</span>
+                <span style="color:#aaa;font-size:10px;font-family:sans-serif;">60%</span>
+              </div>
+              <div style="background:#222;border-radius:3px;height:5px;">
+                <div style="background:#8a70d9;width:60%;height:100%;border-radius:3px;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                <span style="color:#aaa;font-size:10px;font-family:sans-serif;">flood_safety</span>
+                <span style="color:#aaa;font-size:10px;font-family:sans-serif;">40%</span>
+              </div>
+              <div style="background:#222;border-radius:3px;height:5px;">
+                <div style="background:#5aaae0;width:40%;height:100%;border-radius:3px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div style="margin-bottom:12px;">
+            <div style="color:#aaa;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;font-family:sans-serif;">Legend</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <div style="width:28px;height:12px;border-radius:2px;background:linear-gradient(90deg,#1a4a1a,#60c060);"></div>
+              <span style="color:#aaa;font-size:10px;font-family:sans-serif;">Low → High composite score</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div style="flex:1;background:#111;border-radius:4px;padding:5px 7px;">
+                <div style="color:#60c060;font-size:11px;font-weight:700;">42</div>
+                <div style="color:#555;font-size:9px;font-family:sans-serif;">features</div>
+              </div>
+              <div style="flex:1;background:#111;border-radius:4px;padding:5px 7px;">
+                <div style="color:#d08050;font-size:11px;font-weight:700;">1.2s</div>
+                <div style="color:#555;font-size:9px;font-family:sans-serif;">exec time</div>
+              </div>
+              <div style="flex:1;background:#111;border-radius:4px;padding:5px 7px;">
+                <div style="color:#5aaae0;font-size:11px;font-weight:700;">70%</div>
+                <div style="color:#555;font-size:9px;font-family:sans-serif;">opacity</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metadata -->
+          <div style="margin-bottom:10px;">
+            <div style="color:#aaa;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;font-family:sans-serif;">Metadata</div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+              <span style="color:#8a70d9;font-size:10px;font-family:sans-serif;">Provider</span>
+              <span style="color:#e8d9b0;font-size:10px;font-family:sans-serif;">gemma-4-e4b</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+              <span style="color:#8a70d9;font-size:10px;font-family:sans-serif;">Layer type</span>
+              <span style="color:#e8d9b0;font-size:10px;font-family:sans-serif;">GeoJSON polygon</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;">
+              <span style="color:#8a70d9;font-size:10px;font-family:sans-serif;">CRS</span>
+              <span style="color:#e8d9b0;font-size:10px;font-family:sans-serif;">EPSG:4326</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+    <p style="color:#666;font-size:11px;text-align:center;margin-top:8px;font-family:sans-serif;">All sections shown after agent finishes</p>
+  </div>
+
+  <!-- Callouts -->
+  <div style="flex:1;min-width:240px;">
+    <h3>Option B at a glance</h3>
+    <ul style="color:#bbb;font-size:13px;line-height:2;padding-left:18px;">
+      <li>Sections 1–3 same as Option A</li>
+      <li>Section 4 = full rich detail:<br>
+        <span style="color:#8a70d9;">AI summary</span> →
+        <span style="color:#5aaae0;">score stats + bars</span> →
+        <span style="color:#60c060;">legend</span> →
+        <span style="color:#e8d9b0;">metadata</span>
+      </li>
+      <li>Clicking a layer in the left panel updates this same panel to show that layer's full 4-section view</li>
+      <li>No separate floating panel, ever</li>
+    </ul>
+
+    <div style="margin-top:20px;background:rgba(138,112,217,0.07);border:1px solid rgba(138,112,217,0.2);border-radius:8px;padding:14px;">
+      <div style="color:#8a70d9;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;font-family:sans-serif;">vs Option A</div>
+      <p style="color:#bbb;font-size:12px;line-height:1.6;margin:0;font-family:sans-serif;">Option A's Section 4 would just show: <strong style="color:#ccc;">42 features · 1.2s · brief description.</strong> No scoring bars, no legend, no metadata. You'd lose the rich detail currently shown when clicking a layer.</p>
+    </div>
+  </div>
+
+</div>
